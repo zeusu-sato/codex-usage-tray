@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import uuid
 
 from client_registry import current_identity, fingerprint, settings, provider_for, display_name
@@ -35,9 +36,44 @@ def current_change(folder, signature):
     return reference, current
 
 
-def process_identity(pid):
-    if os.name != "nt":
+class _ProcBSDInfo(ctypes.Structure):
+    # Apple's public ABI: https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/proc_info.h
+    # PROC_PIDTBSDINFO includes the kernel's microsecond process-start timestamp.
+    _fields_ = ([(name, ctypes.c_uint32) for name in
+                 ("flags", "status", "xstatus", "pid", "ppid", "uid", "gid", "ruid", "rgid", "svuid", "svgid", "reserved")]
+                + [("comm", ctypes.c_char * 16), ("name", ctypes.c_char * 32)]
+                + [(name, ctypes.c_uint32) for name in ("nfiles", "pgid", "pjobc", "tdev", "tpgid")]
+                + [("nice", ctypes.c_int32), ("started_seconds", ctypes.c_uint64), ("started_microseconds", ctypes.c_uint64)])
+
+
+def darwin_process_identity(pid):
+    try:
+        library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+        query = library.proc_pidinfo
+        query.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_int)
+        query.restype = ctypes.c_int
+        info = _ProcBSDInfo()
+        size = ctypes.sizeof(info)
+        if (query(pid, 3, 0, ctypes.byref(info), size) != size or info.pid != pid
+                or info.status == 5 or info.flags & 4 or info.started_seconds == 0):
+            return None
+        return "darwin:" + str(info.started_seconds) + ":" + str(info.started_microseconds)
+    except (OSError, AttributeError):
         return None
+
+
+def process_identity(pid):
+    if isinstance(pid, bool) or not isinstance(pid, int) or not 0 < pid <= 0x7fffffff:
+        return None
+    if sys.platform == "darwin":
+        return darwin_process_identity(pid)
+    if os.name != "nt":
+        try:
+            fields = Path("/proc", str(pid), "stat").read_text().rsplit(")", 1)[1].split()
+            boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+            return "linux:" + boot + ":" + fields[19] if fields[0] != "Z" else None
+        except (OSError, ValueError, IndexError):
+            return None
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
     kernel.OpenProcess.restype = wintypes.HANDLE
@@ -240,7 +276,20 @@ def run_console(folder, request_path, now=None, selector=None, launch=None):
         print(selected["display_name"] + " / " + selected["effort"] + " で見直します。この操作はUsageを使用します。", flush=True)
         with dll_search_context():
             process = (launch or subprocess.Popen)(command, cwd=request_path.parent, env=environment())
-        exit_code = process.wait()
+        try:
+            exit_code = process.wait()
+        except BaseException:
+            # Interactive Codex shares Terminal's foreground process group.
+            # Closing Terminal signals that group; direct backend interruption
+            # also explicitly terminates/reaps the native Codex child here.
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=1)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=1)
+            raise
         if exit_code == 0:
             accept_result(folder, request_path.parent, current, selected, datetime.now(timezone.utc))
             accepted = True

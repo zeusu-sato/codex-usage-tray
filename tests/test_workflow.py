@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 from types import SimpleNamespace
 import sys
 import tempfile
@@ -80,6 +81,19 @@ class WorkflowTests(unittest.TestCase):
         _, request = self.prepare()
         self.finish(request, instructions)
         return request
+
+    def test_interrupted_review_reaps_child_and_never_accepts_results(self):
+        signature, request = self.prepare()
+        child = Mock()
+        child.wait.side_effect = [KeyboardInterrupt(), subprocess.TimeoutExpired('fixture', 1), -9]
+        child.poll.return_value = None
+        with self.assertRaises(KeyboardInterrupt):
+            reviews.run_console(self.folder, request, self.now, selector=lambda _: self.selected,
+                                launch=lambda *args, **kwargs: child)
+        child.terminate.assert_called_once()
+        child.kill.assert_called_once()
+        self.assertEqual(read_json(self.folder / 'review-state.json')['decisions'][signature]['status'], 'incomplete')
+        self.assertFalse((self.folder / 'proposal.json').exists())
 
     def cli(self, command, *arguments):
         capture = io.StringIO()

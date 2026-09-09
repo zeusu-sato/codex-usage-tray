@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import sys
 
 from client_registry import current_identity, fingerprint, provider_for, display_name
@@ -125,9 +126,12 @@ def owned_block(folder, instructions):
                    "--data-dir", str(root.resolve()), "status"]
     if provider == "claude":
         command += ["--provider", "claude"]
+    shell_example = ("- POSIX shell invocation with literal quoting:\n```sh\n" + shlex.join(command) + "\n```\n"
+                     if os.name != "nt" else "")
     text = (BEGIN + "\nOptional instructions controlled by Codex Usage Tray:\n"
             "- Before applying the following instructions, once per user turn, execute this command with its literal arguments: "
             + json.dumps(command, ensure_ascii=False) + ".\n"
+            + shell_example +
             "- Apply them only when a fresh response explicitly says active:true. A missing application, failed check, disabled switch, "
             "or changed client means use native behavior. This also applies to stale copies of these instructions.\n"
             "- Preserve the user's selected model, reasoning effort, required context, evidence and independent verification. "

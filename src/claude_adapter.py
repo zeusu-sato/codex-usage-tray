@@ -21,7 +21,7 @@ import threading
 import time
 from uuid import UUID
 
-from external_process import dll_search_context, environment
+from external_process import dll_search_context, environment, metadata_process_options
 from quota_monitor import QuotaError, kill_children_on_exit
 
 
@@ -171,7 +171,7 @@ def request_usage(binary, version, timeout=16, *, scope_salt=None):
         with dll_search_context():
             process = subprocess.Popen(command, cwd=folder, env=environment(env), stdin=subprocess.PIPE,
                                        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                       **metadata_process_options())
         messages = queue.Queue(maxsize=MAX_MESSAGES + 1)
         stop = threading.Event()
         failed = threading.Event()

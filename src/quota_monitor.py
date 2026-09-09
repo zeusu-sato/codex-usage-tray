@@ -13,12 +13,13 @@ import math
 import os
 from pathlib import Path
 import queue
+import signal
 import subprocess
 import threading
 import time
 
 from storage import atomic_write, exclusive_file
-from external_process import dll_search_context, environment
+from external_process import dll_search_context, environment, metadata_process_options
 import usage_forecast
 
 
@@ -42,9 +43,21 @@ def send_read_only(stream, message, allow_model_list=False):
 
 @contextmanager
 def kill_children_on_exit(process):
-    """Windows closes this job on parent exit, including a forced UI timeout."""
+    """Windows Job or POSIX private process group; metadata only, never the UI group."""
     if os.name != "nt":
-        yield
+        try:
+            group = os.getpgid(process.pid)
+        except ProcessLookupError:
+            group = process.pid  # Exited leader may still have live descendants.
+        if group != process.pid or group == os.getpgrp():
+            raise QuotaError("process_guard")
+        try:
+            yield
+        finally:
+            try:
+                os.killpg(group, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
         return
     class BasicLimits(ctypes.Structure):
         _fields_ = [("process_time", ctypes.c_int64), ("job_time", ctypes.c_int64),
@@ -98,7 +111,7 @@ def request_metadata(binary, method, params=None, timeout=16):
                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                    text=True, encoding="utf-8", errors="strict", env=environment(env),
                                    cwd=Path(__file__).resolve().parent,
-                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                   **metadata_process_options())
     messages = queue.Queue(maxsize=128)
     stop = threading.Event()
 

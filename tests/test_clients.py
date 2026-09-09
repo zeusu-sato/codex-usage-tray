@@ -24,7 +24,7 @@ class ClientTests(unittest.TestCase):
                 binary.write_bytes(b'fixture')
             (extensions / 'extensions.json').write_text(json.dumps([{
                 'identifier': {'id': 'openai.chatgpt'}, 'version': '1.0', 'relativeLocation': 'openai.chatgpt-1.0'}]))
-            found = clients.discover(root, which=lambda value: None)
+            found = clients.discover(root, which=lambda value: None, platform_name='win32', machine='AMD64')
             self.assertEqual(len(found), 1)
             self.assertEqual(found[0]['extension_version'], '1.0')
 
@@ -66,7 +66,8 @@ class ClientTests(unittest.TestCase):
             other = str(bundle.parent / 'user-tools')
             source = {'PATH': os.pathsep.join((str(bundle), str(bundle / 'bin'), other)),
                       'CODEX_HOME': 'user-defined-location', 'CODEX_THREAD_ID': 'parent-thread', 'AUTH_SENTINEL': 'keep'}
-            with patch.object(sys, 'frozen', True, create=True), patch.object(sys, '_MEIPASS', str(bundle), create=True):
+            with patch.object(sys, 'frozen', True, create=True), patch.object(sys, '_MEIPASS', str(bundle), create=True), \
+                    patch.object(external_process, 'default_cli_directories', return_value=[]):
                 result = external_process.environment(source)
             self.assertEqual(result['PATH'], other)
             self.assertEqual(result['CODEX_HOME'], source['CODEX_HOME'])

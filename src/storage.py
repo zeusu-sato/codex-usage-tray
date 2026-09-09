@@ -5,11 +5,14 @@ from ctypes import wintypes
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import time
 
 
 def default_data_dir():
+    if sys.platform == "darwin":
+        return Path.home() / "Library/Application Support/CodexUsageTray"
     root = os.environ.get("LOCALAPPDATA")
     return Path(root) / "CodexUsageTray" if root else Path.home() / ".local/share/CodexUsageTray"
 
@@ -46,7 +49,15 @@ def exclusive_file(path, timeout=3):
     if os.name != "nt":
         import fcntl
         with path.open("r+b") as stream:
-            fcntl.flock(stream, fcntl.LOCK_EX)
+            deadline = time.monotonic() + timeout
+            while True:
+                try:
+                    fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("Exclusive file access unavailable") from None
+                    time.sleep(0.025)
             try:
                 yield stream
             finally:

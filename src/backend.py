@@ -11,6 +11,7 @@ import policy_manager
 import quota_monitor
 import reviews
 import version_monitor
+from external_process import install_termination_handlers
 from storage import default_data_dir, locked, read_json, write_json
 
 
@@ -109,4 +110,5 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    install_termination_handlers()
     main()

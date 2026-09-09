@@ -19,8 +19,23 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - name: Build and exercise native UI with synthetic data
-        run: bash macos/build-ui.sh
+      - name: Install the hash-verified official CPython runtime
+        run: |
+          mkdir -p build
+          curl --fail --location --silent --show-error https://www.python.org/ftp/python/3.13.15/python-3.13.15-macos11.pkg -o build/python.pkg
+          echo '3b7eaf7f29825f796e8267024435540ddf1f17fc9a97ad58095daa7a75bfdcd3  build/python.pkg' | shasum -a 256 -c -
+          pkgutil --check-signature build/python.pkg
+          sudo installer -pkg build/python.pkg -target /
+      - name: Build and verify self-contained app without AI or accounts
+        run: bash macos/build-package.sh 0.4.0 build/python.pkg
+      - name: Upload portable app and checksums
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: CodexUsageTray-macos-${{ matrix.arch }}
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS-macos-*.txt
+          if-no-files-found: error
       - name: Upload native validation images
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "python_version": "3.13.15",
+  "installer_url": "https://www.python.org/ftp/python/3.13.15/python-3.13.15-macos11.pkg",
+  "installer_sha256": "3b7eaf7f29825f796e8267024435540ddf1f17fc9a97ad58095daa7a75bfdcd3",
+  "source_recipe": "https://github.com/python/cpython/blob/v3.13.15/Mac/BuildScript/build-installer.py",
+  "licenses": [
+    {
+      "file": "CPython-LICENSE.txt",
+      "sha256": "78b12c3a81360b357002334f0e70ea0e92eebf7a9b358805c03c48484945f3bb",
+      "source": "https://raw.githubusercontent.com/python/cpython/v3.13.15/LICENSE"
+    },
+    {
+      "file": "xz-5.2.3-COPYING.txt",
+      "sha256": "c4f8e14fafe458d84808a4cd8b69f94673ebe2bf8fc992291629a69ac12218f8",
+      "source": "https://raw.githubusercontent.com/tukaani-project/xz/v5.2.3/COPYING"
+    },
+    {
+      "file": "mpdecimal-4.0.1-COPYRIGHT.txt",
+      "sha256": "dba079e24a0286052f9f36a5e0b4f6cc95bc83ada657eb26bef8c0b6473f6512",
+      "source": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.1.tar.gz",
+      "source_sha256": "96d33abb4bb0070c7be0fed4246cd38416188325f820468214471938545b1ac8"
+    }
+  ]
+}

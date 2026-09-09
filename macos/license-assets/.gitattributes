@@ -1,0 +1,4 @@
+* text eol=lf
+*-LICENSE.txt -text -whitespace !eol
+*-COPYING.txt -text -whitespace !eol
+*-COPYRIGHT.txt -text -whitespace !eol

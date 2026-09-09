@@ -1,13 +1,15 @@
-"""Discover user-installed Codex clients. Never bundle Codex or read auth files."""
+"""Discover installed Codex/Claude clients without reading credentials."""
 import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shutil
 import subprocess
+import sys
 
-from external_process import dll_search_context, environment
+from external_process import default_cli_directories, dll_search_context, environment, metadata_process_options
 from storage import locked, read_json, write_json
 
 
@@ -18,20 +20,66 @@ class ClientError(ValueError):
     pass
 
 
-def descriptor(binary, client_id, label, extension_version="standalone", provider="codex"):
-    binary = Path(binary).resolve(strict=True)
-    if binary.name.casefold() != ("claude.exe" if provider == "claude" else "codex.exe"):
+def native_arch(machine=None):
+    return {"arm64": "aarch64", "aarch64": "aarch64", "x86_64": "x86_64",
+            "amd64": "x86_64", "x64": "x86_64"}.get((machine or platform.machine()).lower())
+
+
+def npm_codex_binary(launcher, arch):
+    """Resolve the official npm launcher to its native optional dependency.
+
+    Layout: https://github.com/openai/codex/blob/main/codex-cli/bin/codex.js
+    No Node/shell is executed.
+    """
+    package = launcher.parent.parent
+    if read_json(package / "package.json", {}).get("name") != "@openai/codex":
+        raise ClientError("Unsupported CLI launcher")
+    package_name = "codex-darwin-" + ("arm64" if arch == "aarch64" else "x64")
+    roots = (package / "node_modules/@openai" / package_name, package.parent / package_name)
+    for root in roots:
+        if read_json(root / "package.json", {}).get("name") == "@openai/" + package_name:
+            candidate = root / "vendor" / (arch + "-apple-darwin") / "bin/codex"
+            if candidate.is_file():
+                return candidate.resolve(strict=True)
+    candidate = package / "vendor" / (arch + "-apple-darwin") / "bin/codex"
+    if candidate.is_file():
+        return candidate.resolve(strict=True)
+    raise ClientError("Native Codex dependency is missing")
+
+
+def descriptor(binary, client_id, label, extension_version="standalone", provider="codex", *, platform_name=None, machine=None):
+    platform_name = sys.platform if platform_name is None else platform_name
+    launcher = Path(binary)
+    expected = provider + (".exe" if platform_name == "win32" else "")
+    if launcher.name.casefold() != expected:
         raise ClientError("Unexpected executable name")
+    binary = launcher.resolve(strict=True)
+    if platform_name == "win32" and binary.name.casefold() != expected:
+        raise ClientError("Unexpected executable name")
+    if platform_name == "darwin" and provider == "codex" and binary.name == "codex.js":
+        arch = native_arch(machine)
+        if arch is None:
+            raise ClientError("Unsupported architecture")
+        binary = npm_codex_binary(binary, arch)
+    if not binary.is_file() or (platform_name != "win32" and not os.access(binary, os.X_OK)):
+        raise ClientError("CLI is not executable")
     stat = binary.stat()
     return {"client_id": client_id, "label": label, "extension_version": extension_version,
             "binary_path": str(binary), "binary_size": stat.st_size, "binary_mtime_ns": stat.st_mtime_ns}
 
 
-def discover(home=None, which=shutil.which, provider="codex"):
+def discover(home=None, which=shutil.which, provider="codex", *, platform_name=None, machine=None):
+    platform_name = sys.platform if platform_name is None else platform_name
+    if platform_name not in ("win32", "darwin") or provider not in ("codex", "claude"):
+        return []
     home = Path(home or Path.home())
+    arch = native_arch(machine)
+    if arch is None:
+        return []
+    name = provider + (".exe" if platform_name == "win32" else "")
     found = []
-    for client_id, label, name in (("vscode", "VS Code", ".vscode"), ("vscode-insiders", "VS Code Insiders", ".vscode-insiders")):
-        root = (home / name / "extensions").resolve()
+    for client_id, label, directory_name in (("vscode", "VS Code", ".vscode"), ("vscode-insiders", "VS Code Insiders", ".vscode-insiders")):
+        root = (home / directory_name / "extensions").resolve()
         try:
             entries = read_json(root / "extensions.json", [])
             extension_id = "anthropic.claude-code" if provider == "claude" else "openai.chatgpt"
@@ -45,15 +93,33 @@ def discover(home=None, which=shutil.which, provider="codex"):
             extension = (root / relative).resolve()
             if extension.parent != root:
                 continue
-            binary = extension / ("resources/native-binary/claude.exe" if provider == "claude" else "bin/windows-x86_64/codex.exe")
-            found.append(descriptor(binary, client_id, label, str(entry["version"]), provider))
+            if provider == "claude":
+                node_arch = "arm64" if arch == "aarch64" else "x64"
+                candidates = [extension / "resources/native-binaries" / (platform_name + "-" + node_arch) / name,
+                              extension / "resources/native-binary" / name]
+            else:
+                # The official extension maps darwin/arm64 to macos-aarch64.
+                system = "windows" if platform_name == "win32" else "macos"
+                candidates = [extension / "bin" / (system + "-" + arch) / name]
+            binary = next((path for path in candidates if path.is_file()), candidates[-1])
+            found.append(descriptor(binary, client_id, label, str(entry["version"]), provider,
+                                    platform_name=platform_name, machine=machine))
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
             continue
-    binary = which("claude.exe" if provider == "claude" else "codex.exe")
-    if binary and all(Path(item["binary_path"]) != Path(binary).resolve() for item in found):
+    binary = which(name)
+    candidates = [Path(binary)] if binary else []
+    if platform_name == "darwin":
+        candidates.extend(path / name for path in default_cli_directories(home))
+    for candidate in candidates:
         try:
-            found.append(descriptor(binary, "cli-path", ("Claude Code" if provider == "claude" else "Codex") + " CLI (PATH)", provider=provider))
-        except (OSError, ValueError):
+            suffix = " CLI (PATH)" if platform_name == "win32" else " CLI"
+            item = descriptor(candidate, "cli-path", ("Claude Code" if provider == "claude" else "Codex") + suffix,
+                              provider=provider, platform_name=platform_name, machine=machine)
+            if all(item["binary_path"] != existing["binary_path"] for existing in found):
+                found.append(item)
+            # PATH precedence is preserved; fallback directories are for Finder.
+            break
+        except (OSError, ValueError, TypeError, AttributeError):
             pass
     return found
 
@@ -120,16 +186,21 @@ def current_identity(folder):
     else:
         version = None
     if not isinstance(version, str):
+        from quota_monitor import kill_children_on_exit
         with dll_search_context():
             process = subprocess.Popen([client["binary_path"], "--version"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                        text=True, encoding="utf-8", env=environment(),
-                                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                                       **metadata_process_options())
         try:
-            output = process.communicate(timeout=5)[0]
+            with kill_children_on_exit(process):
+                output = process.communicate(timeout=5)[0]
         except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=1)
             raise ClientError("Codexのバージョン確認がタイムアウトしました。") from None
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=1)
+            process.stdout.close()
         matched = re.fullmatch(r"(\d+\.\d+\.\d+) \(Claude Code\)\s*" if provider_for(folder) == "claude" else r"codex-cli (\S+)\s*", output)
         if process.returncode or not matched:
             raise ClientError("Codexのバージョンを確認できません。")
