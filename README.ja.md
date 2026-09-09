@@ -6,6 +6,10 @@ CodexのUsage残量を、Windowsの通知領域に表示する非公式アプリ
 
 **v0.1.0はWindows x64向けの初期ベータ版です。UIは日本語です。** OpenAIとは独立したプロジェクトで、公式Codex製品ではありません。
 
+![Demo：テスト用の残量を表示した、追加対策未設定のアプリ画面](docs/images/demo.png)
+
+実際のアカウント情報を使わないデモ画像です。[capture-demo.ps1](windows/capture-demo.ps1)でネイティブUIから撮影しています。
+
 ## 使い始める
 
 1. Codexを別途インストールし、Codex側でログインしてください。VS Code / VS Code InsidersのCodex拡張機能、または`PATH`上の`codex.exe`を検出します。

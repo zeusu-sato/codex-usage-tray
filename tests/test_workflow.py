@@ -27,7 +27,7 @@ class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
-        root = Path(self.stack.enter_context(tempfile.TemporaryDirectory(prefix="codex-tray-workflow-")))
+        root = Path(self.stack.enter_context(tempfile.TemporaryDirectory(prefix="codex-tray-workflow-"))).resolve()
         self.folder = root / "profile with spaces 日本語"
         self.folder.mkdir()
         self.codex_home = root / "isolated-codex-home"

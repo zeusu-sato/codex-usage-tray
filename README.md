@@ -6,6 +6,10 @@ An unofficial Windows tray app that keeps your reported Codex allowance in view.
 
 **v0.1.0 is an early beta for Windows x64. The interface is currently Japanese.** This project is independent of OpenAI and is not an official Codex product.
 
+![Demo: native app with synthetic quota data and no additional policy enabled](docs/images/demo.png)
+
+Demo screenshot using test data, not a real account. Captured from the native UI with [capture-demo.ps1](windows/capture-demo.ps1).
+
 ## Get started
 
 1. Install Codex separately and sign in through Codex. The app detects the Codex extension in VS Code / VS Code Insiders, or a `codex.exe` available on `PATH`.
