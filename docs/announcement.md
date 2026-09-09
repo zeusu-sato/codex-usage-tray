@@ -1,6 +1,6 @@
-# Announcement draft
+# General announcement draft
 
-Draft for **one bilingual post**. No platform has been selected and this file does not mean a post has been published. Publish only after the repository and v0.2.0 release links are live. Any accompanying screenshot must use fixture values and carry a visible **Demo / テスト用データ** label.
+This is the earlier general draft. The platform-specific text and current publication status are recorded in [promotion/README.md](promotion/README.md). LinkedIn and Reddit were posted on 2026-09-09; X encountered a send error and remains unverified. Any accompanying screenshot uses fixture values and carries a visible **Demo / テスト用データ** label.
 
 ---
 

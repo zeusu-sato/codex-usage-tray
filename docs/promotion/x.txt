@@ -1,0 +1,7 @@
+Codex Usage Tray v0.2.0
+Codex quota in your Windows tray, with a rough color outlook. Monitoring uses no AI inference.
+
+Codex残量と見通しを通知領域に。通常監視はAI推論なし。
+
+Early beta / 初期ベータ・Windows x64・日本語UI
+https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0

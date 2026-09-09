@@ -1,0 +1,1 @@
+Demo / テスト用データ. Codex Usage Tray's Japanese Windows interface shows synthetic 98% remaining in green, a rough outlook with margin until reset, and optional additional instructions switched OFF. The screen includes refresh, AI review, and report buttons. No real account data is shown. 日本語UIのデモ画面。残量98%と「余裕がありそうです」の見通しを緑で表示し、追加対策はOFF。更新・AIで見直す・見直し結果を開くボタンが見えます。実アカウントの情報は含みません。

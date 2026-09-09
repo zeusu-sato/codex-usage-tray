@@ -1,0 +1,27 @@
+I released Codex Usage Tray v0.2.0, an unofficial Windows app that puts your remaining Codex quota in the system tray.
+
+The number shows the remaining percentage reported by Codex. Its color gives a rough outlook based on your recent pace: green for some margin, yellow when the margin is small or uncertain, and red when you may run out before reset. Gray means the outlook is still gathering data or unavailable. Hover to check the percentage and reset time.
+
+Routine quota monitoring and the local color calculation use no AI inference. There is also an optional AI review you can start by choosing “Yes”; that review uses your Codex allowance. You can read the report before enabling any proposed instructions.
+
+This is an early beta for Windows x64, with a Japanese interface and reset times shown in JST. The source and Windows ZIP are available on GitHub. It uses your installed Codex and existing login, and no separate Python installation is needed.
+
+If you try it, I would appreciate feedback on the tray display and how useful the color outlook is during your day.
+
+—
+
+Codexの残量をWindowsの通知領域で確認できる、非公式アプリ「Codex Usage Tray」v0.2.0を公開しました。
+
+数字はCodexが報告する残量の割合。色は、最近の消費ペースでリセットまで持つかを示す大まかな目安です。緑は余裕あり、黄は余裕が少ない・判断が難しい、赤はリセット前に足りなくなる可能性あり。データ不足などで見通しが未確認の場合は灰色です。アイコンにマウスを重ねると、残量とリセット時刻を確認できます。
+
+通常の残量確認と色の計算にはAI推論を使いません。任意のAI見直しもあり、「はい」を選んだ場合はCodexのUsageを消費します。追加指示の提案があれば、報告書を読んでから有効にできます。
+
+Windows x64・日本語UIの初期ベータ版で、時刻表示は日本時間です。ソースコードとWindows版ZIPを公開しています。インストール済みのCodexとそのログインを使い、Pythonを別途入れる必要はありません。
+
+試していただけたら、通知領域での見やすさや、色の目安が作業中に役立つかなど、感想をいただけるとうれしいです。
+
+Source / ソース:
+https://github.com/zeusu-sato/codex-usage-tray
+
+Download / ダウンロード:
+https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0
