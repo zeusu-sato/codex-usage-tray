@@ -6,6 +6,7 @@ reads credentials, talks to undocumented HTTP endpoints, or submits a prompt.
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import ctypes
+import errno
 import hashlib
 from ctypes import wintypes
 import json
@@ -15,6 +16,7 @@ from pathlib import Path
 import queue
 import signal
 import subprocess
+import sys
 import threading
 import time
 
@@ -41,6 +43,25 @@ def send_read_only(stream, message, allow_model_list=False):
     stream.flush()
 
 
+def _kill_metadata_group(process, group):
+    try:
+        os.killpg(group, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except PermissionError as error:
+        # Darwin excludes zombies from killpg's eligible targets and returns
+        # EPERM when only an unreaped, exited leader remains. Reap our own child,
+        # then suppress that error only if its entire group is confirmed gone.
+        # Do not retry SIGKILL after reaping: the group ID could have been reused.
+        if sys.platform != "darwin" or error.errno != errno.EPERM or process.poll() is None:
+            raise
+        try:
+            os.killpg(group, 0)
+        except ProcessLookupError:
+            return
+        raise error
+
+
 @contextmanager
 def kill_children_on_exit(process):
     """Windows Job or POSIX private process group; metadata only, never the UI group."""
@@ -54,10 +75,7 @@ def kill_children_on_exit(process):
         try:
             yield
         finally:
-            try:
-                os.killpg(group, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            _kill_metadata_group(process, group)
         return
     class BasicLimits(ctypes.Structure):
         _fields_ = [("process_time", ctypes.c_int64), ("job_time", ctypes.c_int64),

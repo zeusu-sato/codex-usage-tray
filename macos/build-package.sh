@@ -19,9 +19,12 @@ bash "$ROOT/macos/build-ui.sh"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$ROOT/build/macos-ui/CodexUsageTray" "$APP/Contents/MacOS/CodexUsageTray"
 ditto "$WORK/backend-dist/CodexUsageBackend" "$APP/Contents/Resources/backend"
-"$WORK/venv/bin/python" "$ROOT/macos/collect_notices.py" "$APP" "$INSTALLER"
 "$WORK/venv/bin/python" "$ROOT/macos/prepare_bundle.py" "$APP" "$VERSION"
+# Sign nested binaries before recording their final hashes. Re-seal only the
+# outer app after adding notices, so the recorded runtime bytes stay unchanged.
 codesign --force --deep --sign - "$APP"
+"$WORK/venv/bin/python" "$ROOT/macos/collect_notices.py" "$APP" "$INSTALLER"
+codesign --force --sign - "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 "$WORK/venv/bin/python" "$ROOT/macos/test_package.py" "$APP" "$ARCH"
 ZIP="$ROOT/dist/CodexUsageTray-$VERSION-macos-$ARCH.zip"

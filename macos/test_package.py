@@ -1,4 +1,5 @@
 """Exercise the signed app and frozen backend using native account-free fixtures."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,10 @@ backend = app / 'Contents/Resources/backend/CodexUsageBackend'
 native = app / 'Contents/MacOS/CodexUsageTray'
 assert os.access(backend, os.X_OK) and os.access(native, os.X_OK)
 assert subprocess.check_output(['lipo', '-archs', str(native)], text=True).strip() == arch
+record = json.loads((app / 'Contents/Resources/licenses/runtime-provenance.json').read_text())
+for item in record['native_files']:
+    path = backend.parent / item['path']
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == item['sha256'], 'Signed runtime hash differs: ' + item['path']
 with tempfile.TemporaryDirectory(prefix='usage-tray-mac-') as temporary:
     root = Path(temporary).resolve()
     fake_home = root / 'home'; extensions = fake_home / '.vscode/extensions'
