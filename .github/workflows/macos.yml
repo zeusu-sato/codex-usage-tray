@@ -1,0 +1,30 @@
+name: macOS build
+on:
+  push:
+    branches: [main, macos-menubar]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Build and exercise native UI with synthetic data
+        run: bash macos/build-ui.sh
+      - name: Upload native validation images
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-ui-${{ matrix.arch }}
+          path: build/macos-ui/test-images/
+          if-no-files-found: ignore
