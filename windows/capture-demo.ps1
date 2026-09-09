@@ -16,7 +16,9 @@ $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if ($LASTEXITCODE -ne 0) { throw 'Fixture backend compilation failed' }
 $data = Join-Path $captureRoot 'fixture-data'
 [void][System.IO.Directory]::CreateDirectory($data)
-[System.IO.File]::WriteAllText((Join-Path $data 'fixture.json'), '{"remaining":98}', [System.Text.UTF8Encoding]::new($false))
+# Synthetic trend metadata, unrelated to any account or live quota history.
+$demoFixture = '{"remaining":98,"forecast":{"status":"comfortable","title":"\u4f59\u88d5\u304c\u3042\u308a\u305d\u3046\u3067\u3059","detail":"Weekly: \u76f4\u8fd112\u6642\u9593\u306e\u5e73\u5747\u304b\u3089\u6982\u7b97\u3002\u30ea\u30bb\u30c3\u30c8\u6642\u306e\u6b8b\u91cf\u306f\u7d0485%\u306e\u898b\u8fbc\u307f\u3067\u3059\u3002\n\u4f7f\u3044\u65b9\u304c\u5909\u308f\u308b\u3068\u898b\u901a\u3057\u3082\u5909\u308f\u308a\u307e\u3059\u3002","window_label":"Weekly","observed_hours":12,"projected_remaining_percent":85}}'
+[System.IO.File]::WriteAllText((Join-Path $data 'fixture.json'), $demoFixture, [System.Text.UTF8Encoding]::new($false))
 
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing
 Add-Type -ReferencedAssemblies System.Windows.Forms,System.Drawing -TypeDefinition @'

@@ -120,6 +120,37 @@ public static class PublicUiTest {
     public static void SaveIcon(Form form, string path) {
         form.Invoke(new Action(delegate { using (Bitmap bitmap = ((Icon)Field(form, "usageIcon")).ToBitmap()) bitmap.Save(path); }));
     }
+    public static void CheckDynamicSwitchPaint(Form form) {
+        form.Invoke(new Action(delegate {
+            Label usage = (Label)form.Controls["UsageDetail"];
+            Label monitor = (Label)form.Controls["MonitorStatus"];
+            Control toggle = form.Controls["UsageToggle"];
+            string oldUsage = usage.Text, oldMonitor = monitor.Text;
+            MethodInfo resize = form.GetType().GetMethod("ResizeForText", BindingFlags.Instance | BindingFlags.NonPublic);
+            try {
+                for (int iteration = 0; iteration < 12; iteration++) {
+                    usage.Text = iteration % 2 == 0 ? "Short fixture value" : String.Join("\n", new string[] { "Fixture window 1", "Fixture window 2", "Fixture reset time", "Fixture explanation" });
+                    monitor.Text = iteration % 2 == 0 ? "Short monitor text" : new string('M', 250);
+                    resize.Invoke(form, null);
+                    form.Update(); toggle.Invalidate(); toggle.Update();
+                    foreach (Control other in form.Controls)
+                        if (other is Label && other.Visible && other.Bounds.IntersectsWith(toggle.Bounds))
+                            throw new InvalidOperationException("A relaid-out label overlaps the switch: " + other.Name);
+                    using (Bitmap bitmap = new Bitmap(toggle.Width, toggle.Height)) {
+                        toggle.DrawToBitmap(bitmap, new Rectangle(0, 0, toggle.Width, toggle.Height));
+                        foreach (Point corner in new Point[] { Point.Empty, new Point(bitmap.Width - 1, 0), new Point(0, bitmap.Height - 1), new Point(bitmap.Width - 1, bitmap.Height - 1) })
+                            if (bitmap.GetPixel(corner.X, corner.Y).ToArgb() != form.BackColor.ToArgb())
+                                throw new InvalidOperationException("Switch corners retained transparent/stale parent painting.");
+                    }
+                }
+            } finally { usage.Text = oldUsage; monitor.Text = oldMonitor; resize.Invoke(form, null); }
+        }));
+    }
+    public static int IconBackground(Form form) {
+        return (int)form.Invoke(new Func<int>(delegate {
+            using (Bitmap bitmap = ((Icon)Field(form, "usageIcon")).ToBitmap()) return bitmap.GetPixel(0, 0).ToArgb();
+        }));
+    }
     public static IntPtr Window(int pid) {
         IntPtr found = IntPtr.Zero;
         EnumWindows(delegate(IntPtr handle, IntPtr state) {
@@ -144,6 +175,9 @@ public static class PublicUiTest {
 function Write-Fixture([string] $directory, [hashtable] $values) {
     [void][System.IO.Directory]::CreateDirectory($directory)
     [System.IO.File]::WriteAllText((Join-Path $directory 'fixture.json'), ($values | ConvertTo-Json -Depth 8), [System.Text.UTF8Encoding]::new($false))
+}
+function Forecast-Fixture([string] $status) {
+    return @{ status = $status; title = ('Fixture ' + $status); detail = 'Weekly: fixture average only; usage can change.'; window_label = 'Weekly'; observed_hours = 12; projected_remaining_percent = 50 }
 }
 function Wait-Task($task, [int] $milliseconds = 12000) {
     if (-not $task.Wait($milliseconds)) { throw 'UI operation did not finish' }
@@ -205,6 +239,43 @@ try {
     [PublicUiTest]::Screenshot($window, (Join-Path $testRoot 'public-first-run.png'))
     Write-Output 'PASS: packaged EXE backend, Unicode/space data path, unconfigured policy, manual review, quota states, and timers.'
 
+    $gray = [System.Drawing.Color]::FromArgb(94, 106, 115).ToArgb()
+    $red = [System.Drawing.Color]::FromArgb(174, 43, 39).ToArgb()
+    if ($window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $gray) { throw 'Missing forecast must keep a fresh quota gray' }
+    $forecastColors = @{ comfortable = [System.Drawing.Color]::FromArgb(28, 111, 85).ToArgb(); tight = [System.Drawing.Color]::FromArgb(157, 104, 0).ToArgb(); at_risk = $red; collecting = $gray; unavailable = $gray }
+    foreach ($status in @('comfortable', 'tight', 'at_risk', 'collecting', 'unavailable')) {
+        Write-Fixture $data @{ remaining = 98; forecast = (Forecast-Fixture $status) }
+        Refresh-Quota $window
+        if ($window.Controls['UsageRemaining'].Text -ne '98%' -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $forecastColors[$status]) { throw "Forecast $status changed the actual value or used the wrong color" }
+        if (-not $window.Controls['UsageForecast'].Text.Contains($status) -or -not $window.Controls['UsageForecast'].Text.Contains('Weekly') -or $window.Controls['UsageForecast'].ForeColor.ToArgb() -ne $forecastColors[$status]) { throw "Forecast $status lacks an accessible textual/window explanation" }
+        if ([PublicUiTest]::IconBackground($window) -ne $forecastColors[$status]) { throw "Forecast $status did not color the tray icon" }
+        [PublicUiTest]::SaveIcon($window, (Join-Path $testRoot "forecast-$status.png"))
+    }
+    $invalidForecasts = @('malformed', (Forecast-Fixture 'unknown_future_status'))
+    $invalidProjection = Forecast-Fixture 'comfortable'
+    $invalidProjection.projected_remaining_percent = 101
+    $invalidForecasts += $invalidProjection
+    foreach ($forecast in $invalidForecasts) {
+        Write-Fixture $data @{ remaining = 98; forecast = $forecast }
+        Refresh-Quota $window
+        if ($window.Controls['UsageRemaining'].Text -ne '98%' -or [PublicUiTest]::IconBackground($window) -ne $gray) { throw 'Malformed forecast discarded a valid quota or implied a safe prediction' }
+    }
+    foreach ($override in @('stale', 'blocked', 'zero')) {
+        $case = @{ remaining = 98; forecast = (Forecast-Fixture 'comfortable') }
+        if ($override -eq 'zero') { $case.remaining = 0 } else { $case[$override] = $true }
+        Write-Fixture $data $case
+        Refresh-Quota $window
+        $expectedValue = if ($override -eq 'zero') { '0%' } else { '?' }
+        $expectedColor = if ($override -eq 'zero') { $red } else { $gray }
+        if ($window.Controls['UsageRemaining'].Text -ne $expectedValue -or [PublicUiTest]::IconBackground($window) -ne $expectedColor -or $window.Controls['UsageForecast'].Text.Contains('comfortable')) { throw "Forecast failed the $override override" }
+    }
+    Write-Fixture $data @{ remaining = 4; forecast = (Forecast-Fixture 'comfortable') }
+    Refresh-Quota $window
+    if ($window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $forecastColors.comfortable) { throw 'Old remaining-percentage thresholds overrode the trend status' }
+    Write-Fixture $data @{ remaining = 98 }
+    Refresh-Quota $window
+    Write-Output 'PASS: forecast colors preserve actual quota, name the window, handle missing/invalid history, and respect stale/blocked/zero overrides.'
+
     Write-Fixture $data @{ remaining = 98; configured = $true }
     Wait-Task ([PublicUiTest]::Call($window, 'RunCommandAsync', @('ui-status')))
     Wait-Idle $window
@@ -228,6 +299,8 @@ try {
     Write-Fixture $data @{ remaining = 98 }
     Wait-Task ([PublicUiTest]::Call($window, 'RunCommandAsync', @('ui-status')))
     Write-Output 'PASS: rounded checkbox switch supports Space exactly once, exposes ON/OFF, and preserves unknown and pending states.'
+    [PublicUiTest]::CheckDynamicSwitchPaint($window)
+    Write-Output 'PASS: repeated long/short text updates preserve layout separation and repaint opaque switch corners.'
 
     Wait-Task ([PublicUiTest]::Call($window, 'CheckReviewAsync', @($true)))
     $prompt = [PublicUiTest]::Field($window, 'reviewPrompt')

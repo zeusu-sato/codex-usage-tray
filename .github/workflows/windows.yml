@@ -26,7 +26,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'UI tests failed' }
       - name: Test packaged runtime without an installed Python on PATH
         shell: powershell
-        run: .\packaging\test-package.ps1 -ZipPath .\dist\CodexUsageTray-0.1.0-windows-x64.zip
+        run: .\packaging\test-package.ps1 -ZipPath .\dist\CodexUsageTray-0.2.0-windows-x64.zip
       - name: Upload portable Windows package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

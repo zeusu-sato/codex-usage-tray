@@ -19,6 +19,7 @@ import time
 
 from storage import atomic_write, exclusive_file
 from external_process import dll_search_context, environment
+import usage_forecast
 
 
 ALLOWED_METHODS = frozenset(("initialize", "initialized", "account/rateLimits/read"))
@@ -145,7 +146,7 @@ def request_metadata(binary, method, params=None, timeout=16):
             threading.Thread(target=reader, daemon=True).start()
             deadline = time.monotonic() + timeout
             send_read_only(process.stdin, {"id": 1, "method": "initialize", "params": {
-                "clientInfo": {"name": "codex_usage_tray", "title": "Codex Usage Tray", "version": "0.1.0"}}})
+                "clientInfo": {"name": "codex_usage_tray", "title": "Codex Usage Tray", "version": "0.2.0"}}})
             receive(1, deadline)
             send_read_only(process.stdin, {"method": "initialized"})
             request = {"id": 2, "method": method}
@@ -288,9 +289,16 @@ def reply(cache, now):
         tooltip = f'Codex {chosen["label"]} 残り{remaining:g}% / ' + chosen["resets_label"] + " / " + fetched.astimezone(JST).strftime("%H:%M取得")
     if len(rows) > 1:
         details.append("トレイには、このCodex枠のうち最も少ない残量を表示します。")
+    forecast = (usage_forecast.pending("unavailable", "現在の残量を確認できるまで予測を保留します。")
+                if stale or blocked else usage_forecast.forecast(cache.get("history"), snapshot["windows"], now.timestamp(), label))
+    if not stale and not blocked:
+        short = {"comfortable": "余裕あり", "tight": "ペース注意", "at_risk": "不足注意",
+                 "collecting": "判定待ち", "unavailable": "見通し未確認"}[forecast["status"]]
+        affected = "(" + forecast["window_label"] + ")" if forecast["window_label"] else ""
+        tooltip = short + affected + " / " + tooltip
     return {"ok": not stale, "stale": stale, "title": title, "detail": "\n".join(details),
             "checked_label": checked, "tooltip": tooltip[:63], "remaining_percent": None if stale or blocked else remaining,
-            "windows": rows, "blocked": blocked}
+            "windows": rows, "blocked": blocked, "forecast": forecast}
 
 
 @contextmanager
@@ -335,6 +343,7 @@ def quota_command(folder, now, binary=None):
             if binary is None:
                 raise QuotaError("client_unavailable")
             snapshot = normalize(request_rate_limits(binary))
+            cache["history"] = usage_forecast.record(cache.get("history"), snapshot["windows"], now.timestamp())
             cache.update(snapshot=snapshot, fetched_at=now.isoformat(), last_ok=True)
             cache.pop("error", None)
         except (QuotaError, OSError, ValueError, TypeError, KeyError, AttributeError,

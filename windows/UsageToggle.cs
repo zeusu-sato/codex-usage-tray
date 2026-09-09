@@ -191,15 +191,18 @@ internal sealed class ToggleSwitch : CheckBox
     {
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint
             | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw
-            | ControlStyles.SupportsTransparentBackColor, true);
+            | ControlStyles.Opaque, true);
         Appearance = Appearance.Normal;
         AutoSize = false;
-        BackColor = Color.Transparent;
+        BackColor = Color.FromArgb(247, 249, 250);
         AccessibleRole = AccessibleRole.CheckButton;
     }
 
     protected override void OnPaint(PaintEventArgs e)
     {
+        // Clear the full control, including rounded corners, after moves/resizes.
+        // Transparent CheckBox painting can replay stale sibling text from its parent.
+        e.Graphics.Clear(Parent == null ? BackColor : Parent.BackColor);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
         float scale = e.Graphics.DpiX / 96F;
         float padding = 4F * scale;
@@ -245,6 +248,7 @@ internal sealed class ToggleSwitch : CheckBox
                 SystemColors.Highlight, Parent == null ? SystemColors.Control : Parent.BackColor);
     }
 
+    protected override void OnPaintBackground(PaintEventArgs e) { e.Graphics.Clear(Parent == null ? BackColor : Parent.BackColor); }
     protected override void OnCheckedChanged(EventArgs e) { base.OnCheckedChanged(e); Invalidate(); }
     protected override void OnTextChanged(EventArgs e) { base.OnTextChanged(e); Invalidate(); }
     protected override void OnEnabledChanged(EventArgs e) { base.OnEnabledChanged(e); Cursor = Enabled ? Cursors.Hand : Cursors.Default; Invalidate(); }
@@ -265,6 +269,7 @@ internal sealed class UsageToggleForm : Form
     private readonly Label usageValue;
     private readonly Label usageTitle;
     private readonly Label usageDetail;
+    private readonly Label usageForecast;
     private readonly Label usageChecked;
     private readonly Label mitigationHeading;
     private readonly Label trayHint;
@@ -390,6 +395,15 @@ internal sealed class UsageToggleForm : Form
         usageDetail.Location = new Point(24, 166);
         usageDetail.MaximumSize = new Size(408, 0);
         usageDetail.Font = new Font(Font.FontFamily, 9F);
+
+        usageForecast = new Label();
+        usageForecast.Name = "UsageForecast";
+        usageForecast.AccessibleName = "リセットまでの見通し";
+        usageForecast.AutoSize = true;
+        usageForecast.MaximumSize = new Size(408, 0);
+        usageForecast.Font = new Font(Font.FontFamily, 9F);
+        usageForecast.ForeColor = UsageColor(null);
+        usageForecast.Text = "見通し: 残量を確認しています";
 
         usageChecked = new Label();
         usageChecked.Name = "UsageChecked";
@@ -539,7 +553,7 @@ internal sealed class UsageToggleForm : Form
         usageTimer.Interval = 5 * 60 * 1000;
         usageTimer.Tick += async delegate { await CheckUsageAsync(); };
 
-        Controls.AddRange(new Control[] { header, usageValue, refreshUsage, usageTitle, usageDetail,
+        Controls.AddRange(new Control[] { header, usageValue, refreshUsage, usageTitle, usageDetail, usageForecast,
             usageChecked, mitigationHeading, summary, toggle, detail, expiry, reviewButton, reportButton, reviewFeedback, monitorStatus, trayHint });
         Activated += async delegate
         {
@@ -893,6 +907,9 @@ internal sealed class UsageToggleForm : Form
             usageValue.Text = "?";
             usageTitle.Text = "選択したCodexの残量を確認しています…";
             usageDetail.Text = "";
+            usageValue.ForeColor = UsageColor(null);
+            usageForecast.Text = "見通し: 現在の残量は未確認です";
+            usageForecast.ForeColor = UsageColor(null);
             usageChecked.Text = "";
             usageTooltip = "Codex Usage: 選択した環境を確認中";
             UpdateUsageIcon(null);
@@ -1081,11 +1098,17 @@ internal sealed class UsageToggleForm : Form
         {
             UsageReply reply = await Task.Run(() => ReadUsageReply(CallBackend("usage-check")));
             if (IsDisposed || exiting) return;
-            bool current = reply.Ok && !reply.Stale && reply.RemainingPercent.HasValue;
+            bool current = reply.Ok && !reply.Stale && !reply.Blocked && reply.RemainingPercent.HasValue;
             usageValue.Text = current ? reply.RemainingPercent.Value.ToString("0.#", CultureInfo.InvariantCulture) + "%" : "?";
-            usageValue.ForeColor = UsageColor(current ? reply.RemainingPercent : null);
+            Color forecastColor = ForecastColor(current ? reply.RemainingPercent : null, reply.Forecast.Status);
+            usageValue.ForeColor = forecastColor;
             usageTitle.Text = reply.Title;
             usageDetail.Text = reply.Detail;
+            usageForecast.ForeColor = forecastColor;
+            usageForecast.Text = !current
+                ? (reply.Blocked ? "見通し: 利用制限があるため判定できません" : "見通し: 現在の残量は未確認です")
+                : reply.RemainingPercent.Value == 0 ? "残量なし: 対象の利用枠の残量は0%です。"
+                : "見通し: " + reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail);
             usageChecked.Text = reply.CheckedLabel + (String.IsNullOrEmpty(reply.CheckedLabel) ? "" : "\n")
                 + (reply.Stale ? "現在の残量は未確認 · 5分ごとに再確認" : "5分ごとに更新 · AIは使用しません");
             usageTooltip = reply.Tooltip;
@@ -1094,7 +1117,7 @@ internal sealed class UsageToggleForm : Form
                 lastUsageValue = usageValue.Text;
                 lastUsageDetail = reply.Detail;
             }
-            UpdateUsageIcon(current ? reply.RemainingPercent : null);
+            UpdateForecastIcon(current ? reply.RemainingPercent : null, reply.Forecast.Status);
             UpdateTrayTooltip();
             ResizeForText();
         }
@@ -1104,6 +1127,8 @@ internal sealed class UsageToggleForm : Form
             usageValue.Text = "?";
             usageValue.ForeColor = UsageColor(null);
             usageTitle.Text = "現在の残量を確認できません";
+            usageForecast.Text = "見通し: 現在の残量は未確認です";
+            usageForecast.ForeColor = UsageColor(null);
             usageDetail.Text = error.Message;
             if (!String.IsNullOrEmpty(lastUsageValue))
                 usageDetail.Text += "\n前回の表示（現在の残量は未確認）: " + lastUsageValue + "\n" + lastUsageDetail;
@@ -1127,15 +1152,26 @@ internal sealed class UsageToggleForm : Form
 
     private static Color UsageColor(double? remaining)
     {
+        return ForecastColor(remaining, "collecting");
+    }
+
+    private static Color ForecastColor(double? remaining, string status)
+    {
         if (!remaining.HasValue) return Color.FromArgb(94, 106, 115);
-        if (remaining.Value < 10) return Color.FromArgb(174, 43, 39);
-        if (remaining.Value < 30) return Color.FromArgb(157, 104, 0);
-        return Color.FromArgb(28, 111, 85);
+        if (remaining.Value == 0 || status == "at_risk") return Color.FromArgb(174, 43, 39);
+        if (status == "tight") return Color.FromArgb(157, 104, 0);
+        if (status == "comfortable") return Color.FromArgb(28, 111, 85);
+        return Color.FromArgb(94, 106, 115);
     }
 
     private void UpdateUsageIcon(double? remaining)
     {
-        Icon next = CreateUsageIcon(remaining);
+        UpdateForecastIcon(remaining, "collecting");
+    }
+
+    private void UpdateForecastIcon(double? remaining, string status)
+    {
+        Icon next = CreateForecastIcon(remaining, status);
         Icon previous = usageIcon;
         usageIcon = next;
         trayIcon.Icon = next;
@@ -1144,10 +1180,15 @@ internal sealed class UsageToggleForm : Form
 
     private static Icon CreateUsageIcon(double? remaining)
     {
+        return CreateForecastIcon(remaining, "collecting");
+    }
+
+    private static Icon CreateForecastIcon(double? remaining, string status)
+    {
         // Draw at 2x the common 16px tray size, with strong contrast on either taskbar theme.
         using (Bitmap bitmap = new Bitmap(32, 32))
         using (Graphics graphics = Graphics.FromImage(bitmap))
-        using (SolidBrush background = new SolidBrush(UsageColor(remaining)))
+        using (SolidBrush background = new SolidBrush(ForecastColor(remaining, status)))
         using (SolidBrush track = new SolidBrush(Color.FromArgb(64, 0, 0, 0)))
         using (Font font = new Font("Segoe UI", remaining == 100 ? 17F : 22F, FontStyle.Bold, GraphicsUnit.Pixel))
         using (StringFormat format = new StringFormat(StringFormat.GenericTypographic))
@@ -1186,7 +1227,9 @@ internal sealed class UsageToggleForm : Form
         float scale = DeviceDpiScale();
         int scrollOffset = AutoScrollPosition.Y;
         usageDetail.Top = usageTitle.Bottom + (int)(6 * scale);
-        usageChecked.Top = usageDetail.Bottom + (int)(8 * scale);
+        usageForecast.Top = usageDetail.Bottom + (int)(8 * scale);
+        usageForecast.Left = usageDetail.Left;
+        usageChecked.Top = usageForecast.Bottom + (int)(8 * scale);
         mitigationHeading.Top = usageChecked.Bottom + (int)(22 * scale);
         summary.Top = mitigationHeading.Bottom + (int)(6 * scale);
         toggle.Top = summary.Top;
@@ -1350,6 +1393,13 @@ internal sealed class UsageToggleForm : Form
             reply.Detail = RequireString(data, "detail");
             reply.CheckedLabel = RequireString(data, "checked_label");
             reply.Tooltip = RequireString(data, "tooltip");
+            object blocked;
+            if (data.TryGetValue("blocked", out blocked))
+            {
+                if (!(blocked is bool)) throw new FormatException();
+                reply.Blocked = (bool)blocked;
+            }
+            reply.Forecast = ReadForecastReply(data);
             object remaining;
             if (!data.TryGetValue("remaining_percent", out remaining)) throw new FormatException();
             if (remaining != null)
@@ -1364,6 +1414,42 @@ internal sealed class UsageToggleForm : Form
             return reply;
         }
         catch (FormatException) { throw new InvalidOperationException("使用枠の応答を読み取れませんでした。"); }
+    }
+
+    private static ForecastReply ReadForecastReply(Dictionary<string, object> data)
+    {
+        ForecastReply collecting = new ForecastReply {
+            Status = "collecting", Title = "データを集めています",
+            Detail = "まだ見通しを判定できません。残量の更新時に再確認します。"
+        };
+        object raw;
+        if (!data.TryGetValue("forecast", out raw) || !(raw is Dictionary<string, object>)) return collecting;
+        try
+        {
+            Dictionary<string, object> forecast = (Dictionary<string, object>)raw;
+            string status = RequireString(forecast, "status");
+            if (status != "comfortable" && status != "tight" && status != "at_risk"
+                && status != "collecting" && status != "unavailable") throw new FormatException();
+            string title = RequireString(forecast, "title");
+            string detail = RequireString(forecast, "detail");
+            if (String.IsNullOrWhiteSpace(title) || title.Length > 200 || detail.Length > 4000) throw new FormatException();
+            object window;
+            if (!forecast.TryGetValue("window_label", out window) || (window != null && !(window is string))) throw new FormatException();
+            CheckForecastNumber(forecast, "observed_hours", Double.MaxValue);
+            CheckForecastNumber(forecast, "projected_remaining_percent", 100);
+            return new ForecastReply { Status = status, Title = title, Detail = detail };
+        }
+        catch (FormatException) { return collecting; }
+    }
+
+    private static void CheckForecastNumber(Dictionary<string, object> data, string name, double maximum)
+    {
+        object value;
+        if (!data.TryGetValue(name, out value)) throw new FormatException();
+        if (value == null) return;
+        if (!(value is int) && !(value is long) && !(value is double) && !(value is decimal)) throw new FormatException();
+        double number = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+        if (Double.IsNaN(number) || Double.IsInfinity(number) || number < 0 || number > maximum) throw new FormatException();
     }
 
     private static ReviewReply ReadReviewReply(Dictionary<string, object> data)
@@ -1442,11 +1528,20 @@ internal sealed class UsageToggleForm : Form
     {
         public bool Ok;
         public bool Stale;
+        public bool Blocked;
+        public ForecastReply Forecast;
         public string Title;
         public string Detail;
         public string CheckedLabel;
         public string Tooltip;
         public double? RemainingPercent;
+    }
+
+    private sealed class ForecastReply
+    {
+        public string Status;
+        public string Title;
+        public string Detail;
     }
 
     private sealed class ReviewReply

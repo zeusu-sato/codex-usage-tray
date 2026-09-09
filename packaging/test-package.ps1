@@ -47,15 +47,18 @@ $ui = Invoke-FixtureBackend 'ui-status'
 if (-not $ui.ok -or $ui.enabled -or $ui.can_enable) { throw 'First run must have no policy' }
 $quota = Invoke-FixtureBackend 'usage-check'
 if (-not $quota.ok -or $quota.remaining_percent -ne 74) { throw 'Frozen metadata transport failed' }
+if ($quota.forecast.status -ne 'collecting') { throw 'First reading must wait for trend history' }
 $cached = Get-Content -LiteralPath (Join-Path $data 'quota-state.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+if (@($cached.history).Count -ne 1 -or @($cached.history[0].samples).Count -ne 1 -or $cached.history[0].samples[0][1] -ne 74) { throw 'Frozen forecast history missing or incorrect' }
 $cached.attempted_at = [DateTime]::UtcNow.AddMinutes(-1).ToString('o')
 [System.IO.File]::WriteAllText((Join-Path $data 'quota-state.json'), ($cached | ConvertTo-Json -Depth 10), [System.Text.UTF8Encoding]::new($false))
 $stale = Invoke-FixtureBackend 'usage-check' $true
 if ($stale.ok -or -not $stale.stale -or $null -ne $stale.remaining_percent -or $stale.windows[0].remaining_percent -ne 74) { throw 'Failed refresh must show previous data as stale' }
+if ($stale.forecast.status -ne 'unavailable') { throw 'Stale readings must not retain a positive forecast' }
 $methods = @(Get-Content -LiteralPath $capture)
 if (($methods -join ',') -ne 'initialize,initialized,account/rateLimits/read,initialize,initialized,account/rateLimits/read') { throw 'Unexpected metadata methods' }
 if ((Get-Content -LiteralPath (Join-Path $data 'quota-state.json') -Raw) -match 'fixture secret') { throw 'Raw server error leaked' }
 if (Test-Path -LiteralPath (Join-Path $profile '.codex\AGENTS.md')) { throw 'Monitoring wrote global policy' }
 $components = Get-Content -LiteralPath (Join-Path $package 'licenses\components.json') -Raw | ConvertFrom-Json
 if (-not ($components | Where-Object name -eq 'CPython')) { throw 'Missing runtime attribution' }
-Write-Output 'PASS: frozen package in a Unicode/spaced path, no Python on PATH, isolated fake Codex metadata, first observation, no automatic policy, stale failure and cleanup. No account or AI used.'
+Write-Output 'PASS: frozen package in a Unicode/spaced path, no Python on PATH, isolated fake Codex metadata, first observation and trend history, no automatic policy, stale forecast suppression and cleanup. No account or AI used.'

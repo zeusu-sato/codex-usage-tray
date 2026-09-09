@@ -69,7 +69,10 @@ internal static class FixtureBackend
                 object percent;
                 config.TryGetValue("remaining", out percent);
                 bool stale = Flag(config, "stale");
+                object forecast;
+                config.TryGetValue("forecast", out forecast);
                 result = new { ok = !stale && percent != null, stale = stale, remaining_percent = percent,
+                    blocked = Flag(config, "blocked"), forecast = forecast,
                     title = percent == null ? "テスト状態: 残量は未確認" : "Codexの残り使用枠",
                     detail = (stale ? "前回の記録です。" : "") + "週間枠のリセット: 09/15 15:29 JST",
                     checked_label = "最終取得: テスト時刻", tooltip = stale ? "Codex Usage 未確認" : "Codex 残り" + percent + "% / 09/15 15:29 JST",

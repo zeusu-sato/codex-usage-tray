@@ -1,6 +1,6 @@
 # Privacy / プライバシー
 
-This document describes Codex Usage Tray v0.1.0. It is an independent local Windows application. There is no project-operated telemetry or analytics endpoint.
+This document describes Codex Usage Tray v0.2.0. It is an independent local Windows application. There is no project-operated telemetry or analytics endpoint.
 
 ## Routine operation
 
@@ -16,6 +16,7 @@ The default data directory is `%LOCALAPPDATA%\CodexUsageTray`. A custom `--data-
 | --- | --- |
 | Selected Codex installation, local paths, version and identity reference | Detect the intended client and later changes. Paths can contain your Windows username. |
 | Minimal quota snapshot, reset times, fetch timestamps, coarse failure state | Display reported allowance and distinguish current from previous data. |
+| Up to 24 hours of timestamp/remaining-percentage pairs, at most 289 per quota window | Estimate whether the observed pace will last until reset. Stored only in the existing quota cache; no prompts or activity contents are collected. |
 | Notification signatures and review decisions | Avoid repeating the same notification or automatically starting a declined review. |
 | Review requests, reports, evidence, and optional proposals | Let you inspect an explicitly requested AI review and decide whether to enable its proposal. |
 | Policy state and AGENTS backups | Apply and remove only the app's owned instructions; preserve the previous file content. |
@@ -42,6 +43,8 @@ For a public bug report, prefer the app version, Windows version, selected clien
 ## 日本語
 
 このアプリ独自のアクセス解析やテレメトリー送信先はありません。定期的な残量取得は、インストール済みCodexを通して公式の`account/rateLimits/read`を呼びます。AIの会話・推論ターンは開始しませんが、残量を取得するCodex自身はサービスと通信する場合があります。バージョン確認はローカル処理です。
+
+消費ペースの概算には、既存の5分ごとの取得結果から、各利用枠について最大24時間・289点の時刻と残量だけを保存します。保存先は既存の残量キャッシュです。AI推論、追加の通信、会話内容や作業内容の収集は行いません。
 
 アプリはパスワードや認証トークンを読み取り・コピーせず、ログインも実装しません。既存のCodexが認証を扱い、Codex自身の通信・ログ・データ設定が適用されます。
 

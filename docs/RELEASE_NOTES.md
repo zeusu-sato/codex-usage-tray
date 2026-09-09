@@ -1,3 +1,25 @@
+# v0.2.0 — spending outlook and switch repaint fix
+
+[Windows x64 download and source](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0). This remains an early beta with a Japanese interface.
+
+- Tray and headline colors now estimate whether the recent spending pace will last until reset: green for margin, yellow for caution, red for likely shortage. The number remains the actual reported percentage. A separate outlook label explains the estimate.
+- Gray numbers distinguish an unready forecast from unknown quota (`?`). Weekly forecasts need about one hour of observations; five-hour windows need about 30 minutes. Multiple windows use the least favorable outlook.
+- Bounded local arithmetic reuses existing five-minute readings, with at most 24 hours / 289 timestamp-percentage pairs per window. It adds no AI inference, network requests, polling, or continuous analysis process. Reset changes, refills, clock reversals, and client changes restart the relevant history.
+- Reporting precision and a margin are accounted for. This is a rough projection including idle time; changed work patterns can change the outcome.
+- The ON/OFF switch now paints an opaque background every time, preventing old text from showing behind it after a layout or status update.
+
+The existing no-AI monitoring, optional review consent, and optional policy controls are unchanged. See [Privacy](PRIVACY.md) for local history storage and [README](../README.md) for the calculation and limits.
+
+## 日本語
+
+残量の数字はそのままに、最近の消費ペースで次のリセットまで持つかを色で表示します。緑は余裕あり、黄はペースに注意、赤は不足しそう、灰色の数字は判定待ち・見通し未確認です。残量自体が未確認の場合は引き続き`?`を表示します。
+
+Weeklyでは約1時間、5時間枠では約30分の履歴から判定を始めます。既存の5分ごとの取得データだけを使う軽い計算で、AIも通信も取得頻度も増えません。リセットや残量補充などで履歴を区切ります。今後の使い方が変われば見通しも変わる目安です。
+
+ON/OFFトグルの背景を毎回塗り直し、更新前の文字が裏に透けて見える不具合も修正しました。
+
+---
+
 # v0.1.0 — initial beta
 
 Unofficial Codex Usage Tray for **Windows x64**, with a **Japanese interface**. [Download the ZIP or browse the source](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.1.0).

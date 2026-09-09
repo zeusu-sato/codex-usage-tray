@@ -1,10 +1,10 @@
 # Codex Usage Tray
 
-[日本語](README.ja.md) · [Windows download](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.1.0) · [Privacy](docs/PRIVACY.md)
+[日本語](README.ja.md) · [Windows download](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0) · [Privacy](docs/PRIVACY.md)
 
 An unofficial Windows tray app that keeps your reported Codex allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
 
-**v0.1.0 is an early beta for Windows x64. The interface is currently Japanese.** This project is independent of OpenAI and is not an official Codex product.
+**v0.2.0 is an early beta for Windows x64. The interface is currently Japanese.** This project is independent of OpenAI and is not an official Codex product.
 
 ![Demo: native app with synthetic quota data and no additional policy enabled](docs/images/demo.png)
 
@@ -13,7 +13,7 @@ Demo screenshot using test data, not a real account. Captured from the native UI
 ## Get started
 
 1. Install Codex separately and sign in through Codex. The app detects the Codex extension in VS Code / VS Code Insiders, or a `codex.exe` available on `PATH`.
-2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.1.0), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex itself is not bundled.
+2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex itself is not bundled.
 3. If more than one supported Codex installation is available, choose the one to monitor. You can change this later with **Codexを選ぶ…**.
 4. To keep the number visible, drag its icon from the Windows **^** overflow area into the system tray. Windows controls icon visibility. [Microsoft's taskbar guidance](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows) explains this setting.
 
@@ -27,13 +27,20 @@ The main number is the smallest remaining percentage among the reported windows 
 
 | Display | Meaning |
 | --- | --- |
-| Green, 30–100% | Reported remaining allowance is at least 30%. |
-| Yellow, 10–below 30% | Reported remaining allowance is below 30%. |
-| Red, below 10% | Reported remaining allowance is below 10%. |
+| Green number | Recent spending suggests enough allowance until reset, with a margin. |
+| Yellow number | The projected margin is small or rounding makes the outlook uncertain. |
+| Red number | Recent spending suggests allowance may run out before reset, or it is already zero. |
+| Gray number | Allowance is fresh, but the spending outlook is still collecting data or cannot be estimated. |
 | `0` | The reported window has no remaining allowance. |
 | Gray `?` | Current allowance is unknown, stale, or a server restriction prevents a reliable availability indication. |
 
 An older successful reading may remain in the details, explicitly marked as previous data. The app never assumes a reset means 100% is available. The server may update later than your activity, and the polling interval adds delay. This is a quota snapshot, not a token counter or a prediction of how much work you can finish. Dates and reset times in this release are displayed in **JST (UTC+9)**.
+
+Color estimates **whether the observed pace fits the time until reset**; the number always remains the reported allowance. For example, 90% can be red at a fast pace, while 10% can be green shortly before a reset. The **見通し** label identifies the relevant window and explains the estimate.
+
+The calculation uses only the existing five-minute readings: at most 24 hours and 289 timestamp/percentage pairs per window, in the existing local quota cache. It averages the observed decline over elapsed time, projects that rate to reset, and allows one percentage point for reporting precision. Green requires a 20% margin against the conservative estimate; red requires a deficit even under the lower estimate; intermediate results are yellow. With multiple windows, the least favorable outlook sets the color; green requires all windows to have a favorable estimate.
+
+At least three readings spanning about one hour are needed for weekly quotas (about 30 minutes for a five-hour quota; the minimum is 15 minutes). The first readings show a gray number and **判定待ち**. Reset changes, allowance increases, clock reversals, and client-source changes restart the relevant history. Missing reset times or stale data cannot produce a positive forecast. This is a rough average, including idle time between observations; changes in your work pattern can change the outcome. It adds no AI, polling, network requests, or continuous analysis process.
 
 ## Version checks and optional AI review
 
@@ -79,7 +86,7 @@ To build and run the isolated UI tests on Windows from a source checkout:
 powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 ```
 
-These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.1.0. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
+These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.2.0. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
 
 For a complete portable package, use Windows x64 with CPython 3.13.15 and the .NET Framework compiler:
 
@@ -88,4 +95,4 @@ python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.1.0-windows-x64.zip` with `SHA256SUMS.txt`. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.
+The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.2.0-windows-x64.zip` with `SHA256SUMS.txt`. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.
