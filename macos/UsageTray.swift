@@ -1,12 +1,20 @@
 import AppKit
 import ServiceManagement
 
+final class TrayBackground: NSView {
+    override func draw(_ dirtyRect: NSRect) { NSColor.windowBackgroundColor.setFill(); dirtyRect.fill() }
+}
+final class TrayDocument: NSView {
+    override var isFlipped: Bool { true }
+}
+
 final class ProviderState {
     let id: String
     var quota: Reply = [:], policy: Reply = [:], monitor: Reply = [:]
     var busy = false
     var generation = 0
     var prompted = Set<String>()
+    var feedback = ""
     var statusItem: NSStatusItem?
     init(_ id: String) { self.id = id }
     var name: String { id == "claude" ? "Claude Code" : "Codex" }
@@ -28,6 +36,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var exiting = false
     var promptVisible = false
     var initialized = false
+    var showRequested = false
     let selector = NSSegmentedControl(labels: ["Codex", "Claude"], trackingMode: .selectOne, target: nil, action: nil)
     let remaining = NSTextField(labelWithString: "?")
     let usageTitle = NSTextField(wrappingLabelWithString: "残量を確認しています")
@@ -52,7 +61,17 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     init(backend: BackendCalling) { self.backend = backend; super.init() }
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildWindow()
+        installStatusItems()
+        initialized = true
+        refreshAll(usage: true, monitor: true)
+        timers.append(Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in self?.refreshAll(usage: true, monitor: false) })
+        timers.append(Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { [weak self] _ in self?.refreshAll(usage: false, monitor: true) })
+        let opened = UserDefaults.standard.bool(forKey: "HasOpened")
+        if !opened || showRequested { UserDefaults.standard.set(true, forKey: "HasOpened"); showWindow() }
+    }
+    func installStatusItems() {
         for (index, state) in states.enumerated() {
+            guard state.statusItem == nil else { continue }
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
             state.statusItem = item
             item.autosaveName = "usage-" + state.id
@@ -61,17 +80,12 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
             renderIcon(state)
         }
-        initialized = true
-        refreshAll(usage: true, monitor: true)
-        timers.append(Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in self?.refreshAll(usage: true, monitor: false) })
-        timers.append(Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { [weak self] _ in self?.refreshAll(usage: false, monitor: true) })
-        let opened = UserDefaults.standard.bool(forKey: "HasOpened")
-        if !opened { UserDefaults.standard.set(true, forKey: "HasOpened"); showWindow() }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showWindow(); return true }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationWillTerminate(_ notification: Notification) {
         exiting = true; timers.forEach { $0.invalidate() }
+        backend.shutdown()
         for state in states { if let item = state.statusItem { NSStatusBar.system.removeStatusItem(item) } }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { sender.orderOut(nil); return false }
@@ -92,6 +106,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "Codex + Claude Usage"; window.minSize = NSSize(width: 520, height: 540); window.delegate = self
         window.isReleasedWhenClosed = false; window.center()
+        window.contentView = TrayBackground(frame: NSRect(x: 0, y: 0, width: 540, height: 760))
         selector.selectedSegment = selected; selector.target = self; selector.action = #selector(providerChanged(_:))
         selector.setAccessibilityLabel("表示するサービス")
         refreshButton.target = self; refreshButton.action = #selector(refreshClicked)
@@ -126,7 +141,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = false
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = false
         scroll.translatesAutoresizingMaskIntoConstraints = false
-        let document = NSView(); document.translatesAutoresizingMaskIntoConstraints = false; document.addSubview(stack)
+        let document = TrayDocument(); document.translatesAutoresizingMaskIntoConstraints = false; document.addSubview(stack)
         scroll.documentView = document; window.contentView!.addSubview(scroll)
         NSLayoutConstraint.activate([
             scroll.topAnchor.constraint(equalTo: window.contentView!.topAnchor), scroll.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor),
@@ -146,6 +161,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func render() {
         guard window != nil else { return }
         let state = states[selected]
+        feedback.stringValue = state.feedback
         selector.selectedSegment = selected
         remaining.stringValue = state.remaining.map { String(Int(floor($0))) + "%" } ?? "?"
         remaining.textColor = TrayImage.color(state.remaining, state.forecast.text("status"))
@@ -161,8 +177,8 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         policySwitch.isEnabled = !state.busy && (state.policy.flag("enabled") || state.policy.flag("can_enable"))
         monitorTitle.stringValue = state.monitor.text("title")
         monitorDetail.stringValue = [state.monitor.text("detail"), state.monitor.text("baseline_label"), state.monitor.text("current_label"), state.monitor.text("checked_label")].filter { !$0.isEmpty }.joined(separator: "\n")
-        refreshButton.isEnabled = !state.busy; clientButton.isEnabled = !state.busy
-        reviewButton.isEnabled = !state.busy && state.monitor.flag("ok") && !state.monitor.text("signature").isEmpty
+        refreshButton.isEnabled = !state.busy; clientButton.isEnabled = !state.busy && !promptVisible
+        reviewButton.isEnabled = !state.busy && !promptVisible && state.monitor.flag("ok") && !state.monitor.text("signature").isEmpty
         reportButton.isEnabled = !state.busy
     }
     func refreshAll(usage: Bool, monitor: Bool) { for state in states { refresh(state, usage: usage, monitor: monitor) } }
@@ -187,14 +203,14 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     if usage { state.quota = ["ok": false, "title": "現在の残量は未確認です", "detail": failure] }
                     if monitor { state.monitor = ["ok": false, "title": "バージョンは未確認です", "detail": failure] }
                     state.policy = ["enabled": false, "can_enable": false, "title": "状態を確認できません", "detail": failure]
-                    if self.states[self.selected] === state { self.feedback.stringValue = failure }
+                    state.feedback = failure
                 }
                 self.renderIcon(state); self.render()
                 if version?.flag("alert") == true { self.offerReview(state, manual: false) }
             }
         }
     }
-    func showWindow() { NSApp.activate(ignoringOtherApps: true); window?.makeKeyAndOrderFront(nil) }
+    func showWindow() { showRequested = true; NSApp.activate(ignoringOtherApps: true); window?.makeKeyAndOrderFront(nil) }
     @objc func trayClicked(_ sender: NSStatusBarButton) {
         selected = sender.tag; render()
         if NSApp.currentEvent?.type == .rightMouseUp {
@@ -208,18 +224,31 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else { showWindow() }
     }
     @objc func openFromMenu() { showWindow() }
-    @objc func providerChanged(_ sender: NSSegmentedControl) { selected = sender.selectedSegment; feedback.stringValue = ""; render() }
+    @objc func providerChanged(_ sender: NSSegmentedControl) {
+        guard states.indices.contains(sender.selectedSegment) else { return }
+        selected = sender.selectedSegment; render()
+    }
     @objc func refreshClicked() { refresh(states[selected], usage: true, monitor: true) }
     @objc func quit() { NSApp.terminate(nil) }
-    func failure(_ error: Error) { feedback.stringValue = error.localizedDescription; showWindow() }
-    func perform(_ state: ProviderState, command: String, extra: [String] = [], done: @escaping (Reply) -> Void) {
-        guard !state.busy else { return }
+    func setFeedback(_ text: String, for state: ProviderState) { state.feedback = text; render() }
+    func failure(_ error: Error, for state: ProviderState? = nil) {
+        setFeedback(error.localizedDescription, for: state ?? states[selected]); showWindow()
+    }
+    func reserveModal() -> Bool {
+        guard !exiting, !promptVisible, window.attachedSheet == nil else { return false }
+        promptVisible = true; render(); return true
+    }
+    func releaseModal() { promptVisible = false; render() }
+    func perform(_ state: ProviderState, command: String, extra: [String] = [], onFailure: (() -> Void)? = nil, done: @escaping (Reply) -> Void) {
+        guard !exiting, !state.busy else { onFailure?(); return }
         state.busy = true; render()
+        let generation = state.generation
         DispatchQueue.global(qos: .utility).async {
             let result = Result { try self.backend.call(command, provider: state.id, extra: extra) }
             DispatchQueue.main.async {
-                state.busy = false; guard !self.exiting else { return }; self.render()
-                switch result { case .success(let reply): done(reply); case .failure(let error): self.failure(error) }
+                guard !self.exiting, generation == state.generation else { onFailure?(); return }
+                state.busy = false; self.render()
+                switch result { case .success(let reply): done(reply); case .failure(let error): onFailure?(); self.failure(error, for: state) }
             }
         }
     }
@@ -231,30 +260,35 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc func reviewClicked() { offerReview(states[selected], manual: true) }
     func offerReview(_ state: ProviderState, manual: Bool) {
         let signature = state.monitor.text("signature")
-        guard !signature.isEmpty, !state.busy, !promptVisible, window.attachedSheet == nil, manual || !state.prompted.contains(signature) else { return }
-        perform(state, command: "review-status", extra: ["--signature", signature]) { reply in
-            guard reply.flag("can_review"), manual || reply.flag("should_prompt") else { return }
-            self.promptVisible = true; state.busy = true; state.prompted.insert(signature)
+        guard !signature.isEmpty, !state.busy, manual || !state.prompted.contains(signature), reserveModal() else { return }
+        perform(state, command: "review-status", extra: ["--signature", signature], onFailure: { self.releaseModal() }) { reply in
+            guard reply.flag("ok"), reply.flag("can_review"), manual || reply.flag("should_prompt") else { self.releaseModal(); return }
+            state.busy = true; state.prompted.insert(signature)
             self.selected = self.states.firstIndex { $0 === state }!; self.render(); self.showWindow()
             let alert = NSAlert(); alert.messageText = state.name + "の対策をAIで見直しますか？"
             alert.informativeText = reply.text("detail") + "\n\n「はい」でTerminalを開き、対話形式で見直します。Claudeの見直しにもCodexのUsageを使います。"
             alert.addButton(withTitle: "いいえ (No)"); alert.addButton(withTitle: "はい (Yes)")
             alert.beginSheetModal(for: self.window) { response in
-                self.promptVisible = false; state.busy = false
+                self.releaseModal(); state.busy = false
+                guard !self.exiting else { return }
                 let yes = response == .alertSecondButtonReturn
                 self.perform(state, command: "review-decide", extra: ["--signature", signature, "--decision", yes ? "yes" : "no"]) { decision in
                     if yes {
                         guard decision.flag("ok"), !decision.text("request_path").isEmpty, let actual = self.backend as? Backend else {
-                            self.feedback.stringValue = "AI見直しを開始できませんでした。状態を更新してください。"; return
+                            self.setFeedback("AI見直しを開始できませんでした。状態を更新してください。", for: state); return
                         }
                         do {
                             let launcher = try actual.reviewLauncher(provider: state.id, request: decision.text("request_path"))
                             let terminal = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
                             NSWorkspace.shared.open([launcher], withApplicationAt: terminal, configuration: NSWorkspace.OpenConfiguration()) { _, error in
-                                DispatchQueue.main.async { if let error = error { self.failure(error) } else { self.feedback.stringValue = "Terminalで見直しを開始しました。完了後、結果を確認してください。" } }
+                                DispatchQueue.main.async {
+                                    guard !self.exiting else { return }
+                                    if let error = error { self.failure(error, for: state) }
+                                    else { self.setFeedback("Terminalで見直しを開始しました。完了後、結果を確認してください。", for: state) }
+                                }
                             }
-                        } catch { self.failure(error) }
-                    } else { self.feedback.stringValue = "AI見直しは開始していません。通常の監視を続けます。" }
+                        } catch { self.failure(error, for: state) }
+                    } else { self.setFeedback("AI見直しは開始していません。通常の監視を続けます。", for: state) }
                 }
             }
         }
@@ -262,18 +296,19 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc func reportClicked() {
         let state = states[selected]
         perform(state, command: "review-latest") { reply in
-            guard reply.flag("ok"), let actual = self.backend as? Backend else { self.feedback.stringValue = reply.text("detail"); return }
+            guard reply.flag("ok"), let actual = self.backend as? Backend else { self.setFeedback(reply.text("detail"), for: state); return }
             let root = (state.id == "claude" ? actual.data.appendingPathComponent("providers/claude") : actual.data).appendingPathComponent("reviews").resolvingSymlinksInPath()
             let url = URL(fileURLWithPath: reply.text("report_path")).resolvingSymlinksInPath()
             guard url.lastPathComponent == "report.md", url.deletingLastPathComponent().deletingLastPathComponent() == root else {
-                self.feedback.stringValue = "レポートの保存先を確認できません。"; return
+                self.setFeedback("レポートの保存先を確認できません。", for: state); return
             }
             NSWorkspace.shared.open(url)
         }
     }
     @objc func clientClicked() {
         let state = states[selected]
-        perform(state, command: "client-list") { reply in
+        guard !state.busy, reserveModal() else { return }
+        perform(state, command: "client-list", onFailure: { self.releaseModal() }) { reply in
             let clients = reply["clients"] as? [Reply] ?? []
             let alert = NSAlert(); alert.messageText = "監視する" + state.name + "を選択"
             alert.informativeText = clients.isEmpty ? "対応するクライアントが見つかりません。VS Code拡張または公式CLIをインストールし、ログインしてください。" : "選択だけではAIは起動しません。"
@@ -284,11 +319,13 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if !clients.isEmpty { alert.addButton(withTitle: "選択") }
             state.busy = true; self.render()
             alert.beginSheetModal(for: self.window) { response in
-                state.busy = false; self.render()
+                state.busy = false; self.releaseModal()
+                guard !self.exiting else { return }
                 guard response == .alertSecondButtonReturn, clients.indices.contains(choices.indexOfSelectedItem) else { return }
                 self.perform(state, command: "client-select", extra: ["--client-id", clients[choices.indexOfSelectedItem].text("id")]) { result in
-                    guard result.flag("ok") else { self.feedback.stringValue = result.text("detail"); return }
+                    guard result.flag("ok") else { self.setFeedback(result.text("detail"), for: state); return }
                     state.generation += 1; state.quota = [:]; state.policy = [:]; state.monitor = [:]; state.prompted = []
+                    state.feedback = ""
                     self.renderIcon(state); self.render(); self.refresh(state, usage: true, monitor: true)
                 }
             }
@@ -298,7 +335,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         do {
             if loginButton.state == .on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             if SMAppService.mainApp.status == .requiresApproval {
-                feedback.stringValue = "システム設定のログイン項目で許可してください。"; SMAppService.openSystemSettingsLoginItems()
+                setFeedback("システム設定のログイン項目で許可してください。", for: states[selected]); SMAppService.openSystemSettingsLoginItems()
             }
         } catch { failure(error) }
         loginButton.state = SMAppService.mainApp.status == .enabled ? .on : .off

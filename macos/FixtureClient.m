@@ -22,6 +22,7 @@ int main(int argc, const char *argv[]) { @autoreleasepool {
         puts(claude ? [[version stringByAppendingString:@" (Claude Code)"] UTF8String] : "codex-cli fixture-1.0"); return 0;
     }
     NSArray *expected = claude ? @[@"--print", @"--input-format", @"stream-json", @"--output-format", @"stream-json", @"--verbose", @"--safe-mode", @"--no-session-persistence", @"--strict-mcp-config", @"--no-chrome", @"--disable-slash-commands", @"--tools", @"", @"--setting-sources="] : @[@"app-server", @"--listen", @"stdio://"];
+    capture(@{@"fixture_args": arguments, @"fixture_provider": claude ? @"claude" : @"codex"});
     if (![arguments isEqual:expected]) return 91;
     char *line = NULL; size_t size = 0;
     while (getline(&line, &size, stdin) > 0) {

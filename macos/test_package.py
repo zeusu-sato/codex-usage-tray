@@ -47,6 +47,19 @@ with tempfile.TemporaryDirectory(prefix='usage-tray-mac-') as temporary:
         monitor = call('monitor-check', provider)
         assert monitor['ok'] and not monitor['mismatch'], monitor
         quota = call('usage-check', provider)
+        if not quota['ok']:
+            print('Fixture capture on failure:', capture.read_text()[-5000:], flush=True)
+            if provider == 'codex':
+                binary = extensions / rows[0]['relativeLocation'] / f'bin/macos-{cpu}/codex'
+                controls = [{'id': 1, 'method': 'initialize', 'params': {}}, {'method': 'initialized'}, {'id': 2, 'method': 'account/rateLimits/read'}]
+                probe = subprocess.run([str(binary), 'app-server', '--listen', 'stdio://'], input=''.join(json.dumps(m)+'\n' for m in controls), capture_output=True, text=True, env=env, timeout=10)
+                print('Direct native fixture:', probe.returncode, probe.stdout[:1500], probe.stderr[:1500], flush=True)
+                sys.path.insert(0, str(source.parent.parent / 'src'))
+                import quota_monitor
+                try:
+                    print('Source adapter:', quota_monitor.request_rate_limits(binary), flush=True)
+                except Exception as error:
+                    print('Source adapter failed:', type(error).__name__, str(error), flush=True)
         assert quota['ok'] and quota['remaining_percent'] == expected, quota
         toggle = call('ui-enable', provider)
         assert not toggle['enabled'] and not toggle['can_enable'], toggle
@@ -66,4 +79,4 @@ with tempfile.TemporaryDirectory(prefix='usage-tray-mac-') as temporary:
     assert not unsupported['ok'] and capture.read_bytes() == before, 'Unsupported Claude started metadata'
     assert not (fake_home / '.codex/AGENTS.md').exists() and not (fake_home / '.claude/CLAUDE.md').exists()
     subprocess.run([str(native), '--self-test', str(root / 'native-validation')], env=env, check=True, timeout=45)
-print('PASS: frozen backend without Python on PATH; both providers; controls only; version gate; throttle; account privacy; unsigned policy remains OFF; signed native UI')
+print('PASS: frozen backend without Python on PATH; both providers; controls only; version gate; throttle; account privacy; unreviewed policy remains OFF; signed native UI')
