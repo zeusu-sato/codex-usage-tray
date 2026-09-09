@@ -13,7 +13,7 @@ final class FixtureBackend: BackendCalling {
         lock.lock(); defer { lock.unlock() }
         switch command {
         case "usage-check": return ["ok": true, "stale": false, "blocked": false, "remaining_percent": provider == "codex" ? 68 : 24,
-            "title": "Usage 残り " + (provider == "codex" ? "68%" : "24%"), "detail": "Weekly: 残り68% · リセット 09/15 15:29 JST\nテスト用データです。",
+            "title": "Usage 残り " + (provider == "codex" ? "68%" : "24%"), "detail": "Weekly: 残り" + (provider == "codex" ? "68%" : "24%") + " · リセット 09/15 15:29 JST\nテスト用データです。",
             "checked_label": "最終取得: Demo · 通常監視はAIを使いません", "tooltip": provider + " Demo quota",
             "forecast": ["status": provider == "codex" ? "comfortable" : "tight", "title": provider == "codex" ? "このペースなら余裕があります" : "リセットまでのペースに注意",
                          "detail": "最近の利用ペースから計算した目安です。今後の利用量で変わります。"]]

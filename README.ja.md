@@ -27,6 +27,10 @@ Claudeの監視には既存のClaude Codeとログインが必要で、AI見直�
 
 **v0.4.0でMacのメニューバー版を追加しました。** 2つの残量アイコン・共通画面・ネイティブのON/OFFスイッチ・クライアント選択・任意のログイン時起動に対応します。通常監視ではAI推論を使いません。AI見直しは「はい」を選んだ場合だけTerminalで開き、モデル選択などの対話操作も保ちます。
 
+![Mac版の画面・架空の残量データ](docs/images/macos-demo.png)
+
+Apple SiliconのGitHub実行環境で描画したMac版の画面です。表示値はテストデータです。
+
 Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、**Codex Usage Tray.appをアプリケーションフォルダーへ移動**して起動してください。Pythonの別途導入は不要です。
 
 このベータはアドホック署名のみで、**Developer ID署名・Apple公証は未実施**です。[Mac導入手順](macos/README.md)に通常の個別起動許可の方法を記載しています。Macの実アカウント／Keychain取得、対話AI見直し、ログイン再起動は実機確認が残っており、CIの架空データによるテストとは区別しています。
@@ -110,7 +114,7 @@ powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.3.0の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集の見直しファイルを添付しないでください。
+この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.4.0の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集の見直しファイルを添付しないでください。
 
 配布ZIP全体を作る場合は、Windows x64、CPython 3.13.15、.NET Frameworkのコンパイラーを使用します。
 
@@ -119,4 +123,4 @@ python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.3.0-windows-x64.zip`と`SHA256SUMS.txt`を作成します。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。
+固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.4.0-windows-x64.zip`と`SHA256SUMS.txt`を作成します。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。

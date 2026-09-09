@@ -1,6 +1,6 @@
 # Privacy / プライバシー
 
-This document describes **v0.4.0**, including experimental Claude Code support. This is an independent local Windows application with no project-operated telemetry or analytics endpoint.
+This document describes **v0.4.0**, including experimental Claude Code support. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint.
 
 ## Routine operation
 
@@ -24,7 +24,7 @@ In v0.4.0, Codex retains that directory and Claude uses its `providers\claude` s
 
 | Data | Purpose |
 | --- | --- |
-| Selected client installation, local paths, version and identity reference | Detect the intended client and later changes. Paths can contain your Windows username. |
+| Selected client installation, local paths, version and identity reference | Detect the intended client and later changes. Paths can contain your computer's username. |
 | Minimal quota snapshot, reset times, fetch timestamps, coarse failure state | Display reported allowance and distinguish current from previous data. |
 | Up to 24 hours of timestamp/remaining-percentage pairs, at most 289 per quota window | Estimate whether the observed pace will last until reset. Stored only in the existing quota cache; no prompts or activity contents are collected. |
 | Notification signatures and review decisions | Avoid repeating the same notification or automatically starting a declined review. |
@@ -32,7 +32,7 @@ In v0.4.0, Codex retains that directory and Claude uses its `providers\claude` s
 | Policy state and instruction-file backups | Apply and remove only the app's owned instructions; preserve the previous file content. |
 | Lock files and process identity records | Coordinate local operations and prevent duplicate review runs. |
 
-Files are ordinary local files protected by your Windows account's filesystem permissions; the app does not add encryption. Reports may contain environment details. A backup of `AGENTS.md` can contain your entire pre-existing private instructions. Review those files before sharing them. State, credentials, personal reports, and private backups are not shipped in the source repository or release ZIP.
+Files are ordinary local files protected by your operating system account's filesystem permissions; the app does not add encryption. Reports may contain environment details. A backup of `AGENTS.md` can contain your entire pre-existing private instructions. Review those files before sharing them. State, credentials, personal reports, and private backups are not shipped in the source repository or release ZIP.
 
 If you enable login startup, the app also creates its own per-user Startup shortcut. If you enable a reviewed proposal, it writes its owned block to the global Codex `AGENTS.md`, using `CODEX_HOME` when set. Those are separate from the data directory.
 

@@ -27,6 +27,10 @@ Claude monitoring requires an existing Claude Code installation and login. Revie
 
 **v0.4.0 adds a native AppKit menu-bar app**, with two quota icons, a shared window, native ON/OFF switches, client selection, and optional login startup. The same backend preserves routine monitoring without inference and an explicit Yes before an interactive AI review in Terminal.
 
+![Mac app with synthetic quota data](docs/images/macos-demo.png)
+
+Native Mac UI captured on an Apple Silicon GitHub runner. These are test readings, not a live account.
+
 Download the `macos-arm64` ZIP for Apple Silicon or `macos-x86_64` for Intel, extract it, and move **Codex Usage Tray.app** into **Applications**. Python is included. The beta is ad-hoc signed but **not Developer ID signed or notarized**; see the [Mac installation guide](macos/README.md) for Apple's normal per-app approval procedure and validation limits. Mac account/Keychain access and interactive review still require a user Mac; synthetic CI tests do not establish those results.
 
 ## Get started on Windows
@@ -106,7 +110,7 @@ powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.3.0. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
+These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.4.0. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
 
 For a complete portable package, use Windows x64 with CPython 3.13.15 and the .NET Framework compiler:
 
@@ -115,4 +119,4 @@ python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.3.0-windows-x64.zip` with `SHA256SUMS.txt`. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.
+The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.4.0-windows-x64.zip` with `SHA256SUMS.txt`. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.

@@ -33,7 +33,11 @@ try {
         Copy-Item -LiteralPath (Join-Path $root "docs\$name") -Destination (Join-Path $package 'docs')
     }
     [void][System.IO.Directory]::CreateDirectory((Join-Path $package 'docs\images'))
-    Copy-Item -LiteralPath (Join-Path $root 'docs\images\demo.png') -Destination (Join-Path $package 'docs\images')
+    foreach ($name in @('demo.png', 'macos-demo.png')) {
+        Copy-Item -LiteralPath (Join-Path $root "docs\images\$name") -Destination (Join-Path $package 'docs\images')
+    }
+    [void][System.IO.Directory]::CreateDirectory((Join-Path $package 'macos'))
+    Copy-Item -LiteralPath (Join-Path $root 'macos\README.md') -Destination (Join-Path $package 'macos')
     & $Python (Join-Path $PSScriptRoot 'collect_notices.py') (Join-Path $package 'licenses')
     if ($LASTEXITCODE -ne 0) { throw 'Dependency notices missing' }
     $zip = Join-Path $OutputDirectory "CodexUsageTray-$Version-windows-x64.zip"

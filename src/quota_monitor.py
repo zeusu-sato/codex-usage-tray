@@ -50,15 +50,26 @@ def _kill_metadata_group(process, group):
         pass
     except PermissionError as error:
         # Darwin excludes zombies from killpg's eligible targets and returns
-        # EPERM when only an unreaped, exited leader remains. Reap our own child,
-        # then suppress that error only if its entire group is confirmed gone.
+        # EPERM while a leader is exiting, before waitpid can reap it. Allow a
+        # short bounded wait for our child, then suppress that error only if its
+        # entire group is confirmed gone.
         # Do not retry SIGKILL after reaping: the group ID could have been reused.
-        if sys.platform != "darwin" or error.errno != errno.EPERM or process.poll() is None:
+        if sys.platform != "darwin" or error.errno != errno.EPERM:
             raise
+        if process.poll() is None:
+            try:
+                process.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:
+                error.add_note("Metadata group cleanup: child did not exit within the 0.5 second Darwin grace.")
+                raise error from None
         try:
             os.killpg(group, 0)
         except ProcessLookupError:
             return
+        except OSError as probe_error:
+            error.add_note("Metadata group cleanup: group probe failed after child was reaped.")
+            raise error from probe_error
+        error.add_note("Metadata group cleanup: group still exists after child was reaped.")
         raise error
 
 

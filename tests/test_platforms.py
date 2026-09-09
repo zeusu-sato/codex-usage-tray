@@ -179,6 +179,17 @@ class MetadataGroupErrorTests(unittest.TestCase):
                 side_effect=[PermissionError(errno.EPERM, 'fixture'), ProcessLookupError()]) as kill:
             quota_monitor._kill_metadata_group(process, process.pid)
         process.poll.assert_called_once_with()
+        process.wait.assert_not_called()
+        self.assertEqual(kill.call_args_list, [call(1234, signal.SIGKILL), call(1234, 0)])
+
+    def test_darwin_waits_for_exiting_leader_before_confirming_group_is_gone(self):
+        process = Mock(pid=1234)
+        process.poll.return_value = None
+        process.wait.return_value = 0
+        with patch.object(sys, 'platform', 'darwin'), patch.object(os, 'killpg', create=True,
+                side_effect=[PermissionError(errno.EPERM, 'fixture'), ProcessLookupError()]) as kill:
+            quota_monitor._kill_metadata_group(process, process.pid)
+        process.wait.assert_called_once_with(timeout=0.5)
         self.assertEqual(kill.call_args_list, [call(1234, signal.SIGKILL), call(1234, 0)])
 
     def test_darwin_does_not_ignore_live_child_or_existing_group(self):
@@ -187,11 +198,18 @@ class MetadataGroupErrorTests(unittest.TestCase):
             with self.subTest(alive=alive, probe=probe):
                 process = Mock(pid=1234)
                 process.poll.return_value = None if alive else 0
+                process.wait.side_effect = subprocess.TimeoutExpired('fixture', 0.5)
                 error = PermissionError(errno.EPERM, 'fixture')
                 with patch.object(sys, 'platform', 'darwin'), patch.object(os, 'killpg', create=True,
                         side_effect=[error, probe]) as kill:
-                    with self.assertRaises(PermissionError):
+                    with self.assertRaises(PermissionError) as raised:
                         quota_monitor._kill_metadata_group(process, process.pid)
+                self.assertIs(raised.exception, error)
+                self.assertTrue(error.__notes__[0].startswith('Metadata group cleanup:'))
+                if alive:
+                    process.wait.assert_called_once_with(timeout=0.5)
+                else:
+                    process.wait.assert_not_called()
                 self.assertEqual(kill.call_args_list, [call(1234, signal.SIGKILL)]
                                  + ([] if alive else [call(1234, 0)]))
 
@@ -207,6 +225,7 @@ class MetadataGroupErrorTests(unittest.TestCase):
                 self.assertIs(raised.exception, error)
                 kill.assert_called_once_with(1234, signal.SIGKILL)
                 process.poll.assert_not_called()
+                process.wait.assert_not_called()
 
     def test_missing_group_is_already_cleaned(self):
         process = Mock(pid=1234)
@@ -218,6 +237,31 @@ class MetadataGroupErrorTests(unittest.TestCase):
 
 @unittest.skipIf(os.name == 'nt', 'Real process groups, signals, and flock are POSIX-only; Windows has separate job-object tests')
 class PosixLifecycleTests(unittest.TestCase):
+    def test_darwin_exit_grace_reaps_real_child_after_initial_eperm(self):
+        process = subprocess.Popen([sys.executable, '-u', '-c',
+            'import sys,time; print("ready", flush=True); sys.stdin.read(1); time.sleep(0.03)'],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, **external_process.metadata_process_options())
+        original_killpg = os.killpg
+        def killpg(group, signum):
+            if signum == signal.SIGKILL:
+                process.stdin.write(b'x')
+                process.stdin.flush()
+                raise PermissionError(errno.EPERM, 'Simulated Darwin exit transition')
+            return original_killpg(group, signum)
+        try:
+            self.assertEqual(process.stdout.readline(), b'ready\n')
+            self.assertIsNone(process.poll())
+            with patch.object(sys, 'platform', 'darwin'), patch.object(os, 'killpg', side_effect=killpg) as kill:
+                quota_monitor._kill_metadata_group(process, process.pid)
+            self.assertEqual(process.returncode, 0)
+            self.assertEqual(kill.call_args_list, [call(process.pid, signal.SIGKILL), call(process.pid, 0)])
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=2)
+            process.stdin.close()
+            process.stdout.close()
+
     def test_exited_metadata_leader_is_cleaned_without_reaping_in_caller(self):
         process = subprocess.Popen([sys.executable, '-c', 'print("finished")'],
                                    stdout=subprocess.PIPE, **external_process.metadata_process_options())

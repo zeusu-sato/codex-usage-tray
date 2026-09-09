@@ -25,7 +25,8 @@ for name in ['PRIVACY.md', 'RELEASE_NOTES.md']:
     shutil.copyfile(root / 'docs' / name, docs / name)
 images = docs / 'images'
 images.mkdir()
-shutil.copyfile(root / 'docs/images/demo.png', images / 'demo.png')
+for name in ['demo.png', 'macos-demo.png']:
+    shutil.copyfile(root / 'docs/images' / name, images / name)
 mac_docs = resources / 'macos'
 mac_docs.mkdir()
 shutil.copyfile(root / 'macos/README.md', mac_docs / 'README.md')
