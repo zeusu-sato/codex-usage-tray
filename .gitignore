@@ -1,0 +1,18 @@
+/build/
+/dist/
+/.venv/
+__pycache__/
+*.pyc
+*.spec
+*.log
+.env
+# Per-user runtime state must never be published.
+auth.json
+settings.json
+quota-state.json
+monitor-state.json
+review-state.json
+active-policy.json
+proposal.json
+/reviews/
+/backups/
