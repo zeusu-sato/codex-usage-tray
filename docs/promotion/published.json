@@ -1,10 +1,23 @@
 {
-  "schemaVersion": 1,
-  "recordedAt": "2026-09-09T07:00:53.981Z",
-  "release": "v0.2.0",
+  "schemaVersion": 2,
+  "recordedAt": "2026-09-09T09:08:54.294322+00:00",
+  "release": "v0.3.0",
+  "releaseUrl": "https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0",
+  "releasePublishedAt": "2026-09-09T09:03:12Z",
+  "releaseCommit": "06a770efe86ed09f051426320bde9db76a85e10c",
+  "releasePubliclyVerifiedAt": "2026-09-09T09:04:59.162458+00:00",
+  "ciUrl": "https://github.com/zeusu-sato/codex-usage-tray/actions/runs/34332018299",
+  "windowsZip": {
+    "name": "CodexUsageTray-0.3.0-windows-x64.zip",
+    "url": "https://github.com/zeusu-sato/codex-usage-tray/releases/download/v0.3.0/CodexUsageTray-0.3.0-windows-x64.zip",
+    "size": 8702552,
+    "sha256": "5814307ad1e1d83bacc800fdacec52090cc566a3390db7c9f00ec5bc533ef7b6",
+    "api_digest": "sha256:5814307ad1e1d83bacc800fdacec52090cc566a3390db7c9f00ec5bc533ef7b6",
+    "matches_ci_artifact": true
+  },
   "demo": {
     "file": "docs/images/demo.png",
-    "sha256": "baf760f8f61cacbba524ec9a72ab1c2fbd02563419a766e5e1199c97a4def4c9",
+    "sha256": "77264be28fa6e62d73f67a2c20ae8265fa6b5d147b7bb0a7bce37319c4d2dec0",
     "syntheticData": true
   },
   "posts": [
@@ -20,8 +33,19 @@
       "anonymousPublicReadVerified": true,
       "bothLanguagesVerified": true,
       "publicImageCount": 1,
-      "altVerifiedInComposer": true,
-      "customAltVerifiedOnPublicPage": false
+      "altVerifiedInComposer": false,
+      "customAltVerifiedOnPublicPage": false,
+      "preparedRelease": "v0.3.0",
+      "updatedAt": "2026-09-09T09:03:41.826Z",
+      "verifiedAt": "2026-09-09T09:06:42.993Z",
+      "publishedRelease": "v0.3.0",
+      "verificationMethod": "Reloaded existing permalink and checked revised body, provider details, and links",
+      "anonymousReadScope": "v0.3.0 heading and preview, not the entire bilingual body",
+      "fullTextMatchesIgnoringWhitespaceAndUrlShortening": true,
+      "attachedImageRelease": "v0.2.0",
+      "attachedImageSha256": "baf760f8f61cacbba524ec9a72ab1c2fbd02563419a766e5e1199c97a4def4c9",
+      "newDemoLinkedFromRelease": true,
+      "altNote": "Original attachment and its existing alt text retained; revised body explains that the image is from v0.2.0."
     },
     {
       "platform": "Reddit",
@@ -32,7 +56,14 @@
       "submittedAt": "2026-09-09T06:38:24.571Z",
       "signedInReadVerified": true,
       "anonymousPublicReadVerified": null,
-      "anonymousReadError": "HTTP 403: blocked due to a network policy; removal and public visibility unverified"
+      "anonymousReadError": "Previous anonymous fetch was blocked by network policy; not rechecked for this revision. Current independent public visibility remains unverified.",
+      "preparedRelease": "v0.3.0",
+      "updatedAt": "2026-09-09T09:03:50.022Z",
+      "verifiedAt": "2026-09-09T09:05:50.815Z",
+      "publishedRelease": "v0.3.0",
+      "verificationMethod": "Reloaded existing permalink and checked revised body, provider details, and links",
+      "newDemoLinked": true,
+      "bothLanguagesVerified": true
     },
     {
       "platform": "X",
@@ -46,7 +77,16 @@
       "draftRetainedAfterAttempt": true,
       "notPublishedConfirmedBy": "user",
       "confirmationDate": "2026-09-09",
-      "retriedAfterConfirmation": false
+      "retriedAfterConfirmation": false,
+      "preparedRelease": "v0.3.0",
+      "preparedAt": "2026-09-09T08:51:01.409Z",
+      "preparedFiles": [
+        "x.txt",
+        "../images/demo.png",
+        "alt.txt"
+      ],
+      "browserDraftPersistenceVerified": false,
+      "preparationNote": "New text and image were entered, but the media editor and compose view later remained blank after reload. The revised source files are preserved; X remains unpublished."
     },
     {
       "platform": "Qiita",
@@ -57,13 +97,102 @@
       "preparedText": "qiita.md",
       "submittedAt": "2026-09-09T07:00:13.394Z",
       "signedInReadVerified": true,
-      "anonymousPublicReadVerified": null,
-      "anonymousReadError": "Connection reset before HTTP response; public web fetch unavailable. Independent anonymous visibility remains unverified.",
-      "linkedResourcesPubliclyVerified": 9,
+      "anonymousPublicReadVerified": true,
       "automaticXShare": false,
-      "tags": ["Codex", "Windows", "Python", "C#"],
+      "tags": [
+        "Codex",
+        "Windows",
+        "Python",
+        "C#",
+        "ClaudeCode"
+      ],
       "publicImageCount": 1,
-      "publicImageAltVerified": true
+      "publicImageAltVerified": true,
+      "preparedRelease": "v0.3.0",
+      "updatedAt": "2026-09-09T09:03:50.226Z",
+      "verifiedAt": "2026-09-09T09:05:50.753Z",
+      "publishedRelease": "v0.3.0",
+      "verificationMethod": "Reloaded existing permalink and checked revised body, provider details, and links",
+      "anonymousReadScope": "Updated article body",
+      "publicImageRelease": "v0.3.0",
+      "imageDeliveryVerified": "Anonymous HTTP 200 image/png from the Qiita image proxy",
+      "stockUserChangeNotification": false
+    }
+  ],
+  "history": [
+    {
+      "schemaVersion": 1,
+      "recordedAt": "2026-09-09T07:00:53.981Z",
+      "release": "v0.2.0",
+      "demo": {
+        "file": "docs/images/demo.png",
+        "sha256": "baf760f8f61cacbba524ec9a72ab1c2fbd02563419a766e5e1199c97a4def4c9",
+        "syntheticData": true
+      },
+      "posts": [
+        {
+          "platform": "LinkedIn",
+          "status": "published",
+          "url": "https://www.linkedin.com/feed/update/urn:li:activity:7503340545587589120/",
+          "author": "Zeusu Sato",
+          "audience": "Anyone",
+          "preparedText": "linkedin.txt",
+          "submittedAt": "2026-09-09T06:36:28.650Z",
+          "signedInReadVerified": true,
+          "anonymousPublicReadVerified": true,
+          "bothLanguagesVerified": true,
+          "publicImageCount": 1,
+          "altVerifiedInComposer": true,
+          "customAltVerifiedOnPublicPage": false
+        },
+        {
+          "platform": "Reddit",
+          "status": "published",
+          "url": "https://www.reddit.com/r/ChatGPTCoding/comments/1w9lsay/weekly_self_promotion_thread/p8p56be/",
+          "author": "Competitive-Carob373",
+          "preparedText": "reddit.md",
+          "submittedAt": "2026-09-09T06:38:24.571Z",
+          "signedInReadVerified": true,
+          "anonymousPublicReadVerified": null,
+          "anonymousReadError": "HTTP 403: blocked due to a network policy; removal and public visibility unverified"
+        },
+        {
+          "platform": "X",
+          "status": "not_published",
+          "url": null,
+          "author": "dorodango_zeusu",
+          "preparedText": "x.txt",
+          "submittedAt": "2026-09-09T06:29:53.073Z",
+          "attempts": 1,
+          "profileReloadError": "ERR_CONNECTION_CLOSED",
+          "draftRetainedAfterAttempt": true,
+          "notPublishedConfirmedBy": "user",
+          "confirmationDate": "2026-09-09",
+          "retriedAfterConfirmation": false
+        },
+        {
+          "platform": "Qiita",
+          "status": "published",
+          "url": "https://qiita.com/DoroDango/items/435ec033e0382c0ec52a",
+          "author": "DoroDango",
+          "audience": "public",
+          "preparedText": "qiita.md",
+          "submittedAt": "2026-09-09T07:00:13.394Z",
+          "signedInReadVerified": true,
+          "anonymousPublicReadVerified": null,
+          "anonymousReadError": "Connection reset before HTTP response; public web fetch unavailable. Independent anonymous visibility remains unverified.",
+          "linkedResourcesPubliclyVerified": 9,
+          "automaticXShare": false,
+          "tags": [
+            "Codex",
+            "Windows",
+            "Python",
+            "C#"
+          ],
+          "publicImageCount": 1,
+          "publicImageAltVerified": true
+        }
+      ]
     }
   ]
 }

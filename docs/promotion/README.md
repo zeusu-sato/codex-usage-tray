@@ -2,7 +2,16 @@
 
 ## v0.3.0 update
 
-The platform copy and demo have been revised for Codex + Claude support. Publication updates are being verified separately; the v0.2.0 records below are historical evidence and do not establish that the revised text is already live. X remains an unpublished draft unless a new permalink is recorded.
+Published on 2026-09-09: [v0.3.0 beta](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0), with Codex + Claude support. The [Windows CI](https://github.com/zeusu-sato/codex-usage-tray/actions/runs/34332018299) passed 114 backend tests, both native UI suites, and packaged-runtime tests. Anonymous downloads of the release ZIP, checksum file, and tagged demo matched the verified build. The release targets `06a770efe86ed09f051426320bde9db76a85e10c`.
+
+| Platform | v0.3.0 result | Verification |
+| --- | --- | --- |
+| [LinkedIn](https://www.linkedin.com/feed/update/urn:li:activity:7503340545587589120/) | Existing bilingual post updated | Reloaded full text matches the prepared copy after whitespace and URL shortening. Anonymous HTML exposes the new heading and preview. The original v0.2.0 attachment remains; the text explains this and links to the new demo. |
+| [Reddit](https://www.reddit.com/r/ChatGPTCoding/comments/1w9lsay/comment/p8p56be/) | Existing weekly-thread comment edited | Reloaded signed-in comment shows both languages, Claude limitations, and the new release/demo links. No duplicate comment was posted. Independent anonymous visibility was not rechecked. |
+| [Qiita](https://qiita.com/DoroDango/items/435ec033e0382c0ec52a) | Existing article title, body, tags, and demo updated | Reloaded article checked; anonymous HTTP 200 exposes the revised body. The new image URL and alt text are present, and the Qiita image proxy returns a PNG. Automatic X sharing and stock-user change notifications were off. |
+| X | Revised copy and image prepared; still unpublished | The composer/media editor remained blank after reload, so browser draft persistence is unverified. The exact text, image, and alt text are preserved in this directory. No new posting attempt was made. |
+
+The revised posts describe Claude support as experimental and limited to Claude Code 2.1.263. LinkedIn, Reddit, and Qiita distinguish routine monitoring without inference from a user-requested AI review that consumes Codex allowance. [published.json](published.json) records the current revision and preserves the original publication evidence below.
 
 ## v0.2.0 publication history
 
