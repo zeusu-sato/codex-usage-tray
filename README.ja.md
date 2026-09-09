@@ -1,10 +1,10 @@
 # Codex Usage Tray
 
-[English](README.md) · [Windows版ダウンロード](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0) · [プライバシー](docs/PRIVACY.md)
+[English](README.md) · [Windows・Mac版ダウンロード](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0) · [プライバシー](docs/PRIVACY.md)
 
-CodexとClaude CodeのUsage残量を、Windowsの通知領域に表示する非公式アプリです。数字とゲージで残量を確認でき、マウスを重ねると残量とリセット時刻を表示します。同じウィンドウから、各利用枠の詳細、Codexのバージョン、任意の追加対策を確認できます。
+CodexとClaude CodeのUsage残量を、Windowsの通知領域・Macのメニューバーに表示する非公式アプリです。数字とゲージで残量を確認でき、マウスを重ねると残量とリセット時刻を表示します。同じウィンドウから、各利用枠の詳細、Codexのバージョン、任意の追加対策を確認できます。
 
-**v0.3.0はWindows x64向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
+**v0.4.0はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
 
 ![Demo：テスト用の残量を表示した、追加対策未設定のアプリ画面](docs/images/demo.png)
 
@@ -23,10 +23,18 @@ CodexとClaude CodeのUsage残量を、Windowsの通知領域に表示する非�
 
 Claudeの監視には既存のClaude Codeとログインが必要で、AI見直しにはCodexも必要です。Claudeの候補を別途ONにすると、`%USERPROFILE%\.claude`（または`CLAUDE_CONFIG_DIR`）のグローバル`CLAUDE.md`へ条件付きブロックを追加します。Codexの適用先は引き続き`AGENTS.md`です。クライアント本体・認証情報は同梱しません。
 
+## Mac版
+
+**v0.4.0でMacのメニューバー版を追加しました。** 2つの残量アイコン・共通画面・ネイティブのON/OFFスイッチ・クライアント選択・任意のログイン時起動に対応します。通常監視ではAI推論を使いません。AI見直しは「はい」を選んだ場合だけTerminalで開き、モデル選択などの対話操作も保ちます。
+
+Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、**Codex Usage Tray.appをアプリケーションフォルダーへ移動**して起動してください。Pythonの別途導入は不要です。
+
+このベータはアドホック署名のみで、**Developer ID署名・Apple公証は未実施**です。[Mac導入手順](macos/README.md)に通常の個別起動許可の方法を記載しています。Macの実アカウント／Keychain取得、対話AI見直し、ログイン再起動は実機確認が残っており、CIの架空データによるテストとは区別しています。
+
 ## 使い始める
 
 1. 使用するCodex・Claude Codeを別途インストールし、それぞれでログインしてください。VS Code / VS Code Insidersの拡張機能、または`PATH`上のネイティブ実行ファイルを検出します。Claudeの残量取得は現在**2.1.263**が対象です。未導入の側は、そのタブで未確認表示になります。
-2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
+2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
 3. 同じ製品の対応クライアントが複数ある場合は、監視対象を選びます。後から各トレイアイコンのメニューで変更できます。CodexとClaudeの選択は独立しています。
 4. 常に残量を表示するには、Windowsの **^** 内からアイコンを通知領域へドラッグしてください。表示位置はWindows側の設定です。[Microsoft公式の説明](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows)でもこの操作を案内しています。
 

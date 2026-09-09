@@ -7,7 +7,7 @@ macOS 13 or later. Separate native builds are provided for **Apple Silicon (arm6
 3. Open the app. The first launch shows the shared window; later launches use the menu bar. Click the Codex or Claude number to open that provider. Right-click either icon for refresh and quit.
 4. Install and log into your own Codex / Claude Code client. Registered VS Code and VS Code Insiders extensions and native CLI installations are detected. If there is more than one client, use **クライアントを選ぶ…**.
 
-The beta is **ad-hoc signed, not Developer ID signed or notarized**. If macOS blocks this downloaded app, follow Apple's [instructions for opening an app from an unidentified developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac): after checking the source and download, use **System Settings → Privacy & Security → Open Anyway**. Do not disable Gatekeeper globally. This project does not include Apple signing credentials.
+The beta is **ad-hoc signed, not Developer ID signed or notarized**. If macOS blocks this downloaded app, follow Apple's [instructions for opening an app from an unidentified developer](https://support.apple.com/en-gb/102445): after checking the source and download, use **System Settings → Privacy & Security → Open Anyway**. Do not disable Gatekeeper globally. This project does not include Apple signing credentials.
 
 ## Behavior
 
@@ -27,3 +27,15 @@ To remove the app, turn OFF any enabled additional instructions, disable login s
 Both architectures are built on macOS GitHub runners. Native UI checks use synthetic data. Packaged-runtime checks compile account-free native metadata fixtures and run with no Python on PATH. They verify read-only controls, version gating, throttling, account privacy, and that unreviewed instructions cannot be enabled. Real-account Keychain access, interactive AI review, login restart, and downloaded-app Gatekeeper approval still require a user Mac; CI results do not establish those outcomes.
 
 The package uses the hash-pinned Python.org CPython 3.13.15 macOS installer. `collect_notices.py` verifies its identity, dependency versions, and immutable Mach-O code sections before copying notices; it records relocated binary hashes. Run the commands in [.github/workflows/macos.yml](../.github/workflows/macos.yml) on a clean macOS build environment. The installer command is intended for disposable CI or an explicit developer setup, not app users.
+
+## 日本語での導入
+
+macOS 13以降が対象です。Apple Silicon（M1以降）は`macos-arm64`、Intel Macは`macos-x86_64`のZIPを選び、展開した**Codex Usage Tray.appをアプリケーションフォルダーへ移動**してください。Pythonの追加導入は不要です。
+
+初回は共通画面を開き、以降はメニューバーに常駐します。Codex／Claudeの数字をクリックすると、そのサービスの詳細を表示します。VS Code拡張または公式CLIを導入し、各クライアントでログインしてください。複数ある場合は「クライアントを選ぶ…」から選択します。Claudeは2.1.263限定の試験対応です。
+
+Developer ID署名・Apple公証は未実施です。起動がブロックされた場合は、配布元とファイルを確認したうえで、システム設定の「プライバシーとセキュリティ」から、このアプリを個別に許可します。[Appleの説明](https://support.apple.com/en-gb/102445)も参照してください。
+
+「ログイン時に起動」は任意です。削除する場合は、先に追加対策とログイン時起動をOFFにし、「終了」で常駐を停止します。保存データは`~/Library/Application Support/CodexUsageTray`に残るため、不要な場合だけ別途削除してください。
+
+Mac CIでは架空データによる両CPUの画面・同梱バックエンドを検証します。実アカウント／Keychainでの取得、Terminalでの実際のAI見直し、ログイン後の起動、ダウンロード後のGatekeeper許可は、Mac実機での確認が残っています。

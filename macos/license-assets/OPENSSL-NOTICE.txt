@@ -1,0 +1,25 @@
+OpenSSL attribution added by the Codex Usage Tray distributor
+============================================================
+
+The macOS application includes OpenSSL 3.0.21 shared-library code from
+the official CPython 3.13.15 macOS installer.
+
+Copyright 1998-2026 The OpenSSL Authors. All rights reserved.
+
+OpenSSL uses the Apache License, Version 2.0. Its complete license is
+included as openssl-3.0.21-LICENSE.txt. The pinned upstream release has
+no top-level NOTICE; this is distributor attribution, not an upstream
+NOTICE file.
+
+Packaging thins universal binaries to the selected architecture,
+relocates Mach-O load commands, and adds ad-hoc signatures. Immutable
+code, constants, and strings are verified against the installer runtime.
+
+Upstream source:
+https://github.com/openssl/openssl/tree/51ea949dc1436e865935b47874b21a3bb31a102e
+
+CPython macOS dependency recipe:
+https://github.com/python/cpython/blob/v3.13.15/Mac/BuildScript/build-installer.py
+
+runtime-provenance.json records installer, original binary, and packaged
+binary hashes beside this attribution.

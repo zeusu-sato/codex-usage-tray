@@ -1,3 +1,19 @@
+# v0.4.0 — native macOS menu-bar app
+
+[Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0). Early beta; Japanese UI and JST quota labels.
+
+- Adds an AppKit menu-bar application for macOS 13+, with separate Apple Silicon and Intel packages. Each `.app` includes its Python backend.
+- Two provider icons, native switches, a shared window, client selection, and optional macOS login startup preserve the Windows workflow. Routine checks use metadata and local arithmetic without AI inference.
+- A fresh Yes opens the existing interactive Codex review in Terminal, retaining best-available model selection and maximum supported reasoning. Existing review and proposal safeguards remain in place.
+- Adds macOS extension/native CLI discovery, Application Support storage, process-group cleanup, and PID start-time checks. Windows behavior retains its existing tests.
+- Mac packages are ad-hoc signed, not Developer ID signed or notarized. See [Mac setup and validation scope](../macos/README.md). Claude remains experimental and limited to 2.1.263; Mac real-account/Keychain behavior is unverified.
+
+**Macのメニューバー版を追加しました。** Apple Silicon／Intel向けのアプリにPython実行環境を同梱し、2つの残量アイコン・色の目安・対策スイッチ・バージョン確認・任意のログイン時起動をまとめています。AI見直しは「はい」の後だけTerminalで開き、品質・モデル選択・推論強度の条件を維持します。
+
+macOS 13以降向けの初期ベータです。Developer ID署名・Apple公証、Mac実アカウントでの取得確認は未実施です。Claudeの試験対応は2.1.263限定です。
+
+---
+
 # v0.3.0 — Codex + Claude tray monitoring
 
 [Windows x64 download and source](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0). Early beta with a Japanese interface. The sections below preserve earlier release history.

@@ -1,10 +1,10 @@
 # Codex Usage Tray
 
-[日本語](README.ja.md) · [Windows download](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0) · [Privacy](docs/PRIVACY.md)
+[日本語](README.ja.md) · [Windows + Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0) · [Privacy](docs/PRIVACY.md)
 
-An unofficial Windows tray app that keeps your reported Codex and Claude Code allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
+An unofficial Windows system-tray and macOS menu-bar app that keeps your reported Codex and Claude Code allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
 
-**v0.3.0 is an early beta for Windows x64. The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
+**v0.4.0 is an early beta for Windows x64 and macOS 13+ (Apple Silicon / Intel). The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
 
 ![Demo: native app with synthetic quota data and no additional policy enabled](docs/images/demo.png)
 
@@ -23,10 +23,16 @@ Demo screenshot using test data, not real accounts. Captured from the native UI 
 
 Claude monitoring requires an existing Claude Code installation and login. Reviewing Claude additionally requires Codex. A separately enabled Claude proposal writes its guarded block to global `CLAUDE.md` under `%USERPROFILE%\.claude` (or `CLAUDE_CONFIG_DIR`); Codex proposals continue to use `AGENTS.md`. Neither client nor its credentials are bundled.
 
-## Get started
+## macOS
+
+**v0.4.0 adds a native AppKit menu-bar app**, with two quota icons, a shared window, native ON/OFF switches, client selection, and optional login startup. The same backend preserves routine monitoring without inference and an explicit Yes before an interactive AI review in Terminal.
+
+Download the `macos-arm64` ZIP for Apple Silicon or `macos-x86_64` for Intel, extract it, and move **Codex Usage Tray.app** into **Applications**. Python is included. The beta is ad-hoc signed but **not Developer ID signed or notarized**; see the [Mac installation guide](macos/README.md) for Apple's normal per-app approval procedure and validation limits. Mac account/Keychain access and interactive review still require a user Mac; synthetic CI tests do not establish those results.
+
+## Get started on Windows
 
 1. Install the clients you use and sign in through them. The app detects Codex and Claude Code in VS Code / VS Code Insiders, or their native executable on `PATH`. Claude monitoring currently requires **2.1.263**. An absent client stays unknown in its own tab.
-2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex and Claude Code themselves are not bundled.
+2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex and Claude Code themselves are not bundled.
 3. If more than one installation of a provider is available, choose the one to monitor from its tray menu. The Codex and Claude selections are independent.
 4. To keep the number visible, drag each icon from the Windows **^** overflow area into the system tray. Windows controls icon visibility. [Microsoft's taskbar guidance](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows) explains this setting.
 

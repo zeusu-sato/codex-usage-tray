@@ -1,6 +1,6 @@
 param(
     [string] $Python = 'python',
-    [string] $Version = '0.3.0',
+    [string] $Version = '0.4.0',
     [string] $OutputDirectory = '',
     [switch] $SkipDependencyInstall
 )

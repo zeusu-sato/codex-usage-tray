@@ -68,12 +68,12 @@ def collect(app, installer):
         shutil.copyfile(path, output / path.name); notices.append(entry)
     windows = json.loads((SHARED / 'native-runtime.json').read_text(encoding='utf8'))
     openssl = next(item for item in windows['licenses'] if item['name'] == 'OpenSSL')
-    for key, hashkey in [('file', 'sha256'), ('notice_file', 'notice_sha256')]:
+    for key, hashkey in [('file', 'sha256')]:
         path = SHARED / openssl[key]
         if sha(path) != openssl[hashkey]:
             raise RuntimeError('Changed OpenSSL notice')
         shutil.copyfile(path, output / path.name)
-    notices.append(openssl)
+    notices.append({**openssl, 'notice_file': 'OPENSSL-NOTICE.txt', 'notice_sha256': sha(ASSETS / 'OPENSSL-NOTICE.txt')})
     native = []
     dylibs = {'libcrypto.3.dylib', 'libssl.3.dylib', 'liblzma.5.dylib', 'libmpdec.4.dylib'}
     import PyInstaller

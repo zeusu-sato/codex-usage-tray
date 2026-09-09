@@ -49,6 +49,9 @@ with tempfile.TemporaryDirectory(prefix='usage-tray-mac-') as temporary:
         quota = call('usage-check', provider)
         if not quota['ok']:
             print('Fixture capture on failure:', capture.read_text()[-5000:], flush=True)
+            cache_path = (data / 'providers/claude' if provider == 'claude' else data) / 'quota-state.json'
+            if cache_path.exists():
+                print('Stable cache error:', json.loads(cache_path.read_text()).get('error'), flush=True)
             if provider == 'codex':
                 binary = extensions / rows[0]['relativeLocation'] / f'bin/macos-{cpu}/codex'
                 controls = [{'id': 1, 'method': 'initialize', 'params': {}}, {'method': 'initialized'}, {'id': 2, 'method': 'account/rateLimits/read'}]
@@ -60,6 +63,8 @@ with tempfile.TemporaryDirectory(prefix='usage-tray-mac-') as temporary:
                     print('Source adapter:', quota_monitor.request_rate_limits(binary), flush=True)
                 except Exception as error:
                     print('Source adapter failed:', type(error).__name__, str(error), flush=True)
+                    import traceback
+                    traceback.print_exc(limit=8)
         assert quota['ok'] and quota['remaining_percent'] == expected, quota
         toggle = call('ui-enable', provider)
         assert not toggle['enabled'] and not toggle['can_enable'], toggle

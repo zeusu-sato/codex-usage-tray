@@ -23,4 +23,6 @@ docs = resources / 'docs'
 docs.mkdir()
 for name in ['PRIVACY.md', 'RELEASE_NOTES.md']:
     shutil.copyfile(root / 'docs' / name, docs / name)
-shutil.copyfile(root / 'macos/README.md', resources / 'MAC-README.md')
+mac_docs = resources / 'macos'
+mac_docs.mkdir()
+shutil.copyfile(root / 'macos/README.md', mac_docs / 'README.md')

@@ -1,6 +1,6 @@
 # Privacy / プライバシー
 
-This document describes **v0.3.0**, including experimental Claude Code support. This is an independent local Windows application with no project-operated telemetry or analytics endpoint.
+This document describes **v0.4.0**, including experimental Claude Code support. This is an independent local Windows application with no project-operated telemetry or analytics endpoint.
 
 ## Routine operation
 
@@ -8,7 +8,7 @@ The app launches your installed Codex app server to read quota metadata with `ac
 
 The app does not parse, copy, or request your authentication tokens, passwords, or account credentials. It does not implement its own login or ask you to paste a token. Codex handles authentication through your existing installation. Codex's own network, logging, retention, and telemetry settings remain applicable; “no app analytics” does not mean that Codex operates offline.
 
-### Claude support in v0.3.0
+### Claude support in v0.4.0
 
 The installed Claude Code **2.1.263** process handles its existing authentication and the network request for usage metadata. The adapter sends only `initialize` and `get_usage` controls with behaviors disabled; it sends no user message or prompt, reads no credential files, and does not call a separate HTTP endpoint. The internal interface is experimental: other versions are rejected before starting the metadata session. Output size, message count, and time are bounded, and the metadata process is cleaned up afterward.
 
@@ -20,7 +20,7 @@ The two tray icons may read symbol images from installed official VS Code / Insi
 
 The default data directory is `%LOCALAPPDATA%\CodexUsageTray`. A custom `--data-dir` keeps the same kinds of files at the chosen path.
 
-In v0.3.0, Codex retains that directory and Claude uses its `providers\claude` subdirectory. Client selection, quota cache, review records, and policy state are separate. The Claude quota cache additionally holds the random scope salt and HMAC identifier; changed scope restarts history. This is pseudonymization, not encryption or guaranteed anonymity.
+In v0.4.0, Codex retains that directory and Claude uses its `providers\claude` subdirectory. Client selection, quota cache, review records, and policy state are separate. The Claude quota cache additionally holds the random scope salt and HMAC identifier; changed scope restarts history. This is pseudonymization, not encryption or guaranteed anonymity.
 
 | Data | Purpose |
 | --- | --- |
@@ -44,19 +44,25 @@ Version changes can open a confirmation, but **No, Escape, and closing that conf
 
 The review itself is an AI task. Its prompt, selected client context, and any material that the review reads can be processed by Codex under your existing account. The review may research official sources and uses your Codex allowance. It uses a `workspace-write` sandbox scoped to the review folder and retains existing approval controls. This is separate from routine quota/version polling, which performs no AI inference or recurring online research.
 
-In v0.3.0, **reviewing Claude Code also runs through Codex and consumes Codex allowance only after Yes**. The confirmation identifies that distinction. It uses the same best-available-model and maximum-supported-reasoning selection flow; uncertain selection requires a choice before inference. Monitoring Claude does not require an AI review.
+In v0.4.0, **reviewing Claude Code also runs through Codex and consumes Codex allowance only after Yes**. The confirmation identifies that distinction. It uses the same best-available-model and maximum-supported-reasoning selection flow; uncertain selection requires a choice before inference. Monitoring Claude does not require an AI review.
 
 Reading a completed report or switching an existing proposal on/off does not itself start another AI review. Enabling a proposal is a separate explicit action after the report is available.
+
+## macOS-specific storage and launch behavior
+
+The Mac edition stores state under `~/Library/Application Support/CodexUsageTray`, with the same isolated `providers/claude` subtree. A local instance lock prevents duplicate menu-bar monitors. Optional login startup uses macOS `SMAppService`, not a Windows Startup shortcut. User-facing state and ordinary quota checks retain the same no-inference boundary.
+
+After an explicit Yes, a private executable `.command` launcher is placed inside that approved review's local folder and opened in Terminal. It contains literal, quoted paths and arguments, not credentials, and preserves the interactive review/model-selection flow. macOS clients handle their own existing authentication, which may involve Keychain; this app does not read or copy Keychain entries.
 
 ## Removal and sharing
 
 Turn off an enabled policy and login startup, then exit the app before deleting its installation. Local reports and backups remain in the data directory until you remove them yourself. Keep any backups you need. If the app's AGENTS block was edited manually, automatic removal protects the edited text; inspect it yourself before deleting related state.
 
-For a public bug report, prefer the app version, Windows version, selected client type/version, a redacted error message, and reproduction steps. Do not attach your data directory, Codex auth files, private AGENTS contents, or full AI review sessions. Demo screenshots should use fixture data and be labeled **Demo**.
+For a public bug report, prefer the app version, operating-system version, selected client type/version, a redacted error message, and reproduction steps. Do not attach your data directory, Codex auth files, private AGENTS contents, or full AI review sessions. Demo screenshots should use fixture data and be labeled **Demo**.
 
 ## 日本語
 
-Claude Codeの試験対応を含む**v0.3.0**について説明しています。
+Claude Codeの試験対応を含む**v0.4.0**について説明しています。
 
 このアプリ独自のアクセス解析やテレメトリー送信先はありません。定期的な残量取得は、インストール済みCodexを通して公式の`account/rateLimits/read`を呼びます。AIの会話・推論ターンは開始しませんが、残量を取得するCodex自身はサービスと通信する場合があります。バージョン確認はローカル処理です。
 
@@ -79,3 +85,5 @@ Claudeの状態は、その下の`providers\claude`に分けて保存します�
 追加対策を有効にするとグローバルなCodexの`AGENTS.md`へ管理対象ブロックを追加し、ログイン時起動を有効にするとユーザーのStartupに専用ショートカットを作成します。削除前に両方を無効にしてアプリを終了してください。報告書・バックアップは、不要と判断した後に保存先から別途削除できます。公開Issueに保存先全体や認証ファイル、個人の指示、AIの会話全体を添付しないでください。
 
 Claudeの候補を別途有効にした場合は、`%USERPROFILE%\.claude`（または`CLAUDE_CONFIG_DIR`）の`CLAUDE.md`が対象です。製品ごとのスイッチは独立しています。CLAUDEのバックアップにも元の私的な指示が含まれます。
+
+Mac版の保存先は`~/Library/Application Support/CodexUsageTray`です。Claudeの状態は同じ構造の`providers/claude`へ分離します。ログイン時起動はMacのログイン項目登録を使います。「はい」の後だけ、承認済み見直しフォルダーへ引数を安全に引用した`.command`を作り、Terminalで対話AI見直しを開きます。アプリはKeychainの内容を読み取り・コピーしません。削除前に追加対策とログイン時起動をOFFにしてください。
