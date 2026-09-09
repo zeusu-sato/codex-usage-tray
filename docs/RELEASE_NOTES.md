@@ -1,3 +1,27 @@
+# v0.3.0 — Codex + Claude tray monitoring
+
+[Windows x64 download and source](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0). Early beta with a Japanese interface. The sections below preserve earlier release history.
+
+- Adds separate Codex and Claude tray icons with one shared tabbed window and provider-specific state. Local official extension symbols appear at 18% opacity; without an available image, only the number and gauge appear. Images are not bundled.
+- Adds experimental Claude metadata reads for **exactly 2.1.263**, using only initialization and `get_usage` controls. Other versions stop before the metadata session starts. Only the global five-hour and weekly windows are included; partial or unsupported responses cannot report current allowance. Model-specific limits and extra usage remain outside the display.
+- Preserves known amounts when reset time is absent, without inventing a reset or a forecast for that window. Local salted HMAC account scope separates history without saving raw account metadata; missing identity prevents forecasting. Small reset-time jitter keeps same-cycle history away from reset boundaries, without changing the displayed reset time.
+- Routine checks and forecasts use no AI inference. Claude review runs through Codex only after **Yes** and consumes Codex allowance, using the existing best-available-model / maximum-supported-reasoning selection flow. Enabling a reviewed Claude proposal separately targets `CLAUDE.md`; Codex retains `AGENTS.md`.
+
+The Claude control interface is internal and experimental. Local implementation and fixture checks do not establish support for other versions, accounts, or future service behavior. Existing review safeguards and the lack of a general Usage-saving guarantee still apply.
+
+## 日本語
+
+**v0.3.0のWindows x64版とソースを公開しました。** 日本語UIの初期ベータ版です。下記には旧リリースの履歴も残しています。
+
+- Codex・Claudeの2個の通知領域アイコンと、共通タブ画面を追加します。状態は製品別に保存します。インストール済み公式拡張機能のシンボルを不透明度18%で使い、画像がなければ数字とゲージのみ表示します。画像は同梱しません。
+- Claudeの内部メタデータ取得は**2.1.263限定**です。他版では取得用起動前に停止し、全体の5時間枠・週間枠が揃わない応答も未確認扱いにします。モデル別制限・追加利用分は対象外です。
+- リセット時刻がない枠も既知の残量は表示しますが、その枠の予測はしません。ローカルsaltによるHMACで履歴の連続性を区別し、アカウント情報の原文は保存しません。識別できない場合は予測を保留します。
+- 通常監視・概算のAI推論はありません。ClaudeのAI見直しも、**はい**を選んだ場合だけCodexで行い、CodexのUsageを消費します。モデル・推論強度の選択と確認は従来と同じです。候補を別途ONにしたときの適用先はClaudeが`CLAUDE.md`、Codexが`AGENTS.md`です。
+
+内部APIの実験的な対応であり、他のバージョンやアカウント、将来のサービス変更への対応を保証しません。Usage削減を一般的に保証するものでもありません。
+
+---
+
 # v0.2.0 — spending outlook and switch repaint fix
 
 [Windows x64 download and source](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0). This remains an early beta with a Japanese interface.

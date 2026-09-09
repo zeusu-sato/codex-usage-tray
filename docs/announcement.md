@@ -1,27 +1,25 @@
-# General announcement draft
+# Codex + Claude Usage — v0.3.0
 
-This is the earlier general draft. The platform-specific text and current publication status are recorded in [promotion/README.md](promotion/README.md). LinkedIn, Reddit, and Qiita were posted on 2026-09-09; the user confirmed that X was not posted after its send error. Any accompanying screenshot uses fixture values and carries a visible **Demo / テスト用データ** label.
+Platform copy and publication evidence: [promotion/README.md](promotion/README.md).
+
+**Update: v0.3.0 adds Claude Code support.** I made **Codex Usage Tray**, an unofficial Windows tray app, to check allowance without reopening the usage menus in VS Code.
+
+It now shows Codex and Claude in two tray icons, with faint provider symbols behind readable percentages. Color gives a rough outlook from recent spending: green for margin until reset, yellow for caution, red for a likely shortage, gray while the outlook is unavailable. It reuses five-minute readings; routine monitoring and the arithmetic use no AI inference. Weekly forecasts need about an hour of history; five-hour windows need about 30 minutes.
+
+One window contains both providers' quotas, local version checks, and separate optional instruction switches. AI review starts only after **Yes** and consumes Codex allowance, even for a Claude review. Proposed instructions remain off until you enable them. No promise of quota savings.
+
+**Claude support is experimental and pinned to Claude Code 2.1.263**, using its internal metadata controls. It covers global five-hour and weekly windows only, excluding model-specific limits and extra usage. Unsupported versions pause Claude quota reads.
+
+**Windows x64 beta, Japanese UI, JST times.** Source and a Windows ZIP are available; no separate Python installation is needed. The app uses your installed clients and logins and is independent of OpenAI and Anthropic. Feedback on tray readability and the usefulness of the outlook would be welcome.
+
+[Source](https://github.com/zeusu-sato/codex-usage-tray) · [Windows ZIP](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0) · [New demo — synthetic data](https://raw.githubusercontent.com/zeusu-sato/codex-usage-tray/v0.3.0/docs/images/demo.png)
 
 ---
 
-I made **Codex Usage Tray**, an unofficial Windows tray app for keeping Codex's reported remaining allowance and reset time in view.
+**v0.3.0でClaude Code対応を追加しました。** CodexとClaudeの残量をWindowsの通知領域に並べて表示します。数字は取得した残量、色は最近のペースでリセットまで持つかの概算です。通常の監視と計算はAI推論を使いません。
 
-The number shows actual remaining quota; its color estimates whether your recent spending pace will last until reset. Green suggests margin, yellow suggests caution, and red suggests a likely shortage. This rough local calculation reuses the existing readings, adding no AI or network requests.
+共通画面で両方の残量・バージョン・任意の対策を管理できます。「はい」を押した場合だけCodexのUsageを使うAI見直しを開始し、追加指示は自分でONにするまで適用しません。
 
-Quota refreshes every 5 minutes; local version checks run every 15 minutes. Routine monitoring uses no AI inference. If you choose **Yes**, a visible Codex session can review a client change using the most capable currently available model and maximum supported reasoning effort; ambiguous selection is confirmed before inference. You can read its report before enabling any optional instructions.
+Claudeは2.1.263限定の試験対応で、全体の5時間枠・週間枠が対象です。モデル別制限や追加利用分は含まず、未確認の版では取得を停止します。Windows x64・日本語UI・JST表示のベータ版です。
 
-**v0.2.0 is an early beta: Windows x64, Japanese UI, source + ZIP, no separate Python installation.** It uses your existing Codex installation and login. It starts with no added policy and makes no promise of Usage savings.
-
-[Source](https://github.com/zeusu-sato/codex-usage-tray) · [Windows release](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0)
-
----
-
-CodexのUsage残量とリセット時刻を通知領域で確認できる、非公式Windowsアプリ **Codex Usage Tray** を作りました。
-
-数字は実残量、色は最近の消費ペースでリセットまで持つかの目安です。緑は余裕あり、黄はペース注意、赤は不足しそう。既存の取得データを使う軽い計算なので、AIも通信も増えません。
-
-残量は5分ごと、ローカルなバージョン確認は15分ごと。通常の監視ではAI推論を使いません。**はい** を選んだ場合だけ、画面に見えるCodexで、その時点の最上位モデル・最大推論強度による見直しを依頼できます。モデル選択が曖昧なら推論前に確認し、報告書を読んでから必要な追加指示を有効にできます。
-
-**v0.2.0はWindows x64・日本語UIの初期ベータ版です。ソースとZIPを公開し、Pythonの別途インストールは不要です。** 既存のCodexとログインを使います。初回は追加対策なしの通常動作で、Usage削減を保証するものではありません。
-
-[ソースコード](https://github.com/zeusu-sato/codex-usage-tray) · [Windows版](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0)
+Post text prepared with AI assistance / 告知文の作成にAIを使用しています。

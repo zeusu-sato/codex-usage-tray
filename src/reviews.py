@@ -9,7 +9,7 @@ import re
 import subprocess
 import uuid
 
-from client_registry import current_identity, fingerprint, settings
+from client_registry import current_identity, fingerprint, settings, provider_for, display_name
 from external_process import dll_search_context, environment
 from policy_manager import digest, proposal
 from storage import atomic_write, locked, read_json, write_json
@@ -83,7 +83,7 @@ def build_prompt(reference, current):
                 "summary": "根拠に基づく結論", "instructions": "不要・未検証なら空文字",
                 "sources": ["https://official.example/exact-source"],
                 "validation": ["確認した項目と結果"], "quality_preserved": True}
-    return f"""ユーザーはCodex Usage Trayで明示的にYesを選び、Usage対策の見直しを依頼しました。
+    text = f"""ユーザーはCodex Usage Trayで明示的にYesを選び、Usage対策の見直しを依頼しました。
 この作業フォルダーに調査結果と必要な対策案を実装してください。回答とレポートは日本語で。
 
 監視の基準（観測記録であり、対策が有効という証明ではない）: {json.dumps(reference, ensure_ascii=False)}
@@ -107,6 +107,10 @@ sourcesは実際に確認した一次情報のURL、validationは実際の確認
 対策が不要と確認できた場合、instructionsは空文字でよいです。終了後、このアプリが成果物の形式と環境の一致を確認します。
 アプリが見直し済みと記録することは、AIの結論の正しさを独立して保証するものではありません。
 """
+    if current.get("provider") == "claude":
+        text = text.replace("AGENTS.md", "CLAUDE.md")
+        text = "調査対象はVS Codeで使用するClaude Codeです。調査に使うCodexとは別の製品です。Claude Codeの公式資料と対象実装に基づいて判断してください。\n" + text
+    return text
 
 
 def review_command(folder, command, now, signature, decision=None):
@@ -119,7 +123,11 @@ def review_command(folder, command, now, signature, decision=None):
             return {**reply(signature, active), "ok": command == "review-status"}
         record = state["decisions"].get(signature)
         if command == "review-status":
-            return reply(signature, record)
+            result = reply(signature, record)
+            if provider_for(folder) == "claude":
+                result["title"] = "Claude Codeの対策を見直しますか？"
+                result["detail"] = "調査対象はClaude Codeです。見直しにはCodexを使い、CodexのUsageを消費します。\n" + result["detail"]
+            return result
         if command != "review-decide" or decision not in ("yes", "no"):
             raise ReviewError("Explicit yes/no decision required")
         if decision == "no":
@@ -221,10 +229,11 @@ def run_console(folder, request_path, now=None, selector=None, launch=None):
         if selector is None:
             from model_catalog import select_for_review
             selector = select_for_review
-        selected = selector(current["binary_path"])
+        reviewer = current_identity(folder.parent.parent) if provider_for(folder) == "claude" else current
+        selected = selector(reviewer["binary_path"])
         write_json(request_path.with_name("selected-model.json"), selected)
         current_change(folder, signature)
-        command = [current["binary_path"], "--no-alt-screen", "--search", "-m", selected["model"],
+        command = [reviewer["binary_path"], "--no-alt-screen", "--search", "-m", selected["model"],
                    "-c", "model_reasoning_effort=" + selected["effort"], "-c", "service_tier=default",
                    "--sandbox", "workspace-write", "-C", str(request_path.parent),
                    "Read prompt.md in this workspace and perform the user-authorized review. Write report.md and review-result.json as specified. Respond in Japanese."]

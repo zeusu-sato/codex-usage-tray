@@ -58,7 +58,7 @@ internal static class Program
                 }
                 try
                 {
-                    using (UsageToggleForm form = new UsageToggleForm(python, backend, dataDirectory, startInTray, showWindow))
+                    using (UsageTrayHost form = new UsageTrayHost(python, backend, dataDirectory, startInTray, showWindow))
                     {
                         form.Prepare();
                         Application.Run(form);
@@ -261,6 +261,9 @@ internal sealed class UsageToggleForm : Form
     private readonly string python;
     private readonly string backend;
     private readonly string dataDirectory;
+    private readonly string provider;
+    internal Action HostOpen;
+    internal Action HostExit;
     private readonly Label summary;
     private readonly Label detail;
     private readonly Label expiry;
@@ -301,6 +304,7 @@ internal sealed class UsageToggleForm : Form
     private bool clientMismatch;
     private bool clientAvailable;
     private bool clientSelectionBusy;
+    private bool clientSwitching;
     private bool clientSelectionPrompted;
     private bool acknowledgementBusy;
     private bool initialized;
@@ -327,7 +331,13 @@ internal sealed class UsageToggleForm : Form
     private const string StartupDescription = "Codex Usage Tray managed startup";
 
     public UsageToggleForm(string pythonPath, string backendPath, string stateDirectory, bool startInTray, EventWaitHandle showWindow)
+        : this(pythonPath, backendPath, stateDirectory, startInTray, showWindow, "codex") { }
+
+    public UsageToggleForm(string pythonPath, string backendPath, string stateDirectory, bool startInTray, EventWaitHandle showWindow, string selectedProvider)
     {
+        if(selectedProvider!="codex"&&selectedProvider!="claude")throw new ArgumentException("Unknown provider");
+        provider=selectedProvider;
+        if(provider=="claude")usageTooltip="Claude Code Usage: 残量を確認しています";
         python = pythonPath;
         backend = backendPath;
         dataDirectory = CanonicalPaths.DataDirectory(stateDirectory);
@@ -338,7 +348,7 @@ internal sealed class UsageToggleForm : Form
         reportOpener = OpenReportDocument;
         showRequested = !startInTray;
         showWindowEvent = showWindow;
-        Text = "Codex Usage Tray";
+        Text = provider=="claude"?"Claude Code Usage Tray":"Codex Usage Tray";
         Name = "CodexUsageTray";
         AccessibleName = Text;
         Font = new Font("Yu Gothic UI", 10.5F, FontStyle.Regular, GraphicsUnit.Point);
@@ -357,6 +367,7 @@ internal sealed class UsageToggleForm : Form
         Label header = new Label();
         header.Name = "Heading";
         header.Text = "Codex Usage";
+        if(provider=="claude")header.Text="Claude Usage";
         header.Font = new Font(Font.FontFamily, 18F, FontStyle.Bold);
         header.Location = new Point(24, 22);
         header.Size = new Size(408, 38);
@@ -364,6 +375,7 @@ internal sealed class UsageToggleForm : Form
         usageValue = new Label();
         usageValue.Name = "UsageRemaining";
         usageValue.AccessibleName = "Codexの残り使用枠";
+        if(provider=="claude")usageValue.AccessibleName="Claude Codeの残り使用枠";
         usageValue.Text = "?";
         usageValue.Font = new Font(Font.FontFamily, 34F, FontStyle.Bold);
         usageValue.Location = new Point(20, 65);
@@ -520,6 +532,7 @@ internal sealed class UsageToggleForm : Form
         reportMenu.Click += async delegate { await OpenLatestReviewAsync(); };
         trayMenu.Items.Add(reportMenu);
         clientMenu = new ToolStripMenuItem("Codexを選ぶ…");
+        if(provider=="claude")clientMenu.Text="Claude Codeを選ぶ…";
         clientMenu.Click += async delegate { await ChooseClientAsync(true); };
         trayMenu.Items.Add(clientMenu);
         startupMenu = new ToolStripMenuItem("Windowsログイン時に起動");
@@ -528,12 +541,13 @@ internal sealed class UsageToggleForm : Form
         trayMenu.Items.Add(startupMenu);
         trayMenu.Opening += delegate { RefreshStartupState(); };
         trayMenu.Items.Add(new ToolStripSeparator());
-        trayMenu.Items.Add("終了", null, delegate { exiting = true; Close(); });
+        trayMenu.Items.Add("終了", null, delegate { if(HostExit!=null){HostExit();return;} exiting = true; Close(); });
         trayIcon = new NotifyIcon();
         trayIcon.Icon = Icon;
         trayIcon.Text = usageTooltip;
         trayIcon.ContextMenuStrip = trayMenu;
         trayIcon.DoubleClick += delegate { OpenWindow(); };
+        trayIcon.MouseClick += delegate(object sender, MouseEventArgs e) { if(e.Button==MouseButtons.Left)OpenWindow(); };
         trayIcon.BalloonTipClicked += delegate { OpenWindow(); };
         trayIcon.BalloonTipShown += async delegate
         {
@@ -555,10 +569,7 @@ internal sealed class UsageToggleForm : Form
 
         Controls.AddRange(new Control[] { header, usageValue, refreshUsage, usageTitle, usageDetail, usageForecast,
             usageChecked, mitigationHeading, summary, toggle, detail, expiry, reviewButton, reportButton, reviewFeedback, monitorStatus, trayHint });
-        Activated += async delegate
-        {
-            if (initialized && !busy) await RunCommandAsync("ui-status");
-        };
+        Activated += delegate { RefreshPolicy(); };
         FormClosing += delegate(object sender, FormClosingEventArgs args)
         {
             if (args.CloseReason == CloseReason.UserClosing && !exiting)
@@ -569,6 +580,11 @@ internal sealed class UsageToggleForm : Form
             }
         };
         ResizeForText();
+    }
+
+    internal async void RefreshPolicy()
+    {
+        if (initialized && !busy && !exiting && !Disposing) await RunCommandAsync("ui-status");
     }
 
     public void Prepare()
@@ -597,6 +613,7 @@ internal sealed class UsageToggleForm : Form
     private void OpenWindow()
     {
         if (IsDisposed || exiting) return;
+        if(HostOpen!=null){HostOpen();return;}
         showRequested = true;
         ShowInTaskbar = true;
         if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
@@ -637,14 +654,14 @@ internal sealed class UsageToggleForm : Form
 
     private async Task RunCommandAsync(string command)
     {
-        if (busy || IsDisposed) return;
+        if (busy || clientSwitching || IsDisposed || exiting || Disposing) return;
         busy = true;
         toggle.Enabled = false;
         UseWaitCursor = true;
         try
         {
             BackendReply reply = await Task.Run(() => ReadUiReply(CallBackend(command)));
-            if (IsDisposed) return;
+            if (IsDisposed || exiting || Disposing) return;
             enabled = reply.Enabled;
             toggle.Checked = enabled;
             toggle.Text = enabled ? "ON" : "OFF";
@@ -663,7 +680,7 @@ internal sealed class UsageToggleForm : Form
         }
         catch (Exception error)
         {
-            if (IsDisposed) return;
+            if (IsDisposed || exiting || Disposing) return;
             toggle.Checked = false;
             toggle.Text = "未確認";
             toggle.Enabled = false;
@@ -676,13 +693,13 @@ internal sealed class UsageToggleForm : Form
         finally
         {
             busy = false;
-            if (!IsDisposed) UseWaitCursor = false;
+            if (!IsDisposed && !exiting && !Disposing) UseWaitCursor = false;
         }
     }
 
     private async Task CheckMonitorAsync()
     {
-        if (monitorBusy || IsDisposed || exiting) return;
+        if (monitorBusy || clientSwitching || IsDisposed || exiting) return;
         monitorBusy = true;
         UpdateRefreshButtons();
         try
@@ -778,8 +795,8 @@ internal sealed class UsageToggleForm : Form
     {
         if (IsDisposed || exiting) return;
         reviewButton.Visible = clientAvailable;
-        reviewButton.Enabled = clientAvailable && !reviewBusy;
-        reviewMenu.Enabled = clientAvailable && !reviewBusy;
+        reviewButton.Enabled = clientAvailable && !reviewBusy && !clientSwitching;
+        reviewMenu.Enabled = clientAvailable && !reviewBusy && !clientSwitching;
         reportButton.Visible = clientAvailable;
         reportButton.Enabled = !reportBusy;
         if (reviewPrompt != null && !reviewPrompt.IsDisposed
@@ -828,7 +845,8 @@ internal sealed class UsageToggleForm : Form
     private string ValidateReportPath(string path)
     {
         string report = CanonicalPaths.Existing(path);
-        string reviews = CanonicalPaths.Existing(Path.Combine(dataDirectory, "reviews"))
+        string state = provider=="claude"?Path.Combine(dataDirectory,"providers","claude"):dataDirectory;
+        string reviews = CanonicalPaths.Existing(Path.Combine(state, "reviews"))
             .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         if (!report.StartsWith(reviews, StringComparison.OrdinalIgnoreCase)
             || !String.Equals(Path.GetExtension(report), ".md", StringComparison.OrdinalIgnoreCase) || !File.Exists(report))
@@ -876,7 +894,7 @@ internal sealed class UsageToggleForm : Form
                 clients.Add(new ClientOption(id, label));
             }
             clientSelectionPrompted = true;
-            clientPicker = new ClientPickerForm(clients, selected, SaveClientAsync);
+            clientPicker = new ClientPickerForm(clients, selected, SaveClientAsync, provider == "claude" ? "Claude Code" : "Codex");
             clientPicker.Icon = Icon;
             clientPresenter(clientPicker);
         }
@@ -896,8 +914,18 @@ internal sealed class UsageToggleForm : Form
 
     private async Task<bool> SaveClientAsync(string clientId)
     {
+        if(clientSwitching)return false;
+        clientSwitching=true;
+        UpdateReviewControls();
+        UpdateRefreshButtons();
         try
         {
+            // Finish existing reads before switching their source. Timers cannot start new ones meanwhile.
+            while(usageBusy||monitorBusy||busy||reviewBusy)
+            {
+                if(IsDisposed||exiting)return false;
+                await Task.Delay(40);
+            }
             Dictionary<string, object> reply = await Task.Run(() => CallBackend("client-select", "--client-id", clientId));
             if (IsDisposed || exiting) return false;
             if (!RequireBoolean(reply, "ok")) throw new InvalidOperationException("Codexの選択を保存できませんでした。");
@@ -914,6 +942,7 @@ internal sealed class UsageToggleForm : Form
             usageTooltip = "Codex Usage: 選択した環境を確認中";
             UpdateUsageIcon(null);
             UpdateTrayTooltip();
+            clientSwitching=false;
             await RunCommandAsync("ui-status");
             await RefreshAllAsync();
             return true;
@@ -923,6 +952,7 @@ internal sealed class UsageToggleForm : Form
             if (clientPicker != null && !clientPicker.IsDisposed) clientPicker.ShowFailure(error.Message);
             return false;
         }
+        finally { clientSwitching=false;UpdateReviewControls();UpdateRefreshButtons(); }
     }
 
     private string StartupShortcutPath()
@@ -984,7 +1014,7 @@ internal sealed class UsageToggleForm : Form
 
     private async Task CheckReviewAsync(bool manual)
     {
-        if (reviewBusy || !clientAvailable || String.IsNullOrEmpty(currentVersionSignature) || IsDisposed || exiting) return;
+        if (reviewBusy || clientSwitching || !clientAvailable || String.IsNullOrEmpty(currentVersionSignature) || IsDisposed || exiting) return;
         if (!manual && !clientMismatch) return;
         if (reviewPrompt != null && !reviewPrompt.IsDisposed)
         {
@@ -1084,14 +1114,14 @@ internal sealed class UsageToggleForm : Form
     private void UpdateRefreshButtons()
     {
         if (IsDisposed || exiting) return;
-        bool available = !monitorBusy && !usageBusy;
+        bool available = !monitorBusy && !usageBusy && !clientSwitching;
         checkNow.Enabled = available;
         refreshUsage.Enabled = available;
     }
 
     private async Task CheckUsageAsync()
     {
-        if (usageBusy || IsDisposed || exiting) return;
+        if (usageBusy || clientSwitching || IsDisposed || exiting) return;
         usageBusy = true;
         UpdateRefreshButtons();
         try
@@ -1171,7 +1201,7 @@ internal sealed class UsageToggleForm : Form
 
     private void UpdateForecastIcon(double? remaining, string status)
     {
-        Icon next = CreateForecastIcon(remaining, status);
+        Icon next = TraySymbols.Create(remaining, ForecastColor(remaining, status), provider);
         Icon previous = usageIcon;
         usageIcon = next;
         trayIcon.Icon = next;
@@ -1245,6 +1275,7 @@ internal sealed class UsageToggleForm : Form
         int wantedHeight = trayHint.Bottom - scrollOffset + (int)(20 * scale);
         int availableHeight = Math.Max((int)(240 * scale), Screen.FromControl(this).WorkingArea.Height - (int)(80 * scale));
         AutoScrollMinSize = new Size(0, wantedHeight);
+        if(!TopLevel)return;
         // Scrollbars affect ClientSize; always derive width from the design size, never from a prior layout.
         ClientSize = new Size((int)(456 * scale), Math.Min(availableHeight, wantedHeight));
     }
@@ -1329,6 +1360,7 @@ internal sealed class UsageToggleForm : Form
         StringBuilder commandLine = new StringBuilder();
         if (script) commandLine.Append("-X utf8 ").Append(QuoteArgument(backend)).Append(' ');
         commandLine.Append("--data-dir ").Append(QuoteArgument(dataDirectory));
+        if(provider=="claude")commandLine.Append(" --provider claude");
         foreach (string argument in arguments) commandLine.Append(' ').Append(QuoteArgument(argument));
         start.Arguments = commandLine.ToString();
         start.WorkingDirectory = Path.GetDirectoryName(backend);
@@ -1653,11 +1685,11 @@ internal sealed class ClientPickerForm : Form
     private readonly Func<string, Task<bool>> save;
     private bool saving;
 
-    public ClientPickerForm(List<ClientOption> clients, string selectedId, Func<string, Task<bool>> selection)
+    public ClientPickerForm(List<ClientOption> clients, string selectedId, Func<string, Task<bool>> selection, string providerName = "Codex")
     {
         save = selection;
         Name = "CodexClientPicker";
-        Text = "Codexを選ぶ";
+        Text = providerName + "を選ぶ";
         AccessibleName = Text;
         Font = new Font("Yu Gothic UI", 10F);
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -1670,13 +1702,13 @@ internal sealed class ClientPickerForm : Form
         BackColor = Color.FromArgb(247, 249, 250);
         Label explanation = new Label();
         explanation.Text = clients.Count == 0
-            ? "対応するCodexが見つかりません。VS CodeまたはInsidersにCodex拡張機能をインストールしてから、再度選んでください。"
-            : "監視するCodexを選んでください。\n選択だけではAIは起動しません。";
+            ? "対応する" + providerName + "が見つかりません。VS CodeまたはInsidersに" + providerName + "拡張機能をインストールしてから、再度選んでください。"
+            : "監視する" + providerName + "を選んでください。\n選択だけではAIは起動しません。";
         explanation.Location = new Point(24, 20);
         explanation.Size = new Size(452, 64);
         choices = new ComboBox();
         choices.Name = "CodexClientChoices";
-        choices.AccessibleName = "監視するCodex";
+        choices.AccessibleName = "監視する" + providerName;
         choices.DropDownStyle = ComboBoxStyle.DropDownList;
         choices.Location = new Point(24, 94);
         choices.Size = new Size(452, 30);
@@ -1694,7 +1726,7 @@ internal sealed class ClientPickerForm : Form
         failure.ForeColor = Color.FromArgb(148, 47, 43);
         selectButton = new Button();
         selectButton.Name = "SelectCodexClient";
-        selectButton.Text = "このCodexを使う";
+        selectButton.Text = "これを使う";
         selectButton.Location = new Point(196, 190);
         selectButton.Size = new Size(144, 34);
         selectButton.Enabled = choices.SelectedIndex >= 0;

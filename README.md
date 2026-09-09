@@ -1,29 +1,42 @@
 # Codex Usage Tray
 
-[日本語](README.ja.md) · [Windows download](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0) · [Privacy](docs/PRIVACY.md)
+[日本語](README.ja.md) · [Windows download](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0) · [Privacy](docs/PRIVACY.md)
 
-An unofficial Windows tray app that keeps your reported Codex allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
+An unofficial Windows tray app that keeps your reported Codex and Claude Code allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
 
-**v0.2.0 is an early beta for Windows x64. The interface is currently Japanese.** This project is independent of OpenAI and is not an official Codex product.
+**v0.3.0 is an early beta for Windows x64. The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
 
 ![Demo: native app with synthetic quota data and no additional policy enabled](docs/images/demo.png)
 
-Demo screenshot using test data, not a real account. Captured from the native UI with [capture-demo.ps1](windows/capture-demo.ps1).
+Demo screenshot using test data, not real accounts. Captured from the native UI with [capture-dual-demo.ps1](windows/capture-dual-demo.ps1).
+
+## Codex + Claude
+
+**v0.3.0 adds experimental Claude Code support**, two tray icons, and a shared window. The existing Codex features remain available.
+
+- Two tray icons share one window with Codex and Claude tabs. Clicking an icon opens its tab. Each provider keeps its own client selection, quota history, review records, and instruction switch.
+- Provider symbols are read from your installed official VS Code / Insiders extensions and drawn behind the number at **18% opacity**. Symbols are not bundled; without a usable local image, the icon shows only the number and gauge.
+- Claude metadata support is experimental and restricted to **Claude Code 2.1.263**. It uses the installed CLI's internal `initialize` / `get_usage` control interface with behaviors disabled, never a prompt. Other versions stop before the metadata session starts; unsupported responses remain unknown. This is not a stable public API compatibility promise.
+- Claude's number covers only the global **five-hour and weekly** windows. Both must be supplied. Model-specific limits and extra usage are excluded, so this does not establish availability for every model. A null reset time keeps the known percentage but cannot support a forecast for that window.
+- A local random salt and HMAC-SHA256 identify account continuity without retaining raw email, organization, or account names. The salt, pseudonymous scope, and bounded quota history stay in the provider's local cache. Missing identity prevents a forecast; account changes restart history. See [Privacy](docs/PRIVACY.md).
+- Routine quota/version checks and arithmetic forecasts perform **no AI inference**. An explicitly approved Claude **AI review uses Codex**, consuming Codex allowance only after **Yes**. It follows the model selection and maximum supported reasoning rules below; ambiguous selection requires a choice before inference.
+
+Claude monitoring requires an existing Claude Code installation and login. Reviewing Claude additionally requires Codex. A separately enabled Claude proposal writes its guarded block to global `CLAUDE.md` under `%USERPROFILE%\.claude` (or `CLAUDE_CONFIG_DIR`); Codex proposals continue to use `AGENTS.md`. Neither client nor its credentials are bundled.
 
 ## Get started
 
-1. Install Codex separately and sign in through Codex. The app detects the Codex extension in VS Code / VS Code Insiders, or a `codex.exe` available on `PATH`.
-2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex itself is not bundled.
-3. If more than one supported Codex installation is available, choose the one to monitor. You can change this later with **Codexを選ぶ…**.
-4. To keep the number visible, drag its icon from the Windows **^** overflow area into the system tray. Windows controls icon visibility. [Microsoft's taskbar guidance](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows) explains this setting.
+1. Install the clients you use and sign in through them. The app detects Codex and Claude Code in VS Code / VS Code Insiders, or their native executable on `PATH`. Claude monitoring currently requires **2.1.263**. An absent client stays unknown in its own tab.
+2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex and Claude Code themselves are not bundled.
+3. If more than one installation of a provider is available, choose the one to monitor from its tray menu. The Codex and Claude selections are independent.
+4. To keep the number visible, drag each icon from the Windows **^** overflow area into the system tray. Windows controls icon visibility. [Microsoft's taskbar guidance](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows) explains this setting.
 
-Closing the window keeps the app in the tray. Double-click the icon to reopen it; choose **終了** to exit. Starting the app again opens the existing instance for the same data directory. Login startup is off initially; enable **Windowsログイン時に起動** in the tray menu if wanted. `CodexUsageTray.exe --tray` starts hidden.
+Closing the window keeps the app in the tray. Click either icon to open its corresponding tab; choose **終了** to exit. Starting the app again opens the existing instance for the same data directory. Login startup is off initially; enable **Windowsログイン時に起動** in the tray menu if wanted. `CodexUsageTray.exe --tray` starts hidden.
 
 ## Read the gauge
 
 The app checks quota at startup and every **5 minutes** while running. **更新** or **今すぐ確認** requests a refresh; closely repeated requests are throttled. It uses the installed Codex app server's documented `account/rateLimits/read` method, which supplies rate-limit metadata. These checks do not start an AI conversation or inference turn. [Official app-server documentation](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt)
 
-The main number is the smallest remaining percentage among the reported windows of the **Codex** quota bucket. The window shows each reported reset time. Separate model or reserve pools are not combined into that number.
+Each provider shows the smallest remaining percentage among its included windows. Codex uses the **Codex** quota bucket; Claude uses the global five-hour and weekly windows described above. The window shows each reported reset time. Separate model or reserve pools are not combined into that number.
 
 | Display | Meaning |
 | --- | --- |
@@ -40,11 +53,11 @@ Color estimates **whether the observed pace fits the time until reset**; the num
 
 The calculation uses only the existing five-minute readings: at most 24 hours and 289 timestamp/percentage pairs per window, in the existing local quota cache. It averages the observed decline over elapsed time, projects that rate to reset, and allows one percentage point for reporting precision in both the decline and available allowance. Green requires a 20% margin against the conservative available-allowance estimate; red requires a deficit even under the lower consumption and higher available-allowance estimates; intermediate results are yellow. With multiple windows, the least favorable outlook sets the color; green requires all windows to have a favorable estimate.
 
-At least three readings spanning about one hour are needed for weekly quotas (about 30 minutes for a five-hour quota; the minimum is 15 minutes). The first readings show a gray number and **判定待ち**. Reset changes, allowance increases, clock reversals, and client-source changes restart the relevant history. Missing reset times or stale data cannot produce a positive forecast. This is a rough average, including idle time between observations; changes in your work pattern can change the outcome. It adds no AI, polling, network requests, or continuous analysis process.
+At least three readings spanning about one hour are needed for weekly quotas (about 30 minutes for a five-hour quota; the minimum is 15 minutes). The first readings show a gray number and **判定待ち**. Reset changes, allowance increases, clock reversals, and client-source changes restart the relevant history. For Claude only, reset-time jitter of at most 120 seconds can retain history for the same account and window while both reset times remain more than two minutes away. The displayed server reset time is unchanged. Missing reset times or stale data cannot produce a positive forecast. This is a rough average, including idle time between observations; changes in your work pattern can change the outcome. It adds no AI, polling, network requests, or continuous analysis process.
 
 ## Version checks and optional AI review
 
-Every **15 minutes**, a local check compares the selected Codex installation with the saved reference. It does not call AI or search the web. The first reference is labeled **監視開始時** (“when monitoring began”): recording a version does **not** establish that it has been reviewed or needs a workaround.
+Every **15 minutes**, a local check compares each selected client installation with its saved reference. It does not call AI or search the web. The first reference is labeled **監視開始時** (“when monitoring began”): recording a version does **not** establish that it has been reviewed or needs a workaround.
 
 This detects installed client changes. A server-side model, billing, or behavior change without a local update is not detected by this version check; use the manual review action if you notice an unexplained change.
 
@@ -59,7 +72,7 @@ The review produces a report and may propose additional instructions. Choose **�
 
 ## Optional instructions are off by default
 
-The public app starts with **no additional policy** and leaves Codex's normal behavior in place. A review can conclude that no extra instructions are needed. The switch becomes available only when there is an applicable proposal.
+The public app starts with **no additional policy** for either provider and preserves their normal behavior. A review can conclude that no extra instructions are needed. The switch becomes available only when there is an applicable proposal.
 
 After reading the report, switching **追加対策** to **ON** explicitly adds an app-owned, guarded block to your global Codex `AGENTS.md` (`%USERPROFILE%\.codex\AGENTS.md`, or the location set by `CODEX_HOME`). This affects instructions for Codex across projects. Existing user text is preserved and a private backup is saved first. The guard preserves the user's model, reasoning effort, and necessary quality checks. The thumb sits on the right for ON and on the left for OFF; an unconfirmed state is labeled separately.
 
@@ -84,9 +97,10 @@ To build and run the isolated UI tests on Windows from a source checkout:
 ```powershell
 .\windows\build.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
+powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.2.0. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
+These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.3.0. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
 
 For a complete portable package, use Windows x64 with CPython 3.13.15 and the .NET Framework compiler:
 
@@ -95,4 +109,4 @@ python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.2.0-windows-x64.zip` with `SHA256SUMS.txt`. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.
+The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.3.0-windows-x64.zip` with `SHA256SUMS.txt`. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.

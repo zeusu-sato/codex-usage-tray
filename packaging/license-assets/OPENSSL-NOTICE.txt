@@ -1,0 +1,29 @@
+OpenSSL attribution added by the Codex Usage Tray distributor
+============================================================
+
+This application includes the unmodified libcrypto-3.dll supplied with
+CPython 3.13.15 for Windows x64, built from OpenSSL 3.0.21.
+
+Copyright 1998-2026 The OpenSSL Authors. All rights reserved.
+
+OpenSSL 3.0.21 uses the Apache License, Version 2.0. The complete upstream
+license is included as openssl-3.0.21-LICENSE.txt.
+
+The pinned upstream OpenSSL release has no top-level NOTICE file. This
+file is distributor attribution; it is not presented as an upstream NOTICE.
+Codex Usage Tray does not modify the bundled OpenSSL library.
+
+Upstream source:
+https://github.com/openssl/openssl/tree/51ea949dc1436e865935b47874b21a3bb31a102e
+
+CPython dependency version declaration:
+https://github.com/python/cpython/blob/4061bc4c35f7c26f25264666d4ba083b93d2f6f9/PCbuild/get_externals.bat
+
+CPython's upstream binary:
+https://github.com/python/cpython-bin-deps/blob/4c7747da0d1addd20c95c2f911f8d2e09254a3d2/amd64/libcrypto-3.dll
+
+Verified libcrypto-3.dll SHA-256:
+09499e186cf0e434ffa17ad153aa9a66d6048c54a2c03b823e2a06c49d9affe4
+
+The other source URLs and byte hashes are recorded in
+native-runtime-provenance.json next to this file.

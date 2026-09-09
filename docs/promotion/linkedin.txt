@@ -1,27 +1,31 @@
-I released Codex Usage Tray v0.2.0, an unofficial Windows app that puts your remaining Codex quota in the system tray.
+Update: Codex Usage Tray v0.3.0 now includes Claude Code.
 
-The number shows the remaining percentage reported by Codex. Its color gives a rough outlook based on your recent pace: green for some margin, yellow when the margin is small or uncertain, and red when you may run out before reset. Gray means the outlook is still gathering data or unavailable. Hover to check the percentage and reset time.
+Two Windows tray icons show Codex and Claude's reported remaining quota. Faint provider symbols sit behind readable numbers; color gives a rough outlook on whether your recent pace will last until reset. One window brings together both quotas, local version checks, and optional instruction switches.
 
-Routine quota monitoring and the local color calculation use no AI inference. There is also an optional AI review you can start by choosing “Yes”; that review uses your Codex allowance. You can read the report before enabling any proposed instructions.
+Routine monitoring and the color calculation use no AI inference. An optional AI review starts only after “Yes” and uses Codex allowance, including when reviewing Claude. Proposed instructions stay off until you enable them.
 
-This is an early beta for Windows x64, with a Japanese interface and reset times shown in JST. The source and Windows ZIP are available on GitHub. It uses your installed Codex and existing login, and no separate Python installation is needed.
+Claude support is experimental and currently limited to Claude Code 2.1.263. It covers the global five-hour and weekly windows, excluding model-specific limits and extra usage. An unverified client version pauses Claude quota reads.
 
-If you try it, I would appreciate feedback on the tray display and how useful the color outlook is during your day.
+Windows x64 beta; Japanese UI; JST time labels. Source + Windows ZIP on GitHub, with no separate Python installation. It uses your installed clients and existing logins. Independent of OpenAI and Anthropic.
+
+The attached image is the original v0.2.0 demo. The release page below has the new two-provider demo, using synthetic data.
 
 —
 
-Codexの残量をWindowsの通知領域で確認できる、非公式アプリ「Codex Usage Tray」v0.2.0を公開しました。
+追記：Codex Usage Tray v0.3.0でClaude Codeにも対応しました。
 
-数字はCodexが報告する残量の割合。色は、最近の消費ペースでリセットまで持つかを示す大まかな目安です。緑は余裕あり、黄は余裕が少ない・判断が難しい、赤はリセット前に足りなくなる可能性あり。データ不足などで見通しが未確認の場合は灰色です。アイコンにマウスを重ねると、残量とリセット時刻を確認できます。
+CodexとClaudeの残量を、Windowsの通知領域に2つ並べて表示します。数字の後ろに各サービスのシンボルを薄く置き、色で「このペースならリセットまで持ちそうか」を概算。共通画面で残量・バージョン確認・任意の対策スイッチを管理できます。
 
-通常の残量確認と色の計算にはAI推論を使いません。任意のAI見直しもあり、「はい」を選んだ場合はCodexのUsageを消費します。追加指示の提案があれば、報告書を読んでから有効にできます。
+通常監視と色の計算はAI推論なし。AI見直しは「はい」を押した場合だけで、Claudeの見直しもCodexのUsageを使います。追加指示は自分でONにするまで適用しません。
 
-Windows x64・日本語UIの初期ベータ版で、時刻表示は日本時間です。ソースコードとWindows版ZIPを公開しています。インストール済みのCodexとそのログインを使い、Pythonを別途入れる必要はありません。
+Claudeは現在2.1.263限定の試験対応です。全体の5時間枠・週間枠が対象で、モデル別制限・追加利用分は含みません。未確認の版へ更新されたら残量取得を停止します。
 
-試していただけたら、通知領域での見やすさや、色の目安が作業中に役立つかなど、感想をいただけるとうれしいです。
+Windows x64・日本語UI・JST表示のベータ版です。Pythonの別途導入は不要。既存のクライアントとログインを使います。OpenAI・Anthropicの非公式アプリです。
+
+添付画像は初回投稿時のv0.2.0デモです。新版の2サービス表示は、以下のリリースページにテスト用データの画像を掲載しています。
 
 Source / ソース:
 https://github.com/zeusu-sato/codex-usage-tray
 
-Download / ダウンロード:
-https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0
+Download + new demo / ダウンロード・新版デモ:
+https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0

@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import sys
 
-from client_registry import current_identity, fingerprint
+from client_registry import current_identity, fingerprint, provider_for, display_name
 from storage import atomic_write, exclusive_file, locked, read_json, write_json
 
 
@@ -17,6 +17,12 @@ END = "<!-- END CODEX-USAGE-TRAY-POLICY-V1 -->"
 
 def codex_home():
     return Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))).resolve()
+
+
+def instruction_path(folder):
+    if provider_for(folder) == "claude":
+        return Path(os.environ.get("CLAUDE_CONFIG_DIR", str(Path.home() / ".claude"))).resolve() / "CLAUDE.md"
+    return codex_home() / "AGENTS.md"
 
 
 def digest(data):
@@ -75,7 +81,7 @@ def runtime_status(folder):
     current = current_identity(folder)
     if active.get("fingerprint") != fingerprint(current):
         return {"active": False, "reason": "client_changed"}
-    data = (codex_home() / "AGENTS.md").read_bytes()
+    data = instruction_path(folder).read_bytes()
     span = block_span(data)
     if span is None or digest(data[span[0]:span[1]]) != active.get("owned_block_sha256"):
         return {"active": False, "reason": "instructions_changed"}
@@ -98,7 +104,7 @@ def ui_snapshot(folder):
     if enabled:
         title, detail = "追加対策は有効です", "確認した環境で、ユーザーが選んだ追加指示を使用します。"
     elif candidate is None:
-        title, detail = "追加対策は未設定です", "Codexの通常動作を使用します。必要なら「AIで見直す…」で調査できます。"
+        title, detail = "追加対策は未設定です", display_name(folder) + "の通常動作を使用します。必要なら「AIで見直す…」で調査できます。"
     elif candidate["fingerprint"] != current_fingerprint:
         title, detail = "以前の追加対策は停止しています", "環境が変わったため、旧対策は適用しません。見直しが必要です。"
     elif not candidate["instructions"].strip():
@@ -110,11 +116,15 @@ def ui_snapshot(folder):
 
 
 def owned_block(folder, instructions):
+    provider = provider_for(folder)
+    root = Path(folder).parent.parent if provider == "claude" else Path(folder)
     if getattr(sys, "frozen", False):
-        command = [str(Path(sys.executable).resolve()), "--data-dir", str(Path(folder).resolve()), "status"]
+        command = [str(Path(sys.executable).resolve()), "--data-dir", str(root.resolve()), "status"]
     else:
         command = [str(Path(sys.executable).resolve()), str(Path(__file__).with_name("backend.py").resolve()),
-                   "--data-dir", str(Path(folder).resolve()), "status"]
+                   "--data-dir", str(root.resolve()), "status"]
+    if provider == "claude":
+        command += ["--provider", "claude"]
     text = (BEGIN + "\nOptional instructions controlled by Codex Usage Tray:\n"
             "- Before applying the following instructions, once per user turn, execute this command with its literal arguments: "
             + json.dumps(command, ensure_ascii=False) + ".\n"
@@ -139,7 +149,7 @@ def ui_command(folder, command, now):
         candidate = proposal(folder) if desired else None
         if desired and not ui_snapshot(folder)["can_enable"]:
             return {**ui_snapshot(folder), "ok": False}
-        agents = codex_home() / "AGENTS.md"
+        agents = instruction_path(folder)
         if desired:
             agents.parent.mkdir(parents=True, exist_ok=True)
             try:

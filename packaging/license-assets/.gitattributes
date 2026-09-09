@@ -1,0 +1,8 @@
+* text eol=lf
+
+openssl-3.0.21-LICENSE.txt -text -whitespace !eol
+libffi-3.4.4-LICENSE.txt -text -whitespace !eol
+bzip2-1.0.8-LICENSE.txt -text -whitespace !eol
+mpdecimal-4.0.0-COPYRIGHT.txt -text -whitespace !eol
+xz-5.2.5-COPYING.txt -text -whitespace !eol
+zlib-1.3.1-LICENSE.txt -text -whitespace !eol

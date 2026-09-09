@@ -156,7 +156,7 @@ public static class PublicUiTest {
         EnumWindows(delegate(IntPtr handle, IntPtr state) {
             uint owner; GetWindowThreadProcessId(handle, out owner);
             var title = new StringBuilder(256); GetWindowText(handle, title, title.Capacity);
-            if (owner == pid && title.ToString() == "Codex Usage Tray") { found = handle; return false; }
+            if (owner == pid && title.ToString() == "Codex + Claude Usage") { found = handle; return false; }
             return true;
         }, IntPtr.Zero); return found;
     }

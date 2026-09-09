@@ -23,6 +23,8 @@ internal static class FixtureBackend
         }
         if (command == "sleep-child") { Thread.Sleep(120000); return 0; }
         if (!options.TryGetValue("--data-dir", out folder)) return 2;
+        string provider;
+        if(options.TryGetValue("--provider",out provider)&&provider=="claude")folder=Path.Combine(folder,"providers","claude");
         Directory.CreateDirectory(folder);
         config = Read("fixture.json");
         File.WriteAllText(Path.Combine(folder, "command-" + Guid.NewGuid().ToString("N") + ".txt"), command ?? "missing");
@@ -120,7 +122,9 @@ internal static class FixtureBackend
                 break;
         }
         Console.OutputEncoding = new System.Text.UTF8Encoding(false);
-        Console.WriteLine(Json.Serialize(result));
+        string serialized = Json.Serialize(result);
+        if (provider == "claude" && !command.StartsWith("review-")) serialized = serialized.Replace("Codex", "Claude Code");
+        Console.WriteLine(serialized);
         return 0;
     }
 

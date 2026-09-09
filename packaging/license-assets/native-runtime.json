@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "implementation": "CPython",
+  "python_version": "3.13.15",
+  "system": "Windows",
+  "machine": "AMD64",
+  "runtime_source_url": "https://www.python.org/ftp/python/3.13.15/python-3.13.15-embed-amd64.zip",
+  "runtime_archive_sha256": "d1f04d990aee1253d8569e8e5104e30fa9f5fa830899f14843448872d936a2cf",
+  "python_license_sha256": "62bec384df47b0328307db41455ff6ea2559e5546b394ac69148561b21703120",
+  "cpython_dependency_source_url": "https://raw.githubusercontent.com/python/cpython/4061bc4c35f7c26f25264666d4ba083b93d2f6f9/PCbuild/get_externals.bat",
+  "openssl_binary_source_url": "https://raw.githubusercontent.com/python/cpython-bin-deps/4c7747da0d1addd20c95c2f911f8d2e09254a3d2/amd64/libcrypto-3.dll",
+  "openssl_version": "3.0.21",
+  "openssl_upstream_notice": null,
+  "openssl_notice_check_url": "https://api.github.com/repos/openssl/openssl/git/trees/51ea949dc1436e865935b47874b21a3bb31a102e",
+  "openssl_notice_explanation": "The pinned upstream release has LICENSE.txt and no top-level NOTICE file. OPENSSL-NOTICE.txt is the application distributor attribution, not an upstream NOTICE.",
+  "native_files": {
+    "python313.dll": "e820bf024efd2b56bb2b82791e6b6ddc7303f070f8e72cba7637482a8a906238",
+    "vcruntime140.dll": "d1f4225df2cd877dbf130d5668a021dce3f94118455ff5ec952061c30afc9ce7",
+    "vcruntime140_1.dll": "a7146c08f89fe5b04541ab507cdb59ff7b44534d4ba3c668a426c6450a03434e",
+    "select.pyd": "024f955349fe46cf1bb2c22c6b57fcf38cf5755d46166fbf63e7e5b92433b111",
+    "unicodedata.pyd": "111e0fdfeef9887c04f6ebf1972ce1ccbec55b226012e4a288c2d4a0b17b216b",
+    "_bz2.pyd": "261545bd24f15a783fc0c82568b766a4ab569dde14507a81701cccf5293e6e54",
+    "_ctypes.pyd": "9d6dccb4cd84a44a107f9b06b91c0a44e85766d9bf4debb6abbde8fda7494c2c",
+    "_decimal.pyd": "1e6a5707163d3c103e0eb4695eefedbea4b855fb227c61cc265b168970d6c6f0",
+    "_hashlib.pyd": "79a26289aef0d92545a082507c7021f10e219621d137cb726c4d0fbbfd4b46ae",
+    "_lzma.pyd": "ee224aacf5cf9c9974a1b842aac8d89d5d9b7eeebbf4d76619ae0ce4da8ecd96",
+    "_queue.pyd": "4404c2569443ffb54e7cfffdca8ddf58c9a609175305970728ec12bc1c147b43",
+    "_socket.pyd": "ccbd0f83df3784da08147b8e8765e28c978de28b5c0eddcfba5567b59d43fef9",
+    "_uuid.pyd": "b93832742a2348d6659fd62e8a8aff061594693fc537da74c7d2d1cdf83a8475",
+    "_wmi.pyd": "db45362354fd4965329cb14bd974e60b26525045d09fb4fdfb1674a93b79d60c",
+    "libcrypto-3.dll": "09499e186cf0e434ffa17ad153aa9a66d6048c54a2c03b823e2a06c49d9affe4",
+    "libffi-8.dll": "eff52743773eb550fcc6ce3efc37c85724502233b6b002a35496d828bd7b280a"
+  },
+  "licenses": [
+    {
+      "name": "OpenSSL",
+      "version": "3.0.21",
+      "file": "openssl-3.0.21-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/openssl/openssl/51ea949dc1436e865935b47874b21a3bb31a102e/LICENSE.txt",
+      "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a",
+      "notice_file": "OPENSSL-NOTICE.txt",
+      "notice_sha256": "dc6cba4fbc7a9df232d979ea79c135f88a8ba10bfb0d16da7e2bdc7f94f4bea4"
+    },
+    {
+      "name": "libffi",
+      "version": "3.4.4",
+      "file": "libffi-3.4.4-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/73b247f34ef3ae1859b8c2c34d321d34ebc5db15/LICENSE",
+      "sha256": "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388"
+    },
+    {
+      "name": "bzip2",
+      "version": "1.0.8",
+      "file": "bzip2-1.0.8-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/05301997b2f9590f49c672cf3dfd3d3dfa7ad521/LICENSE",
+      "sha256": "c6dbbf828498be844a89eaa3b84adbab3199e342eb5cb2ed2f0d4ba7ec0f38a3"
+    },
+    {
+      "name": "mpdecimal",
+      "version": "4.0.0",
+      "file": "mpdecimal-4.0.0-COPYRIGHT.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/48316ec025c1ebe500854c332be0a12c640c7301/COPYRIGHT.txt",
+      "sha256": "2713324211652ce4a60e6e21e54f9dc3004299e591b0933a352f1a89c5fb53c2"
+    },
+    {
+      "name": "XZ liblzma",
+      "version": "5.2.5",
+      "file": "xz-5.2.5-COPYING.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/c6bc0c612605622aaef101a33a751f9de2ecc193/COPYING",
+      "sha256": "bcb02973ef6e87ea73d331b3a80df7748407f17efdb784b61b47e0e610d3bb5c"
+    },
+    {
+      "name": "zlib",
+      "version": "1.3.1",
+      "file": "zlib-1.3.1-LICENSE.txt",
+      "source_url": "https://raw.githubusercontent.com/python/cpython-source-deps/4dc98e1909830e2bdc2a9cc2236e3c5d5037335b/LICENSE",
+      "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243"
+    }
+  ],
+  "cpython_dependency_source_sha256": "7f4ef6af9e941f1d933f5cdee708cc5bd88dafc929058b1b6975575c30c35fb5"
+}

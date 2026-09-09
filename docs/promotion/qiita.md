@@ -1,19 +1,20 @@
 ---
-title: Codexの残量をWindowsのトレイに表示するアプリを作った：AIを使わず消費ペースを色で予測
+title: CodexとClaudeの残量をWindowsのトレイに：AIを使わず消費ペースを色で予測
 tags:
   - Codex
+  - ClaudeCode
   - Windows
   - Python
   - C#
 ---
 
-Codexの残量を見るために、毎回VS Codeのメニューを開くのが面倒でした。Windowsの通知領域に残量が見えていて、「このペースなら次のリセットまで持ちそうか」も分かると便利です。
+CodexやClaude Codeの残量を見るために、毎回VS Codeのメニューを開くのが面倒でした。Windowsの通知領域に残量が見えていて、「このペースなら次のリセットまで持ちそうか」も分かると便利です。
 
-そこで、**Codex Usage Tray**という非公式Windowsアプリを作りました。数字はCodexが報告する残量、色は最近の消費ペースから計算した見通しです。この記事では、通常の監視でAI推論を使わない構成と、軽量な予測処理の実装を紹介します。
+そこで、**Codex Usage Tray**という非公式Windowsアプリを作りました。**v0.3.0ではClaude Codeにも試験対応**し、2つのトレイアイコンを共通画面で管理できるようにしました。数字は各クライアントが報告する残量、色は最近の消費ペースから計算した見通しです。この記事では、通常の監視でAI推論を使わない構成と、軽量な予測処理の実装を紹介します。
 
-![Demo / テスト用データ：残量98%と緑の見通し、追加対策OFFを表示するCodex Usage Tray](https://raw.githubusercontent.com/zeusu-sato/codex-usage-tray/v0.2.0/docs/images/demo.png)
+![Demo / テスト用データ：Codexは68%・緑、Claudeは24%・黄。追加対策は両方未設定・OFF](https://raw.githubusercontent.com/zeusu-sato/codex-usage-tray/v0.3.0/docs/images/demo.png)
 
-画像はテスト用の値です。実アカウントの残量や個人の設定は含みません。以下は**v0.2.0時点**の実装です。
+画像はテスト用の値です。実アカウントの残量や個人の設定は含みません。以下は**v0.3.0時点**の実装です。OpenAI・Anthropicの公式アプリではありません。
 
 ## 残量を確認する処理と、AIを動かす処理を分ける
 
@@ -21,7 +22,7 @@ Codexの残量を見るために、毎回VS Codeのメニューを開くのが�
 
 残量取得には、インストール済みCodexのapp-serverが提供する`account/rateLimits/read`を使います。接続ごとに`initialize`の応答を待って`initialized`を送り、その後で残量を読み取ります。これらのメソッドと初期化手順は[公式app-serverドキュメント](https://learn.chatgpt.com/docs/app-server)に記載されています。
 
-このアプリの通常監視で送るメソッドは、次の3つです。
+Codexの通常監視で送るメソッドは、次の3つです。
 
 ```python
 ALLOWED_METHODS = frozenset((
@@ -31,9 +32,21 @@ ALLOWED_METHODS = frozenset((
 ))
 ```
 
-会話や推論ターンを開始するメソッドは呼びません。残量取得は起動時と5分ごとで、手動更新にも短時間の連打を抑える制限を入れています。[取得処理のソース](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.2.0/src/quota_monitor.py)
+会話や推論ターンを開始するメソッドは呼びません。残量取得は起動時と5分ごとで、手動更新にも短時間の連打を抑える制限を入れています。[取得処理のソース](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/src/quota_monitor.py)
 
 ログインは既存のCodexに任せます。このアプリが認証トークンを読み取ったり、コピーしたりする処理はありません。ただし、Codex自身は残量を取得するためにサービスへ通信する場合があります。**AI推論を使わないことと、通信しないことは別です。**
+
+## Claude Codeにも対応する：内部制御は版を限定する
+
+Claudeはインストール済みCLIの内部制御 `initialize` と `get_usage` を使います。プロンプトやユーザーメッセージは送らず、追加動作を無効にしたメタデータ取得専用のプロセスを起動し、取得後に終了します。[Claude取得アダプター](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/src/claude_adapter.py)
+
+これは安定した公開APIではないため、**現在の対象はClaude Code 2.1.263だけ**にしました。別の版では取得用の起動前に止め、応答形式が未対応の場合も残量を未確認とします。版が変わった後の残量取得には、アプリ側の対応更新が必要です。
+
+表示対象は**全体の5時間枠と週間枠**で、両方が取得できた場合に少ない残量をトレイへ出します。モデル別の制限や追加利用分は含みません。この数字だけで、すべてのモデルを使えると判断することはできません。
+
+Codex・Claudeの履歴と設定は別々に保存します。Claudeでは、取得時のアカウントメタデータからローカルsalt付きHMACを作り、アカウント切り替え前後の履歴を混ぜません。メールなどの原文はメモリー内で処理し、返却・保存しません。識別できない場合は残量だけを表示し、予測を保留します。[保存データの説明](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/docs/PRIVACY.md)
+
+2つのアイコンには、インストール済みの公式拡張機能にあるシンボルを**不透明度18%**で描き、その前面に白い数字を置きます。16pxでは数字を読み取れることを優先しました。シンボル画像が見つからなければ数字とゲージだけで表示し、元のロゴ資産は同梱しません。
 
 ## 数字は残量、色はリセットまでの見通し
 
@@ -63,9 +76,9 @@ projected_use = rate * seconds_until_reset
 
 短い履歴や残量1〜2%付近では、報告値の丸めが判定に響きます。「1%残っている」を正確な残量とみなすと、実際には足りない状況を緑にしてしまう可能性があります。
 
-そこでv0.2.0では、消費量と現在残量の両方に1ポイントの幅を持たせました。これは**このアプリで選んだ保守的な計算上の幅**で、APIの精度保証や統計的な信頼区間ではありません。
+そこでv0.3.0では、消費量と現在残量の両方に1ポイントの幅を持たせました。これは**このアプリで選んだ保守的な計算上の幅**で、APIの精度保証や統計的な信頼区間ではありません。
 
-履歴・リセット時刻・残量が有効で、残量0などの特別な状態を先に処理した後、色は次のように決めています。[実装全体](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.2.0/src/usage_forecast.py)
+履歴・リセット時刻・残量が有効で、残量0などの特別な状態を先に処理した後、色は次のように決めています。[実装全体](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/src/usage_forecast.py)
 
 ```python
 lower_use = max(0, spent - 1.0) / elapsed_seconds * seconds_until_reset
@@ -95,7 +108,7 @@ else:
 
 - 保存する履歴は直近24時間まで、各枠につき最大289件、最大3枠。
 - 保存値は時刻と残量。同じ5分区間で手動更新した場合は、最後の1点を置き換える。
-- リセット時刻や枠の条件の変更、残量の増加、時計の巻き戻り、監視対象の変更時には、該当する履歴を区切る。
+- リセットや枠の変更、残量増加、時計の巻き戻り、監視対象の変更時には履歴を区切る。Claudeで同じアカウント・枠のリセット時刻が120秒以内だけ揺れた場合は、旧新リセットがともに2分以上先にある間に限り履歴を維持する。画面には取得したリセット時刻をそのまま表示する。
 - 判定には3件以上の記録と、Weeklyでは約1時間、5時間枠では約30分の観測が必要。短い枠でも最短15分は待つ。
 
 24時間は**保存する過去の履歴の上限**です。予測する先は、その枠の次のリセット時刻までになります。
@@ -118,29 +131,29 @@ protected override void OnPaint(PaintEventArgs e)
 }
 ```
 
-実際には`ControlStyles.Opaque`などの設定と`OnPaintBackground`の処理も合わせています。[スイッチのソース](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.2.0/windows/UsageToggle.cs)
+実際には`ControlStyles.Opaque`などの設定と`OnPaintBackground`の処理も合わせています。[スイッチのソース](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/windows/UsageToggle.cs)
 
 短い説明と長い説明を交互に表示するテストを用意し、再配置後もスイッチの四隅がフォームの背景色で塗られることを確認しました。単に静止画がきれいに見えるだけでなく、状態を更新した後の描画も確認するのが大事でした。
 
 ## AIを呼ぶのは、ユーザーが見直しを依頼したとき
 
-同じ画面で、15分ごとのローカルなCodexバージョン確認も行います。これもAIを使いません。変更があったときの通知、または手動操作から、**「はい」を選んだ場合だけ**、画面に見えるCodexでAIによる見直しを開始します。この見直しはCodexのUsageを消費します。
+同じ画面で、15分ごとのローカルなCodex・Claudeのバージョン確認も行います。これもAIを使いません。変更があったときの通知、または手動操作から、**「はい」を選んだ場合だけ**、画面に見えるCodexでAIによる見直しを開始します。**Claudeの見直しにもCodexを使い、このときはCodexのUsageを消費します。**
 
-公開版は追加指示なしで起動します。見直しで追加指示が提案されても、報告書を読んでONにするまでは適用しません。ONにするとアプリ管理の条件付き指示をグローバルな`AGENTS.md`へ追加するため、プロジェクトをまたいで影響します。Codexの変更を確認した場合は旧対策を適用しない条件にし、更新後に自動で再有効化することも避けています。
+公開版は追加指示なしで起動します。見直しで追加指示が提案されても、報告書を読んでONにするまでは適用しません。ONにするとアプリ管理の条件付き指示をグローバルな指示ファイル（Codexは`AGENTS.md`、Claudeは`CLAUDE.md`）へ追加するため、プロジェクトをまたいで影響します。対象クライアントの変更を確認した場合は旧対策を適用しない条件にし、更新後に自動で再有効化することも避けています。
 
 クライアントのバージョン一致だけでは、サーバー側の挙動変更までは検知できません。特定のサブエージェント動作がUsage増加の原因だと断定したり、Usage削減を保証したりするアプリではありません。
 
 ## 試す・コードを読む
 
-Windows x64向けの初期ベータ版です。UIは日本語、時刻はJST表示です。既存のCodexとそのログインが必要です。
+Windows x64向けの初期ベータ版です。UIは日本語、時刻はJST表示です。使う製品の既存クライアントとログインが必要です。Claude監視は2.1.263限定で、AI見直しにはCodexも必要です。
 
-- [ソースコードと日本語README](https://github.com/zeusu-sato/codex-usage-tray/tree/v0.2.0)
-- [Windows版ZIP](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.2.0)
-- [保存データと削除方法](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.2.0/docs/PRIVACY.md)
+- [ソースコードと日本語README](https://github.com/zeusu-sato/codex-usage-tray/tree/v0.3.0)
+- [Windows版ZIP](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.3.0)
+- [保存データと削除方法](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/docs/PRIVACY.md)
 
 ZIPはフォルダー全体を展開し、`backend`フォルダーを隣に置いたまま`CodexUsageTray.exe`を起動します。Python実行環境を同梱しているため、利用者によるPythonの別途インストールは不要です。通知領域で常に見えるようにするには、Windowsの`^`内からアイコンをドラッグします。
 
-予測処理を読む場合は、[usage_forecast.py](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.2.0/src/usage_forecast.py)と[そのテスト](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.2.0/tests/test_usage_forecast.py)が入口です。開発用Pythonがある環境では、リポジトリのルートから次のように確認できます。テストは架空のデータを使い、実アカウントやAI推論を使いません。
+予測処理を読む場合は、[usage_forecast.py](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/src/usage_forecast.py)と[そのテスト](https://github.com/zeusu-sato/codex-usage-tray/blob/v0.3.0/tests/test_usage_forecast.py)が入口です。開発用Pythonがある環境では、リポジトリのルートから次のように確認できます。テストは架空のデータを使い、実アカウントやAI推論を使いません。
 
 ```powershell
 $env:PYTHONPATH = "src"

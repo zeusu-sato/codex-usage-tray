@@ -18,40 +18,41 @@ class ClientError(ValueError):
     pass
 
 
-def descriptor(binary, client_id, label, extension_version="standalone"):
+def descriptor(binary, client_id, label, extension_version="standalone", provider="codex"):
     binary = Path(binary).resolve(strict=True)
-    if binary.name.casefold() != "codex.exe":
+    if binary.name.casefold() != ("claude.exe" if provider == "claude" else "codex.exe"):
         raise ClientError("Unexpected executable name")
     stat = binary.stat()
     return {"client_id": client_id, "label": label, "extension_version": extension_version,
             "binary_path": str(binary), "binary_size": stat.st_size, "binary_mtime_ns": stat.st_mtime_ns}
 
 
-def discover(home=None, which=shutil.which):
+def discover(home=None, which=shutil.which, provider="codex"):
     home = Path(home or Path.home())
     found = []
     for client_id, label, name in (("vscode", "VS Code", ".vscode"), ("vscode-insiders", "VS Code Insiders", ".vscode-insiders")):
         root = (home / name / "extensions").resolve()
         try:
             entries = read_json(root / "extensions.json", [])
-            matches = [entry for entry in entries if entry.get("identifier", {}).get("id") == "openai.chatgpt"]
+            extension_id = "anthropic.claude-code" if provider == "claude" else "openai.chatgpt"
+            matches = [entry for entry in entries if entry.get("identifier", {}).get("id") == extension_id]
             if len(matches) != 1:
                 continue
             entry = matches[0]
             relative = entry.get("relativeLocation", "")
-            if not re.fullmatch(r"openai\.chatgpt-[A-Za-z0-9_.-]+", relative):
+            if not re.fullmatch(re.escape(extension_id) + r"-[A-Za-z0-9_.-]+", relative):
                 continue
             extension = (root / relative).resolve()
             if extension.parent != root:
                 continue
-            binary = extension / "bin/windows-x86_64/codex.exe"
-            found.append(descriptor(binary, client_id, label, str(entry["version"])))
+            binary = extension / ("resources/native-binary/claude.exe" if provider == "claude" else "bin/windows-x86_64/codex.exe")
+            found.append(descriptor(binary, client_id, label, str(entry["version"]), provider))
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
             continue
-    binary = which("codex.exe")
+    binary = which("claude.exe" if provider == "claude" else "codex.exe")
     if binary and all(Path(item["binary_path"]) != Path(binary).resolve() for item in found):
         try:
-            found.append(descriptor(binary, "cli-path", "Codex CLI (PATH)"))
+            found.append(descriptor(binary, "cli-path", ("Claude Code" if provider == "claude" else "Codex") + " CLI (PATH)", provider=provider))
         except (OSError, ValueError):
             pass
     return found
@@ -64,8 +65,23 @@ def settings(folder):
     return data
 
 
+def provider_for(folder):
+    value = settings(folder).get("provider", "codex")
+    if value not in ("codex", "claude"):
+        raise ClientError("Unsupported provider")
+    return value
+
+
+def clients_for(folder):
+    return discover(provider="claude") if provider_for(folder) == "claude" else discover()
+
+
+def display_name(folder):
+    return "Claude Code" if provider_for(folder) == "claude" else "Codex"
+
+
 def choose_client(folder):
-    clients = discover()
+    clients = clients_for(folder)
     selected = settings(folder).get("selected_client")
     if selected:
         matches = [client for client in clients if client["client_id"] == selected]
@@ -80,7 +96,7 @@ def choose_client(folder):
 
 
 def client_command(folder, command, client_id=None):
-    clients = discover()
+    clients = clients_for(folder)
     if command == "client-select":
         if client_id not in [client["client_id"] for client in clients]:
             raise ClientError("現在インストールされているCodexを選択してください。")
@@ -114,11 +130,11 @@ def current_identity(folder):
             process.kill()
             process.wait(timeout=1)
             raise ClientError("Codexのバージョン確認がタイムアウトしました。") from None
-        matched = re.fullmatch(r"codex-cli (\S+)\s*", output)
+        matched = re.fullmatch(r"(\d+\.\d+\.\d+) \(Claude Code\)\s*" if provider_for(folder) == "claude" else r"codex-cli (\S+)\s*", output)
         if process.returncode or not matched:
             raise ClientError("Codexのバージョンを確認できません。")
         version = matched.group(1)
-    return {**client, "cli_version": version}
+    return {**client, "cli_version": version, "provider": provider_for(folder)}
 
 
 def fingerprint(identity):

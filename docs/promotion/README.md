@@ -1,4 +1,10 @@
-# v0.2.0 promotion
+# Promotion
+
+## v0.3.0 update
+
+The platform copy and demo have been revised for Codex + Claude support. Publication updates are being verified separately; the v0.2.0 records below are historical evidence and do not establish that the revised text is already live. X remains an unpublished draft unless a new permalink is recorded.
+
+## v0.2.0 publication history
 
 Status on 2026-09-09: **LinkedIn, Reddit, and Qiita posted; the user confirmed X was not posted.** The user selected the platforms and opened the previously used publication browser. Posting accounts were verified in that browser.
 
