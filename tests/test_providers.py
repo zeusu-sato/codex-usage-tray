@@ -21,7 +21,7 @@ class ProviderTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root=Path(self.temp.name)
+        self.root=Path(self.temp.name).resolve()
         self.folder=self.root/'providers'/'claude'
         self.folder.mkdir(parents=True)
         write_json(self.folder/'settings.json',{'schema_version':1,'provider':'claude'})
