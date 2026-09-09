@@ -1,10 +1,10 @@
 # Codex Usage Tray
 
-[English](README.md) · [Windows・Mac版ダウンロード](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0) · [プライバシー](docs/PRIVACY.md)
+[English](README.md) · [Windows・Mac版ダウンロード](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1) · [プライバシー](docs/PRIVACY.md)
 
 CodexとClaude CodeのUsage残量を、Windowsの通知領域・Macのメニューバーに表示する非公式アプリです。数字とゲージで残量を確認でき、マウスを重ねると残量とリセット時刻を表示します。同じウィンドウから、各利用枠の詳細、Codexのバージョン、任意の追加対策を確認できます。
 
-**v0.4.0はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
+**v0.4.1はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
 
 ![Demo：テスト用の残量を表示した、追加対策未設定のアプリ画面](docs/images/demo.png)
 
@@ -16,7 +16,8 @@ CodexとClaude CodeのUsage残量を、Windowsの通知領域・Macのメニュ�
 
 - 通知領域に2個のアイコンを表示し、共通ウィンドウのCodex・Claudeタブを開きます。アイコンのクリックで対応するタブへ移動します。監視対象・残量履歴・見直し記録・追加対策スイッチは製品ごとに分離します。
 - シンボルは、インストール済みの公式VS Code / Insiders拡張機能から読み取り、数字の背後に**不透明度18%**で描画します。画像は同梱しません。利用できる画像がなければ数字とゲージのみ表示します。
-- Claudeの残量取得は実験的な対応で、**Claude Code 2.1.263だけ**を対象にします。インストール済みCLIの内部`initialize` / `get_usage`制御を使い、追加動作を無効にして、プロンプトを送りません。他のバージョンではメタデータ取得用の起動前に停止し、未対応の応答も未確認扱いにします。安定した公開APIへの対応を保証するものではありません。
+- Claudeの残量取得は試験対応です。版を確認できた**2.1.263以降の安定版**で、時間・出力を制限した内部`initialize` / `get_usage`制御を試し、版の上限は固定しません。プロンプトを送らず、ローカル会話履歴の分析を省略し、毎回の残量応答を検証します。非互換なら未確認にし、AIによる代替取得はしません。公式Windows版**2.1.263・2.1.266**の該当処理を静的に確認しましたが、将来版は応答で判断し、互換性を保証するものではありません。[確認根拠と限界](docs/CLAUDE_METADATA_PROTOCOL.md)をご覧ください。
+- クライアント更新時は引き続き旧追加対策を停止しますが、**版の不一致だけでは残量取得を止めません**。互換性のある残量を表示するために、AI見直しや対策の再有効化は不要です。
 - Claudeの数字は**全体の5時間枠・週間枠のみ**で、両方の取得が必要です。モデル別制限・追加利用分は含まず、すべてのモデルの利用可否を示すものではありません。リセット時刻がnullでも既知の残量は表示しますが、その枠の予測は行いません。
 - アカウントの連続性は、ローカルのランダムsaltを使ったHMAC-SHA256で区別します。メール・組織名・アカウント名の原文は保存せず、salt・仮名化した識別値・上限付き残量履歴だけを製品別キャッシュに保存します。識別できない場合は予測せず、アカウントが変われば履歴を区切ります。[プライバシー](docs/PRIVACY.md)もご覧ください。
 - 通常の残量・バージョン確認と概算では**AI推論を使いません**。Claudeの**AI見直しにもCodexを使用**し、**はい**を選んだ場合だけCodexのUsageを消費します。下記と同じ最上位モデル・最大推論強度の選択手順に従い、選択が曖昧なら推論前に確認します。
@@ -37,8 +38,8 @@ Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、*
 
 ## 使い始める
 
-1. 使用するCodex・Claude Codeを別途インストールし、それぞれでログインしてください。VS Code / VS Code Insidersの拡張機能、または`PATH`上のネイティブ実行ファイルを検出します。Claudeの残量取得は現在**2.1.263**が対象です。未導入の側は、そのタブで未確認表示になります。
-2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
+1. 使用するCodex・Claude Codeを別途インストールし、それぞれでログインしてください。VS Code / VS Code Insidersの拡張機能、または`PATH`上のネイティブ実行ファイルを検出します。Claudeは版を確認できた**2.1.263以降の安定版**と互換性のある残量応答が必要です。未導入側は未確認表示になります。このアプリのためにClaudeを旧版へ戻す必要はありません。
+2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
 3. 同じ製品の対応クライアントが複数ある場合は、監視対象を選びます。後から各トレイアイコンのメニューで変更できます。CodexとClaudeの選択は独立しています。
 4. 常に残量を表示するには、Windowsの **^** 内からアイコンを通知領域へドラッグしてください。表示位置はWindows側の設定です。[Microsoft公式の説明](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows)でもこの操作を案内しています。
 
@@ -96,7 +97,7 @@ Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、*
 
 保存先は`%LOCALAPPDATA%\CodexUsageTray`です。最小限の残量記録、対象Codexと監視基準、通知への回答、見直し結果、対策状態を保存します。AGENTSのバックアップには個人の指示内容が含まれる場合があります。これらを配布ZIPに含めません。アプリは認証情報を読み取り・コピーせず、ログインはインストール済みCodexが扱います。アプリ独自のアクセス解析はありません。Codex自身の通信・ログ・データ設定は引き続き適用されます。[プライバシーの詳細](docs/PRIVACY.md)
 
-`?`が表示されたら、選択したCodexとそのログイン状態を確認し、**今すぐ確認** を実行してウィンドウの説明を読んでください。未対応のアカウントや応答形式、Codexの未検出、接続不能などで未確認になる場合があります。このアプリからログインしたり、トークンを貼り付けたりする必要はありません。
+`?`が表示されたら、選択したCodexまたはClaudeとそのログイン状態を確認し、**今すぐ確認** または **更新** を実行してウィンドウの説明を読んでください。未対応のアカウント、非互換の応答、クライアント未検出、接続不能などで未確認になる場合があります。版変更の通知だけを理由に、残量取得のためのAI見直しは必要ありません。このアプリからログインしたり、トークンを貼り付けたりする必要もありません。
 
 削除するときは、先に有効な追加対策とログイン時起動を無効にし、**終了** を選んでから展開フォルダーを削除します。`%LOCALAPPDATA%\CodexUsageTray`は別に残るため、報告書やバックアップが不要な場合だけ削除してください。移動する場合も、実行ファイルへの参照を持つ追加対策とログイン時起動を先に無効にしてください。アプリの更新は手動です。自己更新や定期的なオンライン調査は行いません。
 
@@ -114,7 +115,7 @@ powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.4.0の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集の見直しファイルを添付しないでください。
+この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.4.1の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集の見直しファイルを添付しないでください。
 
 配布ZIP全体を作る場合は、Windows x64、CPython 3.13.15、.NET Frameworkのコンパイラーを使用します。
 

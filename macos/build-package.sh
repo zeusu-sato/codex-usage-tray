@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VERSION="${1:-0.4.0}"
+VERSION="${1:-0.4.1}"
 INSTALLER="${2:?Pass the verified python.org installer path}"
 PYTHON=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3.13
 ARCH="$(uname -m)"

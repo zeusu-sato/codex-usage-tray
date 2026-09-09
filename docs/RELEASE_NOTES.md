@@ -1,3 +1,19 @@
+# v0.4.1 — Claude metadata compatibility
+
+Compatibility fix for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1). Early beta with a Japanese UI.
+
+- Removes the exact Claude 2.1.263 quota pin. Identified stable versions 2.1.263 or newer may attempt the same bounded metadata exchange, with no fixed upper version. Every response must pass the supported schema; incompatible responses remain unknown.
+- A client update still retires old additional instructions, but a version mismatch alone does not stop quota reads. No AI review or instruction reactivation is required for compatible quota monitoring.
+- Retains the literal safe startup flags, only `initialize` and `get_usage` controls, skipped transcript analysis, output/time limits, process cleanup, and account sanitization. Unexpected behavioral analysis data is rejected. No prompts, weaker-model fallback, or AI quota-recovery path are added.
+- Drops inherited VS Code integration hints from the metadata child and retries a previously version-blocked cache once after the transport revision changes, while retaining normal refresh throttling.
+- Adds a [Mac manual checklist](../macos/MANUAL_CHECKS.ja.md). Official Windows 2.1.263 and 2.1.266 control paths were statically inspected; see [evidence and limits](CLAUDE_METADATA_PROTOCOL.md). This internal interface has no stable public API guarantee. Future responses and Mac real-account behavior still need validation.
+
+**Claude更新後も、互換性のある残量取得を続ける修正です。** 2.1.263限定を外し、2.1.263以降の安定版で取得を試します。上限の版は固定せず、毎回の応答を検証し、非互換なら未確認にします。旧対策の停止は維持しますが、それだけを理由に残量取得は止めません。AI見直しや旧対策の再有効化は不要です。
+
+通常監視は引き続き固定の制御2通だけで、プロンプトやAIによる代替取得はありません。公式Windows版2.1.263・2.1.266の静的確認に加え、Windowsの2.1.266で実際の残量取得を確認しています。将来版の互換性やMac実アカウントでの動作保証とは別です。配布物のCI検証は架空データを使い、実アカウントでのAIレビューは検証していません。
+
+---
+
 # v0.4.0 — native macOS menu-bar app
 
 [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0). Early beta; Japanese UI and JST quota labels.

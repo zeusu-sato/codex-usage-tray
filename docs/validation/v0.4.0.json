@@ -1,0 +1,85 @@
+{
+  "tag": "v0.4.0",
+  "published_at": "2026-09-09T13:13:35Z",
+  "url": "https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0",
+  "source_commit": "c4b414e0d3c50e33dd37e9284cbc615a30da6d66",
+  "assets": [
+    {
+      "name": "CodexUsageTray-0.4.0-macos-arm64.zip",
+      "sha256": "b28ead072d510b3706f298f1a91ccb0c1eb402f57c247d9d9d925062eb37bdf1",
+      "bytes": 8562473,
+      "entries": 114
+    },
+    {
+      "name": "CodexUsageTray-0.4.0-macos-x86_64.zip",
+      "sha256": "5a5ae8f9608b88c9ae89d78ae0739e958cce92c1536ce7af826ce5ec1986fb44",
+      "bytes": 9187816,
+      "entries": 114
+    },
+    {
+      "name": "CodexUsageTray-0.4.0-windows-x64.zip",
+      "sha256": "2220ebea241d703a6e7ac6b888c79c3646ae31c1f48c9815b26b7d0693b31a9a",
+      "bytes": 8788906,
+      "entries": 107
+    }
+  ],
+  "verification": "Unauthenticated public API, release page, tag, three asset SHA-256 digests and downloaded bytes, checksum file",
+  "public_metadata_rechecked_at": "2026-09-09T13:51:25.104552+00:00",
+  "ci_runs": [
+    {
+      "id": 34355255447,
+      "name": "macOS build",
+      "status": "success",
+      "source_commit": "c4b414e0d3c50e33dd37e9284cbc615a30da6d66",
+      "url": "https://github.com/zeusu-sato/codex-usage-tray/actions/runs/34355255447",
+      "scope": "Release artifact build"
+    },
+    {
+      "id": 34355259350,
+      "name": "Windows build",
+      "status": "success",
+      "source_commit": "c4b414e0d3c50e33dd37e9284cbc615a30da6d66",
+      "url": "https://github.com/zeusu-sato/codex-usage-tray/actions/runs/34355259350",
+      "scope": "Release artifact build"
+    },
+    {
+      "id": 34355646693,
+      "name": "macOS build",
+      "status": "success",
+      "source_commit": "c4b414e0d3c50e33dd37e9284cbc615a30da6d66",
+      "url": "https://github.com/zeusu-sato/codex-usage-tray/actions/runs/34355646693",
+      "scope": "Same source after main fast-forward"
+    },
+    {
+      "id": 34355646700,
+      "name": "Windows build",
+      "status": "success",
+      "source_commit": "c4b414e0d3c50e33dd37e9284cbc615a30da6d66",
+      "url": "https://github.com/zeusu-sato/codex-usage-tray/actions/runs/34355646700",
+      "scope": "Same source after main fast-forward"
+    }
+  ],
+  "automated_mac_checks": [
+    "136 backend tests on each native architecture",
+    "AppKit menu-bar, provider isolation, switch layout, modal reservation and stale callbacks",
+    "Process timeout, shutdown, instance locking and literal review launcher quoting",
+    "Frozen backend with no Python on PATH using native account-free metadata fixtures",
+    "Read-only controls, throttling, unsupported-version gate, privacy and unreviewed proposal OFF",
+    "Ad-hoc signature verification and final hashes for 49 bundled Mach-O files per architecture"
+  ],
+  "unverified_on_user_mac": [
+    "Real account quota retrieval and existing client Keychain access",
+    "Downloaded app Gatekeeper approval",
+    "Login item after an actual logout and login",
+    "Interactive AI review after fresh Yes"
+  ],
+  "not_completed": [
+    "Developer ID signing and Apple notarization"
+  ],
+  "manual_checklist": "macos/MANUAL_CHECKS.ja.md",
+  "limitations": [
+    "macOS 13 or later",
+    "Japanese UI; reset labels use JST",
+    "Claude quota compatibility is experimental and restricted to 2.1.263"
+  ]
+}

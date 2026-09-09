@@ -85,8 +85,15 @@ with tempfile.TemporaryDirectory(prefix='usage-tray-mac-') as temporary:
     persisted = '\n'.join(p.read_text() for p in data.rglob('*.json'))
     assert 'private-fixture@example.invalid' not in persisted and 'fixture-private-organization' not in persisted
     before = capture.read_bytes()
-    unsupported = call('usage-check', 'claude', folder=root/'unsupported', custom_env={**env, 'TRAY_FIXTURE_VERSION': '2.1.264'})
-    assert not unsupported['ok'] and capture.read_bytes() == before, 'Unsupported Claude started metadata'
+    for version in ('2.1.266', '2.1.999', '3.0.0'):
+        compatible = call('usage-check', 'claude', folder=root/('compatible-' + version),
+                          custom_env={**env, 'TRAY_FIXTURE_VERSION': version})
+        assert compatible['ok'] and compatible['remaining_percent'] == 73, 'Compatible update blocked quota'
+        new_messages = [json.loads(line) for line in capture.read_bytes()[len(before):].splitlines()]
+        assert [m['request']['subtype'] for m in new_messages if 'request' in m] == ['initialize', 'get_usage']
+        before = capture.read_bytes()
+    unsupported = call('usage-check', 'claude', folder=root/'unsupported', custom_env={**env, 'TRAY_FIXTURE_VERSION': '2.1.262'})
+    assert not unsupported['ok'] and capture.read_bytes() == before, 'Old Claude started metadata'
     assert not (fake_home / '.codex/AGENTS.md').exists() and not (fake_home / '.claude/CLAUDE.md').exists()
     subprocess.run([str(native), '--self-test', str(root / 'native-validation')], env=env, check=True, timeout=45)
-print('PASS: frozen backend without Python on PATH; both providers; controls only; version gate; throttle; account privacy; unreviewed policy remains OFF; signed native UI')
+print('PASS: frozen backend without Python on PATH; both providers; controls only; compatible updates; old version guard; throttle; account privacy; unreviewed policy remains OFF; signed native UI')

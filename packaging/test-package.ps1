@@ -115,11 +115,22 @@ foreach ($privateValue in @('fixture-private-account@example.invalid','Fixture P
 }
 $claudeMethods = @(Get-Content -LiteralPath $claudeCapture)
 if (($claudeMethods -join ',') -ne 'initialize,get_usage,initialize,get_usage,initialize,get_usage') { throw 'Unexpected Claude control messages' }
+foreach ($version in @('2.1.266', '2.1.999', '3.0.0')) {
+    Write-FixtureIndex $version
+    $compatible = Invoke-FixtureBackend -Command 'usage-check' -Provider 'claude' -ClaudeVersion $version
+    if (-not $compatible.ok -or $compatible.remaining_percent -ne 73) { throw 'Compatible Claude update blocked quota' }
+    $changed = Invoke-FixtureBackend -Command 'monitor-check' -Provider 'claude' -ClaudeVersion $version
+    if (-not $changed.mismatch -or $changed.baseline_label -notlike '*2.1.263*') { throw 'Quota read approved a changed client version' }
+    $updatedUi = Invoke-FixtureBackend -Command 'ui-status' -Provider 'claude' -ClaudeVersion $version
+    if ($updatedUi.enabled -or $updatedUi.can_enable) { throw 'Compatible update enabled an unreviewed policy' }
+}
+$claudeMethods = @(Get-Content -LiteralPath $claudeCapture)
+if (($claudeMethods -join ',') -ne ((@('initialize,get_usage') * 6) -join ',')) { throw 'Compatible updates used other control messages' }
 $launchCount = @(Get-Content -LiteralPath $claudeLaunches).Count
-Write-FixtureIndex '2.1.999'
-$unsupported = Invoke-FixtureBackend -Command 'usage-check' -Provider 'claude' -ClaudeVersion '2.1.999'
+Write-FixtureIndex '2.1.262'
+$unsupported = Invoke-FixtureBackend -Command 'usage-check' -Provider 'claude' -ClaudeVersion '2.1.262'
 $afterLaunches = @(Get-Content -LiteralPath $claudeLaunches)
-if ($unsupported.ok -or $null -ne $unsupported.remaining_percent -or $unsupported.detail -notlike '*停止*') { throw 'Unsupported Claude version was not explained as unavailable' }
+if ($unsupported.ok -or $null -ne $unsupported.remaining_percent -or $unsupported.detail -notlike '*古い版*') { throw 'Old Claude version was not explained as unavailable' }
 if ($afterLaunches.Count -ne $launchCount + 1 -or $afterLaunches[-1] -ne 'version' -or
     ((Get-Content -LiteralPath $claudeCapture) -join ',') -ne ($claudeMethods -join ',')) { throw 'Unsupported Claude version started a metadata process' }
 if ((Get-FileHash -LiteralPath (Join-Path $data 'quota-state.json') -Algorithm SHA256).Hash -ne $codexStateHash) { throw 'Claude checks changed Codex state' }
@@ -141,4 +152,4 @@ foreach ($entry in $provenance.bundled_native_files.PSObject.Properties) {
     $binaryPath = Join-Path $package ('backend\_internal\' + $entry.Name)
     if ((Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash -ne $entry.Value.sha256) { throw 'Packaged native binary hash differs from its provenance' }
 }
-Write-Output 'PASS: frozen package in a Unicode/spaced path, no Python on PATH, isolated Codex/Claude metadata, pseudonymous Claude history, null resets, stale suppression, unsupported-version metadata refusal, no automatic policy, and verified native license/runtime hashes. No account or AI used.'
+Write-Output 'PASS: frozen package in a Unicode/spaced path, no Python on PATH, isolated Codex/Claude metadata, pseudonymous Claude history, null resets, stale suppression, compatible updates with independent version alerts, old-version metadata refusal, no automatic policy, and verified native license/runtime hashes. No account or AI used.'

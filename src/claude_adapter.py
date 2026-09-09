@@ -1,4 +1,4 @@
-"""Bounded, experimental metadata transport for one verified Claude CLI version.
+"""Bounded, experimental Claude metadata transport with response validation.
 
 Only initialize and get_usage control requests can leave this module. No user
 message, prompt, model selection, login, or credential-file read is supported.
@@ -25,13 +25,24 @@ from external_process import dll_search_context, environment, metadata_process_o
 from quota_monitor import QuotaError, kill_children_on_exit
 
 
-SUPPORTED_VERSION = "2.1.263"
+MINIMUM_VERSION = (2, 1, 263)
 MAX_TIMEOUT_SECONDS = 16
 MAX_LINE_BYTES = 1024 * 1024
 MAX_OUTPUT_BYTES = 2 * MAX_LINE_BYTES
 MAX_MESSAGES = 2
 INITIALIZE_ID = "usage-tray-initialize"
 USAGE_ID = "usage-tray-get-usage"
+
+
+def can_probe_version(version):
+    """Accept identified releases from the first inspected protocol onward.
+
+    A newer number is not proof of compatibility: the exact control exchange
+    and quota schema must still validate on every read. There is no upper pin.
+    """
+    if not isinstance(version, str) or not re.fullmatch(r"[0-9]{1,9}\.[0-9]{1,9}\.[0-9]{1,9}", version):
+        return False
+    return tuple(int(part) for part in version.split(".")) >= MINIMUM_VERSION
 
 
 def _initialize():
@@ -112,6 +123,8 @@ def _scope_key(initialized, scope_salt=None):
 
 def _usage_fields(data, initialized, scope_salt=None):
     # Deliberately discard behavioral data, account details, and model windows.
+    if data.get("behaviors") is not None:
+        raise QuotaError("protocol")
     limits = data.get("rate_limits")
     result = {"rate_limits_available": data.get("rate_limits_available"),
               "rate_limits": ({key: {field: value[field] for field in ("utilization", "resets_at")
@@ -147,10 +160,11 @@ def _cleanup(process, stop, reader):
 def request_usage(binary, version, timeout=16, *, scope_salt=None):
     """Two metadata control requests, bounded output/time, then kill the job.
 
-    The caller must verify the installed binary's version. Unsupported versions
-    fail before process launch because this official extension API is experimental.
+    Newer client releases may use this same control-only exchange. Invalid or
+    older identities fail before launch; incompatible replies fail without a
+    prompt, fallback conversation, model change, or automatic AI review.
     """
-    if version != SUPPORTED_VERSION:
+    if not can_probe_version(version):
         raise QuotaError("unsupported_version")
     _validate_scope_salt(scope_salt)
     if (isinstance(timeout, bool) or not isinstance(timeout, (int, float))
@@ -158,7 +172,8 @@ def request_usage(binary, version, timeout=16, *, scope_salt=None):
         raise QuotaError("invalid_timeout")
     env = os.environ.copy()
     for key in list(env):
-        if key.startswith("CODEX_") or key in ("CLAUDECODE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_ENTRYPOINT"):
+        if key.startswith(("CODEX_", "VSCODE_")) or key in (
+                "CLAUDECODE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT"):
             env.pop(key, None)
     for key in ("DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "DISABLE_AUTOUPDATER"):
         env[key] = "1"

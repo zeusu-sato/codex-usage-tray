@@ -1,6 +1,6 @@
 # Privacy / プライバシー
 
-This document describes **v0.4.0**, including experimental Claude Code support. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint.
+This document describes **v0.4.1**, including experimental Claude Code support. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint.
 
 ## Routine operation
 
@@ -8,9 +8,11 @@ The app launches your installed Codex app server to read quota metadata with `ac
 
 The app does not parse, copy, or request your authentication tokens, passwords, or account credentials. It does not implement its own login or ask you to paste a token. Codex handles authentication through your existing installation. Codex's own network, logging, retention, and telemetry settings remain applicable; “no app analytics” does not mean that Codex operates offline.
 
-### Claude support in v0.4.0
+### Claude metadata
 
-The installed Claude Code **2.1.263** process handles its existing authentication and the network request for usage metadata. The adapter sends only `initialize` and `get_usage` controls with behaviors disabled; it sends no user message or prompt, reads no credential files, and does not call a separate HTTP endpoint. The internal interface is experimental: other versions are rejected before starting the metadata session. Output size, message count, and time are bounded, and the metadata process is cleaned up afterward.
+The installed Claude Code process handles its existing authentication and the network request for usage metadata. Identified stable versions **2.1.263 or newer** may attempt the metadata exchange, without an exact upper version pin. The adapter sends only `initialize` and `get_usage` controls, requesting that local transcript analysis be skipped. It sends no user message or prompt, reads no credential files, and does not call a separate HTTP endpoint. Output size, message count, and time are bounded, and the metadata process is cleaned up afterward. Each response must satisfy the supported schema; incompatible responses remain unknown and never trigger an AI fallback. The internal interface is experimental, without a stable public API guarantee.
+
+The **2.1.263 and 2.1.266 Windows binaries** were statically inspected for this control path; this does not establish compatibility with every future version or Mac account. The process uses safe mode, empty user/project setting sources, no tools, and disabled browser integration and session persistence. Inherited VS Code integration hints are removed. Claude still manages its own authentication and may apply administrator-managed settings, including managed hooks under safe mode, as described in its [CLI reference](https://code.claude.com/docs/en/cli-reference). A changed client version still stops old additional instructions; that policy decision does not itself stop compatible metadata reads.
 
 Only global five-hour and weekly quota amounts and reset times leave the adapter, with an optional pseudonymous account scope. The scope is HMAC-SHA256 of bounded account email and, when present, organization, API-provider and token-source **metadata**, using an app-generated 32-byte random salt. Raw account fields are processed only in memory and are not returned, logged, or saved. Token-source metadata describes the authentication source; it is not an authentication token. The salt is local app data, not a provider credential. Missing or invalid account identity prevents history-based forecasting.
 
@@ -20,7 +22,7 @@ The two tray icons may read symbol images from installed official VS Code / Insi
 
 The default data directory is `%LOCALAPPDATA%\CodexUsageTray`. A custom `--data-dir` keeps the same kinds of files at the chosen path.
 
-In v0.4.0, Codex retains that directory and Claude uses its `providers\claude` subdirectory. Client selection, quota cache, review records, and policy state are separate. The Claude quota cache additionally holds the random scope salt and HMAC identifier; changed scope restarts history. This is pseudonymization, not encryption or guaranteed anonymity.
+Codex retains that directory and Claude uses its `providers\claude` subdirectory. Client selection, quota cache, review records, and policy state are separate. The Claude quota cache additionally holds the random scope salt, HMAC identifier, and a local transport revision used to retry a previously blocked read after an app update; changed scope restarts history. This is pseudonymization, not encryption or guaranteed anonymity.
 
 | Data | Purpose |
 | --- | --- |
@@ -44,7 +46,7 @@ Version changes can open a confirmation, but **No, Escape, and closing that conf
 
 The review itself is an AI task. Its prompt, selected client context, and any material that the review reads can be processed by Codex under your existing account. The review may research official sources and uses your Codex allowance. It uses a `workspace-write` sandbox scoped to the review folder and retains existing approval controls. This is separate from routine quota/version polling, which performs no AI inference or recurring online research.
 
-In v0.4.0, **reviewing Claude Code also runs through Codex and consumes Codex allowance only after Yes**. The confirmation identifies that distinction. It uses the same best-available-model and maximum-supported-reasoning selection flow; uncertain selection requires a choice before inference. Monitoring Claude does not require an AI review.
+**Reviewing Claude Code also runs through Codex and consumes Codex allowance only after Yes**. The confirmation identifies that distinction. It uses the same best-available-model and maximum-supported-reasoning selection flow; uncertain selection requires a choice before inference. Monitoring Claude does not require an AI review.
 
 Reading a completed report or switching an existing proposal on/off does not itself start another AI review. Enabling a proposal is a separate explicit action after the report is available.
 
@@ -62,11 +64,13 @@ For a public bug report, prefer the app version, operating-system version, selec
 
 ## 日本語
 
-Claude Codeの試験対応を含む**v0.4.0**について説明しています。
+Claude Codeの試験対応を含む**v0.4.1**について説明しています。
 
 このアプリ独自のアクセス解析やテレメトリー送信先はありません。定期的な残量取得は、インストール済みCodexを通して公式の`account/rateLimits/read`を呼びます。AIの会話・推論ターンは開始しませんが、残量を取得するCodex自身はサービスと通信する場合があります。バージョン確認はローカル処理です。
 
-Claude対応は、インストール済み**2.1.263**の内部`initialize` / `get_usage`制御だけを使います。追加動作を無効にし、プロンプト・ユーザーメッセージは送りません。他の版では取得用起動前に停止します。認証はClaude自身が扱い、アプリは認証ファイルを読まず、独自のHTTP取得も行いません。出力・時間に上限を設け、終了時に取得用プロセスを片付けます。安定した公開APIではありません。
+Claude対応は、版を確認できた**2.1.263以降の安定版**で内部`initialize` / `get_usage`制御だけを試し、版の上限は固定しません。ローカル会話履歴の分析を省略するよう指定し、プロンプト・ユーザーメッセージは送りません。毎回の応答を検証し、非互換なら未確認表示にして、AIによる代替取得はしません。認証はClaude自身が扱い、アプリは認証ファイルを読まず、独自のHTTP取得も行いません。出力・時間に上限を設け、終了時に取得用プロセスを片付けます。安定した公開APIではありません。
+
+公式Windows版2.1.263・2.1.266の該当処理を静的に確認していますが、すべての将来版やMacの実アカウントでの動作確認ではありません。取得用プロセスはsafe modeで起動し、ユーザー・プロジェクト設定、ツール、ブラウザー連携、セッション保存を無効にして、継承したVS Code連携用の環境変数を除きます。ただしClaude自身の認証や管理者設定は適用され、safe modeでも管理者設定のhookは動作し得ます。[公式CLI仕様](https://code.claude.com/docs/en/cli-reference)に従う範囲です。クライアント更新で旧追加対策は停止しますが、その判定だけで互換性のある残量取得を止めることはありません。
 
 Claudeでは全体の5時間枠・週間枠だけを取得し、メールと任意の組織・API提供元・認証元のメタデータから、メモリー上でHMAC-SHA256の識別値を作ります。アプリが生成した32バイトのランダムsaltを使い、**アカウント情報の原文は返却・ログ出力・保存しません**。認証元の名称はトークンそのものではありません。saltも認証情報ではなく、ローカル生成データです。識別できない場合は履歴からの予測を行いません。
 
@@ -76,7 +80,7 @@ Claudeでは全体の5時間枠・週間枠だけを取得し、メールと任�
 
 `%LOCALAPPDATA%\CodexUsageTray`には、対象Codexと監視基準、最小限の残量・時刻、通知への回答、見直し依頼・報告書・根拠・候補、対策状態、操作を調整する記録を保存します。パスにWindowsユーザー名が含まれる場合があります。AGENTSのバックアップには変更前の個人の指示が丸ごと含まれるため、公開しないでください。通常のローカルファイルであり、アプリ独自の暗号化はありません。個人データや認証情報を配布ZIPに同梱しません。
 
-Claudeの状態は、その下の`providers\claude`に分けて保存します。残量キャッシュにはsalt・HMAC識別値・上限付き履歴も保存し、アカウントの変更時には履歴を区切ります。これは仮名化であり、暗号化や完全な匿名性を保証するものではありません。通知領域のシンボルはインストール済み公式拡張機能から読み、不透明度18%で表示します。画像の送信・同梱はせず、見つからなければ数字とゲージだけを表示します。
+Claudeの状態は、その下の`providers\claude`に分けて保存します。残量キャッシュにはsalt・HMAC識別値・上限付き履歴と、アプリ更新後に旧版の取得停止状態を再試行するための取得方式の版番号も保存し、アカウントの変更時には履歴を区切ります。これは仮名化であり、暗号化や完全な匿名性を保証するものではありません。通知領域のシンボルはインストール済み公式拡張機能から読み、不透明度18%で表示します。画像の送信・同梱はせず、見つからなければ数字とゲージだけを表示します。
 
 **はい** を明示的に押したときだけ、表示されるCodexコンソールでAI見直しを始めます。**いいえ・Escape・×では開始しません**。AI見直しのプロンプトや調査対象は既存のCodex設定に従って処理され、Usageを消費します。通常の監視とは異なり、見直しでは公式情報のオンライン調査を行う場合があります。報告書を開く操作や、作成済み候補の有効・無効切り替えだけで、新しいAI見直しは始まりません。
 

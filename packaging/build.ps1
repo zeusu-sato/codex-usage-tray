@@ -1,6 +1,6 @@
 param(
     [string] $Python = 'python',
-    [string] $Version = '0.4.0',
+    [string] $Version = '0.4.1',
     [string] $OutputDirectory = '',
     [switch] $SkipDependencyInstall
 )
@@ -29,7 +29,7 @@ try {
     & (Join-Path $root 'windows\build.ps1') -OutputDirectory $package
     Copy-Item -LiteralPath (Join-Path $root 'README.md'), (Join-Path $root 'README.ja.md'), (Join-Path $root 'LICENSE') -Destination $package
     [void][System.IO.Directory]::CreateDirectory((Join-Path $package 'docs'))
-    foreach ($name in @('PRIVACY.md', 'RELEASE_NOTES.md')) {
+    foreach ($name in @('PRIVACY.md', 'RELEASE_NOTES.md', 'CLAUDE_METADATA_PROTOCOL.md')) {
         Copy-Item -LiteralPath (Join-Path $root "docs\$name") -Destination (Join-Path $package 'docs')
     }
     [void][System.IO.Directory]::CreateDirectory((Join-Path $package 'docs\images'))
@@ -37,7 +37,7 @@ try {
         Copy-Item -LiteralPath (Join-Path $root "docs\images\$name") -Destination (Join-Path $package 'docs\images')
     }
     [void][System.IO.Directory]::CreateDirectory((Join-Path $package 'macos'))
-    Copy-Item -LiteralPath (Join-Path $root 'macos\README.md') -Destination (Join-Path $package 'macos')
+    Copy-Item -LiteralPath (Join-Path $root 'macos\README.md'), (Join-Path $root 'macos\MANUAL_CHECKS.ja.md') -Destination (Join-Path $package 'macos')
     & $Python (Join-Path $PSScriptRoot 'collect_notices.py') (Join-Path $package 'licenses')
     if ($LASTEXITCODE -ne 0) { throw 'Dependency notices missing' }
     $zip = Join-Path $OutputDirectory "CodexUsageTray-$Version-windows-x64.zip"

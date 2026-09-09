@@ -28,7 +28,7 @@ jobs:
           pkgutil --check-signature build/python.pkg
           sudo installer -pkg build/python.pkg -target /
       - name: Build and verify self-contained app without AI or accounts
-        run: bash macos/build-package.sh 0.4.0 build/python.pkg
+        run: bash macos/build-package.sh 0.4.1 build/python.pkg
       - name: Upload portable app and checksums
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

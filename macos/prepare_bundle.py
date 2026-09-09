@@ -21,7 +21,7 @@ for name in ['LICENSE', 'README.md', 'README.ja.md']:
     shutil.copyfile(root / name, resources / name)
 docs = resources / 'docs'
 docs.mkdir()
-for name in ['PRIVACY.md', 'RELEASE_NOTES.md']:
+for name in ['PRIVACY.md', 'RELEASE_NOTES.md', 'CLAUDE_METADATA_PROTOCOL.md']:
     shutil.copyfile(root / 'docs' / name, docs / name)
 images = docs / 'images'
 images.mkdir()
@@ -29,4 +29,5 @@ for name in ['demo.png', 'macos-demo.png']:
     shutil.copyfile(root / 'docs/images' / name, images / name)
 mac_docs = resources / 'macos'
 mac_docs.mkdir()
-shutil.copyfile(root / 'macos/README.md', mac_docs / 'README.md')
+for name in ['README.md', 'MANUAL_CHECKS.ja.md']:
+    shutil.copyfile(root / 'macos' / name, mac_docs / name)

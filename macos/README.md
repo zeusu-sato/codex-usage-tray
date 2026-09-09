@@ -1,8 +1,10 @@
 # Codex Usage Tray for macOS
 
+This guide describes **v0.4.1**, including the shared Claude metadata compatibility fix. Windows 2.1.266 quota retrieval was observed successfully; actual Mac account/Keychain access remains unverified.
+
 macOS 13 or later. Separate native builds are provided for **Apple Silicon (arm64)** and **Intel (x86_64)**. The UI is Japanese; quota reset labels use JST, matching the Windows edition.
 
-1. Download the ZIP for your Mac from the GitHub release and extract it.
+1. Download the ZIP for your Mac from the [v0.4.1 release](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1) and extract it.
 2. Move **Codex Usage Tray.app** to **Applications** before enabling login startup or additional instructions. Keep the app bundle intact; its Python backend is included.
 3. Open the app. The first launch shows the shared window; later launches use the menu bar. Click the Codex or Claude number to open that provider. Right-click either icon for refresh and quit.
 4. Install and log into your own Codex / Claude Code client. Registered VS Code and VS Code Insiders extensions and native CLI installations are detected. If there is more than one client, use **クライアントを選ぶ…**.
@@ -13,8 +15,8 @@ The beta is **ad-hoc signed, not Developer ID signed or notarized**. If macOS bl
 
 - Two menu-bar icons show reported remaining quota; faint symbols are loaded from the user's official extensions. No standalone provider logo assets are distributed. Numbers and the color outlook remain available when the local images are absent.
 - Quota reads run every five minutes; local client/version checks run every fifteen minutes. Forecasts reuse small local histories. Routine checks do not start model inference.
-- Claude Code **2.1.263 only** is currently supported experimentally. Global five-hour and weekly windows are included; model-specific limits and extra usage are excluded. Unverified Claude versions pause quota reads.
-- Additional instructions remain OFF until separately enabled. Changed client versions stop the old instructions. There is no fixed retirement date and no promise of quota savings.
+- Claude Code metadata is experimental. Identified stable versions **2.1.263 or newer** may attempt the same bounded control exchange, with no exact upper version pin. Each response is validated; an incompatible response remains unknown without a prompt or AI fallback. Global five-hour and weekly windows are included; model-specific limits and extra usage are excluded. Static inspection of Windows versions 2.1.263 and 2.1.266 does not establish Mac-account or future-version compatibility; this is not a stable public API guarantee.
+- Additional instructions remain OFF until separately enabled. Changed client versions stop the old instructions, but that mismatch does not itself stop compatible quota reads. There is no fixed retirement date and no promise of quota savings.
 - A fresh **Yes** opens Terminal and starts the existing interactive Codex review, using the best available model and maximum supported reasoning. This consumes Codex allowance, including when reviewing Claude. No/closing the prompt keeps monitoring without AI. Terminal preserves interactive model selection when the best model cannot be determined automatically.
 - **ログイン時に起動** uses macOS login-item registration. Enable it only if wanted; macOS may request confirmation in its Login Items settings. Closing the main window keeps both icons running; **終了** quits the app.
 
@@ -24,7 +26,7 @@ To remove the app, turn OFF any enabled additional instructions, disable login s
 
 ## Validation and building
 
-Both architectures are built on macOS GitHub runners. Native UI checks use synthetic data. Packaged-runtime checks compile account-free native metadata fixtures and run with no Python on PATH. They verify read-only controls, version gating, throttling, account privacy, and that unreviewed instructions cannot be enabled. Real-account Keychain access, interactive AI review, login restart, and downloaded-app Gatekeeper approval still require a user Mac; CI results do not establish those outcomes.
+Both architectures use macOS GitHub runners. Native UI checks use synthetic data. Packaged-runtime checks compile account-free native metadata fixtures and run with no Python on PATH. These checks cover read-only controls, compatibility rejection, throttling, account privacy, and that unreviewed instructions cannot be enabled. Real-account Keychain access, interactive AI review, login restart, and downloaded-app Gatekeeper approval still require a user Mac; CI results do not establish those outcomes. Use the [Japanese manual checklist](MANUAL_CHECKS.ja.md) for a user Mac.
 
 The package uses the hash-pinned Python.org CPython 3.13.15 macOS installer. `collect_notices.py` verifies its identity, dependency versions, and immutable Mach-O code sections before copying notices; it records relocated binary hashes. Run the commands in [.github/workflows/macos.yml](../.github/workflows/macos.yml) on a clean macOS build environment. The installer command is intended for disposable CI or an explicit developer setup, not app users.
 
@@ -32,7 +34,9 @@ The package uses the hash-pinned Python.org CPython 3.13.15 macOS installer. `co
 
 macOS 13以降が対象です。Apple Silicon（M1以降）は`macos-arm64`、Intel Macは`macos-x86_64`のZIPを選び、展開した**Codex Usage Tray.appをアプリケーションフォルダーへ移動**してください。Pythonの追加導入は不要です。
 
-初回は共通画面を開き、以降はメニューバーに常駐します。Codex／Claudeの数字をクリックすると、そのサービスの詳細を表示します。VS Code拡張または公式CLIを導入し、各クライアントでログインしてください。複数ある場合は「クライアントを選ぶ…」から選択します。Claudeは2.1.263限定の試験対応です。
+この手順はv0.4.1向けです。WindowsのClaude 2.1.266では残量取得の成功を確認していますが、Macの実アカウント／Keychainでの確認とは別です。
+
+初回は共通画面を開き、以降はメニューバーに常駐します。Codex／Claudeの数字をクリックすると、そのサービスの詳細を表示します。VS Code拡張または公式CLIを導入し、各クライアントでログインしてください。複数ある場合は「クライアントを選ぶ…」から選択します。Claudeは版を確認できた2.1.263以降の安定版で取得を試す方式です。版の上限は固定せず、毎回の応答を検証し、非互換なら未確認表示にします。旧対策の停止だけを理由に残量取得は止めず、AIによる代替取得もしません。旧版へ戻す必要はありません。
 
 Developer ID署名・Apple公証は未実施です。起動がブロックされた場合は、配布元とファイルを確認したうえで、システム設定の「プライバシーとセキュリティ」から、このアプリを個別に許可します。[Appleの説明](https://support.apple.com/en-gb/102445)も参照してください。
 

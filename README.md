@@ -1,10 +1,10 @@
 # Codex Usage Tray
 
-[日本語](README.ja.md) · [Windows + Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0) · [Privacy](docs/PRIVACY.md)
+[日本語](README.ja.md) · [Windows + Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1) · [Privacy](docs/PRIVACY.md)
 
 An unofficial Windows system-tray and macOS menu-bar app that keeps your reported Codex and Claude Code allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
 
-**v0.4.0 is an early beta for Windows x64 and macOS 13+ (Apple Silicon / Intel). The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
+**v0.4.1 is an early beta for Windows x64 and macOS 13+ (Apple Silicon / Intel). The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
 
 ![Demo: native app with synthetic quota data and no additional policy enabled](docs/images/demo.png)
 
@@ -16,7 +16,8 @@ Demo screenshot using test data, not real accounts. Captured from the native UI 
 
 - Two tray icons share one window with Codex and Claude tabs. Clicking an icon opens its tab. Each provider keeps its own client selection, quota history, review records, and instruction switch.
 - Provider symbols are read from your installed official VS Code / Insiders extensions and drawn behind the number at **18% opacity**. Symbols are not bundled; without a usable local image, the icon shows only the number and gauge.
-- Claude metadata support is experimental and restricted to **Claude Code 2.1.263**. It uses the installed CLI's internal `initialize` / `get_usage` control interface with behaviors disabled, never a prompt. Other versions stop before the metadata session starts; unsupported responses remain unknown. This is not a stable public API compatibility promise.
+- Claude metadata support is experimental. Identified stable versions **2.1.263 or newer** can attempt the same bounded `initialize` / `get_usage` exchange, with no exact upper version pin. The app sends no prompt and skips local transcript analysis; each response must satisfy the expected quota schema. Incompatible responses remain unknown, without an AI fallback. Official Windows binaries **2.1.263 and 2.1.266** were inspected for this control path; future compatibility is checked from responses, not guaranteed by version number. See [protocol evidence and limits](docs/CLAUDE_METADATA_PROTOCOL.md).
+- A client update still retires old additional instructions. That version mismatch **does not itself stop quota reads**, and no AI review or re-enabling of instructions is needed to display compatible quota metadata.
 - Claude's number covers only the global **five-hour and weekly** windows. Both must be supplied. Model-specific limits and extra usage are excluded, so this does not establish availability for every model. A null reset time keeps the known percentage but cannot support a forecast for that window.
 - A local random salt and HMAC-SHA256 identify account continuity without retaining raw email, organization, or account names. The salt, pseudonymous scope, and bounded quota history stay in the provider's local cache. Missing identity prevents a forecast; account changes restart history. See [Privacy](docs/PRIVACY.md).
 - Routine quota/version checks and arithmetic forecasts perform **no AI inference**. An explicitly approved Claude **AI review uses Codex**, consuming Codex allowance only after **Yes**. It follows the model selection and maximum supported reasoning rules below; ambiguous selection requires a choice before inference.
@@ -35,8 +36,8 @@ Download the `macos-arm64` ZIP for Apple Silicon or `macos-x86_64` for Intel, ex
 
 ## Get started on Windows
 
-1. Install the clients you use and sign in through them. The app detects Codex and Claude Code in VS Code / VS Code Insiders, or their native executable on `PATH`. Claude monitoring currently requires **2.1.263**. An absent client stays unknown in its own tab.
-2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.0), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex and Claude Code themselves are not bundled.
+1. Install the clients you use and sign in through them. The app detects Codex and Claude Code in VS Code / VS Code Insiders, or their native executable on `PATH`. Claude monitoring requires an identified stable version **2.1.263 or newer** and compatible metadata responses. An absent client stays unknown in its own tab; do not downgrade Claude just for this app.
+2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex and Claude Code themselves are not bundled.
 3. If more than one installation of a provider is available, choose the one to monitor from its tray menu. The Codex and Claude selections are independent.
 4. To keep the number visible, drag each icon from the Windows **^** overflow area into the system tray. Windows controls icon visibility. [Microsoft's taskbar guidance](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows) explains this setting.
 
@@ -94,7 +95,7 @@ This project makes **no general promise of lower Usage** and does not establish 
 
 State is stored under `%LOCALAPPDATA%\CodexUsageTray`: minimal quota snapshots, client preferences and references, notification decisions, review files, and policy records. AGENTS backups can contain your private instructions. These files are not included in the release ZIP. The app does not read or copy credentials; the installed Codex process handles its own login. There is no added app analytics. Codex's own networking, logging, and data settings still apply. See [Privacy](docs/PRIVACY.md).
 
-If the gauge shows `?`, check the selected Codex and its login, use **今すぐ確認**, and inspect the message in the window. An unsupported account, API response, missing client, or unavailable connection can leave the value unknown. This app does not initiate login or require you to paste a token.
+If the gauge shows `?`, check the selected Codex or Claude client and its login, use **今すぐ確認** or **更新**, and inspect the message in the window. An unsupported account, incompatible response, missing client, or unavailable connection can leave the value unknown. A version-change alert alone does not require an AI review to resume quota reads. This app does not initiate login or require you to paste a token.
 
 To remove the app, first turn off any enabled additional policy and login startup, choose **終了**, then delete the extracted application folder. Remove `%LOCALAPPDATA%\CodexUsageTray` separately only if you no longer need its reports or backups. Move an installation only after disabling startup and any active policy, because those can refer to its executable path. Updates are manual; the app does not update itself or run recurring online research.
 
@@ -110,7 +111,7 @@ powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.4.0. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
+These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.4.1. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
 
 For a complete portable package, use Windows x64 with CPython 3.13.15 and the .NET Framework compiler:
 

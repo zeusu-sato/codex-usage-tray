@@ -124,7 +124,7 @@ class ClaudeTransportTest(unittest.TestCase):
                           "read()\n" + behavior, encoding="utf-8")
         return server, capture
 
-    def run_fake(self, behavior, timeout=3, expected_error=None, scope_salt=None, **patches):
+    def run_fake(self, behavior, timeout=3, expected_error=None, scope_salt=None, version="2.1.263", **patches):
         with tempfile.TemporaryDirectory() as directory:
             server, capture = self.fake_server(directory, behavior)
             original_popen = subprocess.Popen
@@ -143,11 +143,11 @@ class ClaudeTransportTest(unittest.TestCase):
                     (patch.multiple(claude, **patches) if patches else nullcontext()):
                 if expected_error is not None:
                     with self.assertRaisesRegex(quota.QuotaError, "^" + expected_error + "$"):
-                        claude.request_usage("fixture-claude.exe", claude.SUPPORTED_VERSION,
+                        claude.request_usage("fixture-claude.exe", version,
                                              timeout=timeout, scope_salt=scope_salt)
                     result = None
                 else:
-                    result = claude.request_usage("fixture-claude.exe", claude.SUPPORTED_VERSION,
+                    result = claude.request_usage("fixture-claude.exe", version,
                                                   timeout=timeout, scope_salt=scope_salt)
             self.assertEqual(len(created), 1)
             self.assertIsNotNone(created[0].poll())
@@ -170,7 +170,9 @@ class ClaudeTransportTest(unittest.TestCase):
         behavior = ("emit(" + repr(envelope(claude.INITIALIZE_ID, init)) + ")\nread()\n"
                     "emit(" + repr(envelope(claude.USAGE_ID, data)) + ")\ntime.sleep(60)\n")
         with patch.dict(claude.os.environ, {"CODEX_THREAD_ID": "private-thread", "CODEX_OTHER": "private-value",
-                                          "CLAUDECODE": "1", "CLAUDE_CODE_SESSION_ID": "private-session"}):
+                                          "CLAUDECODE": "1", "CLAUDE_CODE_SESSION_ID": "private-session",
+                                          "CLAUDE_CODE_ENTRYPOINT": "sdk", "CLAUDE_CODE_SSE_PORT": "12345",
+                                          "VSCODE_IPC_HOOK_CLI": "private-ide", "VSCODE_PID": "123"}):
             result, sent, command, options = self.run_fake(behavior)
         self.assertEqual(sent, [claude._initialize(), claude._get_usage()])
         self.assertEqual(command, ["fixture-claude.exe", "--print", "--input-format", "stream-json",
@@ -179,9 +181,9 @@ class ClaudeTransportTest(unittest.TestCase):
                                   "--disable-slash-commands", "--tools", "", "--setting-sources="])
         for forbidden in ("--bare", "--max-budget-usd", "--model", "--system-prompt", "--resume", "--continue"):
             self.assertNotIn(forbidden, command)
-        self.assertFalse(any(key.startswith("CODEX_") for key in options["env"]))
-        self.assertNotIn("CLAUDECODE", options["env"])
-        self.assertNotIn("CLAUDE_CODE_SESSION_ID", options["env"])
+        self.assertFalse(any(key.startswith(("CODEX_", "VSCODE_")) for key in options["env"]))
+        for key in ("CLAUDECODE", "CLAUDE_CODE_SESSION_ID", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT"):
+            self.assertNotIn(key, options["env"])
         for key in ("DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "DISABLE_AUTOUPDATER"):
             self.assertEqual(options["env"][key], "1")
         self.assertEqual(options["stderr"], subprocess.DEVNULL)
@@ -209,15 +211,39 @@ class ClaudeTransportTest(unittest.TestCase):
                 claude.send_read_only(stream, message)
             self.assertEqual(stream.getvalue(), b"")
 
-    def test_version_mismatch_and_unbounded_timeouts_fail_before_launch(self):
+    def test_old_or_unidentified_version_and_unbounded_timeouts_fail_before_launch(self):
         with patch.object(claude.subprocess, "Popen") as launch:
-            for version in (None, "", "2.1.262", "2.1.264", "2.1.263-beta", "Claude Code 2.1.263"):
+            for version in (None, "", 266, [], "2.1.262", "2.0.999", "1.99.999", "2.1.263-beta",
+                            "Claude Code 2.1.263", "2.1.266\n", "2.1." + "9" * 100):
                 with self.subTest(version=version), self.assertRaisesRegex(quota.QuotaError, "^unsupported_version$"):
                     claude.request_usage("unused", version)
             for timeout in (None, False, 0, -1, float("nan"), float("inf"), 17, "1"):
                 with self.subTest(timeout=timeout), self.assertRaisesRegex(quota.QuotaError, "^invalid_timeout$"):
-                    claude.request_usage("unused", claude.SUPPORTED_VERSION, timeout=timeout)
+                    claude.request_usage("unused", "2.1.263", timeout=timeout)
             launch.assert_not_called()
+
+    def test_newer_versions_use_only_the_same_metadata_controls(self):
+        behavior = ("emit(" + repr(envelope(claude.INITIALIZE_ID)) + ")\nread()\n"
+                    "emit(" + repr(envelope(claude.USAGE_ID, usage())) + ")\n")
+        for version in ("2.1.264", "2.1.266", "2.1.999", "2.2.0", "3.0.0"):
+            with self.subTest(version=version):
+                result, sent, _, _ = self.run_fake(behavior, version=version)
+                self.assertEqual(sent, [claude._initialize(), claude._get_usage()])
+                self.assertEqual(claude.normalize(result)["windows"][1]["remaining_percent"], 91)
+
+    def test_new_version_cannot_bypass_response_or_skip_behaviors_contract(self):
+        for response in (envelope("new-protocol-id"), {"type": "result"}):
+            with self.subTest(response=response):
+                _, sent, _, _ = self.run_fake("emit(" + repr(response) + ")\ntime.sleep(60)\n",
+                                              version="3.0.0", expected_error="protocol")
+                self.assertEqual(sent, [claude._initialize()])
+        for behaviors in ({}, [], "private", False):
+            data = dict(usage(), behaviors=behaviors)
+            behavior = ("emit(" + repr(envelope(claude.INITIALIZE_ID)) + ")\nread()\n"
+                        "emit(" + repr(envelope(claude.USAGE_ID, data)) + ")\n")
+            with self.subTest(behaviors=behaviors):
+                _, sent, _, _ = self.run_fake(behavior, version="2.1.266", expected_error="protocol")
+                self.assertEqual(sent, [claude._initialize(), claude._get_usage()])
 
     def test_failed_initialize_cannot_send_usage_or_expose_error_text(self):
         bad = envelope(claude.INITIALIZE_ID, subtype="error")
@@ -315,7 +341,7 @@ class ClaudeTransportTest(unittest.TestCase):
         with patch.object(claude.subprocess, "Popen") as launch:
             for salt in (True, "a" * 32, b"", b"a" * 31, bytearray(32), [], 32):
                 with self.subTest(salt=salt), self.assertRaisesRegex(quota.QuotaError, "^invalid_scope_salt$"):
-                    claude.request_usage("unused", claude.SUPPORTED_VERSION, scope_salt=salt)
+                    claude.request_usage("unused", "2.1.263", scope_salt=salt)
             launch.assert_not_called()
 
     def test_salted_transport_returns_no_raw_email_organization_name_or_salt(self):

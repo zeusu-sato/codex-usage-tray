@@ -14,6 +14,7 @@ import client_registry
 import policy_manager
 import reviews
 import usage_forecast
+import version_monitor
 from storage import write_json
 
 
@@ -127,12 +128,59 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual(reply['remaining_percent'],80)
         self.assertNotEqual(reply['forecast']['status'],'comfortable')
 
-    def test_new_version_never_polls_and_explains(self):
-        self.identity['cli_version']='2.1.999'
+    def test_old_version_never_polls_and_explains(self):
+        self.identity['cli_version']='2.1.262'
         with patch.object(client_registry,'current_identity',return_value=self.identity),patch('claude_adapter.subprocess.Popen',side_effect=AssertionError('Must not start unsupported binary')):
             reply=claude_quota.quota_command(self.folder,self.now)
         self.assertIsNone(reply['remaining_percent'])
-        self.assertIn('停止',reply['detail'])
+        self.assertIn('古い版',reply['detail'])
+
+    def test_compatible_update_keeps_quota_independent_of_unreviewed_version_alert(self):
+        reference=copy.deepcopy(self.identity)
+        write_json(self.folder/'settings.json',{'schema_version':1,'provider':'claude',
+                   'reference':reference,'reference_kind':'reviewed'})
+        active={'enabled':True,'launcher':policy_manager.launcher_identity(),
+                'fingerprint':client_registry.fingerprint(reference)}
+        write_json(self.folder/'active-policy.json',active)
+        self.identity.update(cli_version='2.1.266',extension_version='2.1.266',binary_mtime_ns=2)
+        with patch.object(version_monitor,'current_identity',return_value=self.identity):
+            monitor=version_monitor.monitor_command(self.folder,'monitor-check',self.now)
+        self.assertTrue(monitor['mismatch'])
+        self.assertTrue(monitor['alert'])
+        self.assertEqual(self.read()['remaining_percent'],80)
+        data=json.loads((self.folder/'settings.json').read_text())
+        self.assertEqual(data['reference'],reference)
+        self.assertEqual(data['reference_kind'],'reviewed')
+        with patch.object(policy_manager,'current_identity',return_value=self.identity):
+            self.assertEqual(policy_manager.runtime_status(self.folder),{'active':False,'reason':'client_changed'})
+        self.assertEqual(json.loads((self.folder/'active-policy.json').read_text()),active)
+
+    def test_app_update_retries_old_version_error_once_then_throttles(self):
+        self.identity['cli_version']='2.1.266'
+        write_json(self.folder/'quota-state.json',{'schema_version':1,
+                   'source':client_registry.fingerprint(self.identity),
+                   'attempted_at':self.now.isoformat(),'last_ok':False,'error':'unsupported_version'})
+        with patch.object(client_registry,'current_identity',return_value=self.identity), \
+                patch.object(claude_quota.claude_adapter,'request_usage',return_value=self.payload) as read:
+            first=claude_quota.quota_command(self.folder,self.now)
+            second=claude_quota.quota_command(self.folder,self.now+timedelta(seconds=1))
+        self.assertEqual(first['remaining_percent'],80)
+        self.assertEqual(second['remaining_percent'],80)
+        read.assert_called_once()
+        cache=json.loads((self.folder/'quota-state.json').read_text())
+        self.assertNotIn('error',cache)
+        self.assertEqual(cache['transport_revision'],claude_quota.TRANSPORT_REVISION)
+
+    def test_incompatible_reply_remains_unknown_without_raw_output_or_positive_forecast(self):
+        self.read()
+        malformed=copy.deepcopy(self.payload)
+        malformed['rate_limits']['seven_day']['resets_at']='private-invalid-timestamp'
+        reply=self.read(malformed,self.now+timedelta(minutes=5))
+        self.assertIsNone(reply['remaining_percent'])
+        self.assertIn('対応形式と一致しません',reply['detail'])
+        self.assertEqual(reply['forecast']['status'],'unavailable')
+        self.assertNotIn('private-invalid',json.dumps(reply))
+        self.assertNotIn('private-invalid',(self.folder/'quota-state.json').read_text())
 
     def test_claude_guard_targets_own_folder_and_file(self):
         with patch.dict('os.environ',{'CLAUDE_CONFIG_DIR':str(self.root/'claude-config')}):

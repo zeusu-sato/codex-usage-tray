@@ -12,6 +12,7 @@ from storage import read_json, write_json
 
 
 RESET_JITTER_SECONDS = 120
+TRANSPORT_REVISION = 2
 
 
 def align_reset_history(history, windows, timestamp):
@@ -44,7 +45,9 @@ def response(cache, now):
         result[key] = result[key].replace("Codex", "Claude Code")
     result["detail"] += "\n対象: 全体の5時間枠・週間枠。モデル別の制限や追加利用分は含みません。"
     if cache.get("error") == "unsupported_version":
-        result["detail"] = "Claude Codeが更新されました。このバージョンの取得方式は未確認のため、残量取得を停止しています。\nアプリの対応更新が必要です。\n" + result["detail"]
+        result["detail"] = "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。\n選択したクライアントをご確認ください。\n" + result["detail"]
+    elif cache.get("error") == "incompatible_protocol":
+        result["detail"] = "Claude Codeの残量取得への応答が対応形式と一致しません。\n続く場合はアプリの対応更新が必要です。\n" + result["detail"]
     if cache.get("last_ok") and not cache.get("account_scope"):
         result["forecast"] = usage_forecast.pending("unavailable", "アカウントの連続性を確認できないため、残量だけを表示します。")
     return result
@@ -62,13 +65,14 @@ def quota_command(folder, now):
                 if existing.get("schema_version") == 1 and existing.get("source") == source:
                     quota.reply(existing, now)
                     cache = existing
-                attempted = datetime.fromisoformat(cache["attempted_at"]) if cache.get("attempted_at") else None
+                attempted = (datetime.fromisoformat(cache["attempted_at"])
+                             if cache.get("attempted_at") and cache.get("transport_revision") == TRANSPORT_REVISION else None)
             except (OSError,ValueError,TypeError,KeyError,AttributeError,OverflowError,quota.QuotaError):
                 cache = {"schema_version":1}
                 attempted = None
             if attempted and attempted.tzinfo and 0 <= (now-attempted).total_seconds() < quota.MIN_REFRESH_SECONDS:
                 return response(cache, now)
-            cache.update(source=source, attempted_at=now.isoformat(), last_ok=False)
+            cache.update(source=source, attempted_at=now.isoformat(), last_ok=False, transport_revision=TRANSPORT_REVISION)
             salt = cache.get("scope_salt")
             try:
                 if not isinstance(salt,str) or len(bytes.fromhex(salt)) != 32:
@@ -94,6 +98,9 @@ def quota_command(folder, now):
                 quota.QuotaError, subprocess.SubprocessError) as error:
             # Never persist raw process/server output or account identifiers.
             cache.update(attempted_at=now.isoformat(), last_ok=False)
-            cache["error"] = "unsupported_version" if isinstance(error, quota.QuotaError) and str(error) == "unsupported_version" else "unavailable"
+            code = str(error) if isinstance(error, quota.QuotaError) else "unavailable"
+            cache["error"] = ("unsupported_version" if code == "unsupported_version" else
+                              "incompatible_protocol" if code in ("protocol", "unsupported_response", "incomplete_windows") else
+                              "unavailable")
         write_json(folder / "quota-state.json", cache)
         return response(cache, now)
