@@ -86,6 +86,21 @@ public static class PublicUiTest {
         }));
     }
     public static void Select(ComboBox box, int index) { box.Invoke(new Action(delegate { box.SelectedIndex = index; })); }
+    public static bool Space(CheckBox box) {
+        return (bool)box.Invoke(new Func<bool>(delegate {
+            box.Focus();
+            typeof(Control).GetMethod("OnKeyDown", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(box, new object[] { new KeyEventArgs(Keys.Space) });
+            typeof(Control).GetMethod("OnKeyUp", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(box, new object[] { new KeyEventArgs(Keys.Space) });
+            return box.Checked;
+        }));
+    }
+    public static void CaptureControl(Control control, string path) {
+        control.Invoke(new Action(delegate {
+            using (Bitmap bitmap = new Bitmap(control.Width, control.Height)) {
+                control.DrawToBitmap(bitmap, new Rectangle(0, 0, control.Width, control.Height)); bitmap.Save(path);
+            }
+        }));
+    }
     public static void UnownedShortcut(string assembly, string path, string target) {
         Assembly.LoadFile(assembly).GetType("StartupShortcuts", true).GetMethod("Save")
             .Invoke(null, new object[] { path, target, "", Path.GetDirectoryName(target), "Unrelated shortcut" });
@@ -189,6 +204,30 @@ try {
     Refresh-Quota $window
     [PublicUiTest]::Screenshot($window, (Join-Path $testRoot 'public-first-run.png'))
     Write-Output 'PASS: packaged EXE backend, Unicode/space data path, unconfigured policy, manual review, quota states, and timers.'
+
+    Write-Fixture $data @{ remaining = 98; configured = $true }
+    Wait-Task ([PublicUiTest]::Call($window, 'RunCommandAsync', @('ui-status')))
+    Wait-Idle $window
+    $switch = $window.Controls['UsageToggle']
+    if ($switch.GetType().Name -ne 'ToggleSwitch' -or $switch.AutoCheck -or $switch.AccessibilityObject.Role -ne [System.Windows.Forms.AccessibleRole]::CheckButton) { throw 'Toggle bar lost its confirmed-state checkbox semantics' }
+    [PublicUiTest]::CaptureControl($switch, (Join-Path $testRoot 'switch-off.png'))
+    if ([PublicUiTest]::Space($switch)) { throw 'Space visually committed ON before the backend reply' }
+    Wait-Idle $window
+    if (-not $switch.Checked -or $switch.Text -ne 'ON') { throw 'Space did not activate the confirmed toggle state' }
+    [PublicUiTest]::CaptureControl($switch, (Join-Path $testRoot 'switch-on.png'))
+    if (-not [PublicUiTest]::Space($switch)) { throw 'Space visually committed OFF before the backend reply' }
+    Wait-Idle $window
+    if ($switch.Checked -or $switch.Text -ne 'OFF') { throw 'Space did not deactivate the confirmed toggle state' }
+    $switchCommands = @(Get-ChildItem -LiteralPath $data -Filter 'command-*.txt' | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw })
+    if (@($switchCommands | Where-Object { $_ -eq 'ui-enable' }).Count -ne 1 -or @($switchCommands | Where-Object { $_ -eq 'ui-disable' }).Count -ne 1) { throw 'A keyboard toggle sent duplicate backend commands' }
+    [PublicUiTest]::SetField($window, 'backend', (Join-Path $testRoot 'missing-fixture.exe'))
+    Wait-Task ([PublicUiTest]::Call($window, 'RunCommandAsync', @('ui-status')))
+    if ($switch.Enabled -or $switch.Text -ne '未確認') { throw 'An unknown state looked like confirmed OFF' }
+    [PublicUiTest]::CaptureControl($switch, (Join-Path $testRoot 'switch-unknown.png'))
+    [PublicUiTest]::SetField($window, 'backend', $fixtureBackend)
+    Write-Fixture $data @{ remaining = 98 }
+    Wait-Task ([PublicUiTest]::Call($window, 'RunCommandAsync', @('ui-status')))
+    Write-Output 'PASS: rounded checkbox switch supports Space exactly once, exposes ON/OFF, and preserves unknown and pending states.'
 
     Wait-Task ([PublicUiTest]::Call($window, 'CheckReviewAsync', @($true)))
     $prompt = [PublicUiTest]::Field($window, 'reviewPrompt')

@@ -54,9 +54,9 @@ The review produces a report and may propose additional instructions. Choose **�
 
 The public app starts with **no additional policy** and leaves Codex's normal behavior in place. A review can conclude that no extra instructions are needed. The switch becomes available only when there is an applicable proposal.
 
-After reading the report, switching **追加対策** to **有効** explicitly adds an app-owned, guarded block to your global Codex `AGENTS.md` (`%USERPROFILE%\.codex\AGENTS.md`, or the location set by `CODEX_HOME`). This affects instructions for Codex across projects. Existing user text is preserved and a private backup is saved first. The guard preserves the user's model, reasoning effort, and necessary quality checks.
+After reading the report, switching **追加対策** to **ON** explicitly adds an app-owned, guarded block to your global Codex `AGENTS.md` (`%USERPROFILE%\.codex\AGENTS.md`, or the location set by `CODEX_HOME`). This affects instructions for Codex across projects. Existing user text is preserved and a private backup is saved first. The guard preserves the user's model, reasoning effort, and necessary quality checks. The thumb sits on the right for ON and on the left for OFF; an unconfirmed state is labeled separately.
 
-Switching to **無効** disables the policy and removes only the app's unchanged owned block. If that block was manually edited, the app protects it instead of overwriting it. A changed or unverifiable client, a disabled switch, or a missing/failed guard stops the old policy from applying, including copies in existing conversations. There is no fixed calendar expiry and no automatic reactivation after a client update.
+Switching to **OFF** disables the policy and removes only the app's unchanged owned block. If that block was manually edited, the app protects it instead of overwriting it. A changed or unverifiable client, a disabled switch, or a missing/failed guard stops the old policy from applying, including copies in existing conversations. There is no fixed calendar expiry and no automatic reactivation after a client update.
 
 This project makes **no general promise of lower Usage** and does not establish a particular subagent behavior as the cause of excess usage. A proposed instruction is specific to the evidence and environment reviewed.
 
