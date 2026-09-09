@@ -49,6 +49,13 @@ class ForecastTests(unittest.TestCase):
     def test_rounding_step_does_not_create_confident_red(self):
         self.assertEqual(predict([100, 100, 99], hours=1)['status'], 'tight')
 
+    def test_rounding_also_bounds_the_remaining_allowance(self):
+        # Reported 2 -> 1 could represent 2.49 -> 0.51: the actual 20-minute
+        # projection can exceed the true available allowance despite reporting 1%.
+        self.assertEqual(predict([2, 2, 1], hours=1, reset=T+1200)['status'], 'tight')
+        # Conversely, 2.1 points of projected use need not exhaust a rounded 2%.
+        self.assertEqual(predict([6, 4, 2], hours=1, reset=T+2520)['status'], 'tight')
+
     def test_zero_does_not_need_observation_history(self):
         result = trend.forecast(None, [window(0)], T, quota.label)
         self.assertEqual(result['status'], 'at_risk')

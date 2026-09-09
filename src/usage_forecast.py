@@ -93,9 +93,11 @@ def assess_one(window, samples, now, name):
     # A one-point reporting step must not turn a flat/short history into false certainty.
     lower_use = max(0, spent - ROUNDING_POINTS) / elapsed * time_left
     upper_use = (spent + ROUNDING_POINTS) / elapsed * time_left
-    if lower_use > remaining:
+    lower_available = max(0, remaining - ROUNDING_POINTS)
+    upper_available = min(100, remaining + ROUNDING_POINTS)
+    if lower_use > upper_available:
         status, title = "at_risk", "リセット前に不足しそう"
-    elif upper_use <= remaining * (1 - HEADROOM_FRACTION):
+    elif upper_use <= lower_available * (1 - HEADROOM_FRACTION):
         status, title = "comfortable", "このペースなら余裕あり"
     else:
         status, title = "tight", "リセットまでのペースに注意"
