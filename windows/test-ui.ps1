@@ -86,6 +86,10 @@ public static class PublicUiTest {
         }));
     }
     public static void Select(ComboBox box, int index) { box.Invoke(new Action(delegate { box.SelectedIndex = index; })); }
+    public static void UnownedShortcut(string assembly, string path, string target) {
+        Assembly.LoadFile(assembly).GetType("StartupShortcuts", true).GetMethod("Save")
+            .Invoke(null, new object[] { path, target, "", Path.GetDirectoryName(target), "Unrelated shortcut" });
+    }
     public static void Dispose(Form form) { if (!form.IsDisposed) form.Invoke(new Action(form.Dispose)); }
     public static void Close(Form form) { form.Invoke(new Action(form.Close)); }
     public static void Escape(Form form) {
@@ -156,7 +160,10 @@ function Assert-Ended([int] $processId) {
 }
 
 $window = $null
+$aliasWindow = $null
 $native = $null
+$second = $null
+$third = $null
 try {
     $data = Join-Path $testRoot 'profile with spaces 日本語'
     Write-Fixture $data @{ remaining = 98 }
@@ -218,7 +225,29 @@ try {
     Write-Fixture $data @{ remaining = 98 }
     Write-Output 'PASS: review-result opening is user initiated and rejects files outside the app review directory.'
 
-    $startup = Join-Path $data 'fake Startup'
+    $dataAlias = Join-Path $testRoot 'profile junction alias'
+    [void](New-Item -ItemType Junction -Path $dataAlias -Target $data)
+    $aliasWindow = [PublicUiTest]::Start([System.IO.Path]::GetFullPath($AssemblyPath), $fixtureBackend, $dataAlias)
+    Wait-Idle $aliasWindow
+    if ([PublicUiTest]::Field($aliasWindow, 'dataDirectory') -ne [PublicUiTest]::Field($window, 'dataDirectory')) { throw 'A data-directory alias retained a different identity' }
+    Wait-Task ([PublicUiTest]::Call($aliasWindow, 'OpenLatestReviewAsync', @()))
+    if ([PublicUiTest]::Reports.Count -ne 2 -or [PublicUiTest]::Reports[1] -ne [PublicUiTest]::Reports[0]) { throw 'A resolved report from an aliased data directory was rejected' }
+    $reportAlias = Join-Path $dataAlias 'reviews\fixture\result.md'
+    $resolvedReport = [PublicUiTest]::Call($aliasWindow, 'ValidateReportPath', @([string]$reportAlias))
+    if ($resolvedReport -ne [PublicUiTest]::Reports[0]) { throw 'A report alias was not resolved to its real file' }
+    $outside = Join-Path $testRoot 'outside review destination'
+    [void][System.IO.Directory]::CreateDirectory($outside)
+    [System.IO.File]::WriteAllText((Join-Path $outside 'escape.md'), 'Synthetic report outside the reviews directory.')
+    $escapeAlias = Join-Path $data 'reviews\escape junction'
+    [void](New-Item -ItemType Junction -Path $escapeAlias -Target $outside)
+    $rejected = $false
+    try { [void][PublicUiTest]::Call($aliasWindow, 'ValidateReportPath', @([string](Join-Path $escapeAlias 'escape.md'))) } catch { $rejected = $true }
+    if (-not $rejected) { throw 'A junction escaped the canonical review directory' }
+    [PublicUiTest]::Dispose($aliasWindow)
+    Write-Output 'PASS: profile/report junction aliases resolve consistently, and a report junction escaping the real reviews directory is rejected.'
+
+    # Supplementary Unicode is outside both the runner's ANSI code page and CP932.
+    $startup = Join-Path $data ('fake Startup ' + [char]0xD83E + [char]0xDDEA)
     [PublicUiTest]::SetField($window, 'startupDirectory', $startup)
     if ([PublicUiTest]::Call($window, 'StartupEnabled', @())) { throw 'Startup must default off' }
     [void][PublicUiTest]::Call($window, 'SetStartupEnabled', @($true))
@@ -229,17 +258,11 @@ try {
     [void][PublicUiTest]::Call($window, 'SetStartupEnabled', @($false))
     if ((Get-Content -LiteralPath (Join-Path $startup 'unrelated.txt') -Raw) -ne 'keep') { throw 'Startup operation changed an unrelated file' }
     $unrelatedShortcut = Join-Path $startup 'CodexUsageTray-managed.lnk'
-    $shell = New-Object -ComObject WScript.Shell
-    $link = $shell.CreateShortcut($unrelatedShortcut)
-    $link.TargetPath = (Join-Path $env:WINDIR 'notepad.exe')
-    $link.Description = 'Unrelated shortcut'
-    $link.Save()
-    [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($link)
-    [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell)
+    [PublicUiTest]::UnownedShortcut([System.IO.Path]::GetFullPath($AssemblyPath), $unrelatedShortcut, (Join-Path $env:WINDIR 'notepad.exe'))
     $preserved = $false
     try { [void][PublicUiTest]::Call($window, 'SetStartupEnabled', @($false)) } catch { $preserved = $true }
     if (-not $preserved -or -not (Test-Path -LiteralPath $unrelatedShortcut)) { throw 'An unowned same-name shortcut was modified' }
-    Write-Output 'PASS: startup is opt-in and operates only on its own shortcut in an isolated Startup fixture.'
+    Write-Output 'PASS: Unicode startup save/read/removal is opt-in and preserves unowned shortcuts, including Japanese and supplementary-Unicode paths.'
     [PublicUiTest]::Dispose($window)
 
     $data = Join-Path $testRoot 'ambiguous profile'
@@ -280,13 +303,15 @@ try {
     Copy-Item -LiteralPath $fixtureBackend -Destination (Join-Path $install 'backend\CodexUsageBackend.exe')
     $data = Join-Path $testRoot 'native profile'
     Write-Fixture $data @{ remaining = $null }
+    $nativeDataAlias = Join-Path $testRoot 'native profile junction'
+    [void](New-Item -ItemType Junction -Path $nativeDataAlias -Target $data)
     $nativeExe = Join-Path $install 'CodexUsageTray.exe'
     $native = Start-Process -FilePath $nativeExe -ArgumentList ('--tray --data-dir "' + $data + '"') -WindowStyle Hidden -PassThru
     $watch = [Diagnostics.Stopwatch]::StartNew()
     do { Start-Sleep -Milliseconds 50; $handle = [PublicUiTest]::Window($native.Id) } while ($handle -eq [IntPtr]::Zero -and $watch.ElapsedMilliseconds -lt 10000)
     if ($handle -eq [IntPtr]::Zero -or [PublicUiTest]::IsWindowVisible($handle)) { throw '--tray did not start hidden' }
     [PublicUiTest]::MoveOffscreen($handle)
-    $second = Start-Process -FilePath $nativeExe -ArgumentList ('--data-dir "' + $data + '"') -WindowStyle Hidden -PassThru
+    $second = Start-Process -FilePath $nativeExe -ArgumentList ('--data-dir "' + $nativeDataAlias + '"') -WindowStyle Hidden -PassThru
     if (-not $second.WaitForExit(5000)) { throw 'Second instance remained running' }
     $watch.Restart()
     do {
@@ -295,14 +320,17 @@ try {
     } while (($handle -eq [IntPtr]::Zero -or -not [PublicUiTest]::IsWindowVisible($handle)) -and $watch.ElapsedMilliseconds -lt 5000)
     if (-not [PublicUiTest]::IsWindowVisible($handle)) { throw 'First normal handoff did not restore the hidden native window' }
     [PublicUiTest]::Hide($handle)
-    $third = Start-Process -FilePath $nativeExe -ArgumentList ('--tray --data-dir "' + $data + '"') -WindowStyle Hidden -PassThru
+    $third = Start-Process -FilePath $nativeExe -ArgumentList ('--tray --data-dir "' + $nativeDataAlias + '"') -WindowStyle Hidden -PassThru
     if (-not $third.WaitForExit(5000) -or [PublicUiTest]::IsWindowVisible($handle)) { throw 'Duplicate --tray should exit without showing the resident' }
-    Write-Output 'PASS: a real packaged-style --tray process starts hidden, first normal handoff restores it, and duplicate --tray exits.'
+    Write-Output 'PASS: a real packaged-style --tray process starts hidden; normal and --tray instances using a junction alias hand off to the same resident.'
 } finally {
     if ($window -and -not $window.IsDisposed) { [PublicUiTest]::Dispose($window) }
-    if ($native -and -not $native.HasExited) {
-        if ($native.MainModule.FileName -ne $nativeExe) { throw 'Refusing to stop a non-fixture process' }
-        Stop-Process -Id $native.Id
+    if ($aliasWindow -and -not $aliasWindow.IsDisposed) { [PublicUiTest]::Dispose($aliasWindow) }
+    foreach ($process in @($native, $second, $third)) {
+        if ($process -and -not $process.HasExited) {
+            if ($process.MainModule.FileName -ne $nativeExe) { throw 'Refusing to stop a non-fixture process' }
+            Stop-Process -Id $process.Id
+        }
     }
 }
 Write-Output "Artifacts: $testRoot"

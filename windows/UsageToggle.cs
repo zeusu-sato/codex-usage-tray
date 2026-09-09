@@ -42,6 +42,7 @@ internal static class Program
                 else throw new ArgumentException("起動オプションを確認してください。");
             }
             // Different extracted versions share one resident instance for the same user data.
+            dataDirectory = CanonicalPaths.DataDirectory(dataDirectory);
             string instanceName;
             using (SHA256 hash = SHA256.Create())
                 instanceName = "Local\\CodexUsageTray." + BitConverter.ToString(hash.ComputeHash(
@@ -70,6 +71,117 @@ internal static class Program
         {
             MessageBox.Show(error.Message, "Codex Usage Tray", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+}
+
+internal static class CanonicalPaths
+{
+    public static string DataDirectory(string path)
+    {
+        path = Path.GetFullPath(path);
+        Directory.CreateDirectory(path);
+        return Existing(path);
+    }
+
+    public static string Existing(string path)
+    {
+        path = Path.GetFullPath(path);
+        // Open with no data access, sharing reads/writes/deletion. BACKUP_SEMANTICS
+        // allows directory handles; following links gives the same target as Python resolve().
+        using (Microsoft.Win32.SafeHandles.SafeFileHandle handle = CreateFile(path, 0, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero))
+        {
+            if (handle.IsInvalid) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+            StringBuilder buffer = new StringBuilder(512);
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                uint length = GetFinalPathNameByHandle(handle, buffer, (uint)buffer.Capacity, 0);
+                if (length == 0) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
+                if (length >= buffer.Capacity)
+                {
+                    buffer = new StringBuilder(checked((int)length + 1));
+                    continue;
+                }
+                string final = buffer.ToString();
+                if (final.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase)) final = @"\\" + final.Substring(8);
+                else if (final.StartsWith(@"\\?\", StringComparison.Ordinal)) final = final.Substring(4);
+                return Path.GetFullPath(final);
+            }
+            throw new IOException("保存先の実体パスを確認できませんでした。");
+        }
+    }
+
+    [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string name, uint access, uint share,
+        IntPtr security, uint disposition, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", EntryPoint = "GetFinalPathNameByHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetFinalPathNameByHandle(Microsoft.Win32.SafeHandles.SafeFileHandle handle,
+        StringBuilder path, uint length, uint flags);
+}
+
+internal static class StartupShortcuts
+{
+    public static bool Matches(string path, string target, string arguments, string description)
+    {
+        object instance = new ShellLink();
+        try
+        {
+            ((System.Runtime.InteropServices.ComTypes.IPersistFile)instance).Load(path, 0);
+            IShellLinkW link = (IShellLinkW)instance;
+            StringBuilder actualTarget = new StringBuilder(32768);
+            StringBuilder actualArguments = new StringBuilder(32768);
+            StringBuilder actualDescription = new StringBuilder(1024);
+            link.GetPath(actualTarget, actualTarget.Capacity, IntPtr.Zero, 4);
+            link.GetArguments(actualArguments, actualArguments.Capacity);
+            link.GetDescription(actualDescription, actualDescription.Capacity);
+            return String.Equals(actualDescription.ToString(), description, StringComparison.Ordinal)
+                && String.Equals(Path.GetFileName(actualTarget.ToString()), Path.GetFileName(target), StringComparison.OrdinalIgnoreCase)
+                && String.Equals(actualArguments.ToString(), arguments, StringComparison.OrdinalIgnoreCase);
+        }
+        finally { Marshal.FinalReleaseComObject(instance); }
+    }
+
+    public static void Save(string path, string target, string arguments, string workingDirectory, string description)
+    {
+        object instance = new ShellLink();
+        try
+        {
+            IShellLinkW link = (IShellLinkW)instance;
+            link.SetPath(target);
+            link.SetArguments(arguments);
+            link.SetWorkingDirectory(workingDirectory);
+            link.SetDescription(description);
+            link.SetIconLocation(target, 0);
+            link.SetShowCmd(7);
+            ((System.Runtime.InteropServices.ComTypes.IPersistFile)instance).Save(path, true);
+        }
+        finally { Marshal.FinalReleaseComObject(instance); }
+    }
+
+    [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
+    private class ShellLink { }
+
+    // Vtable order follows the Unicode Shell Link interface; no ANSI path conversion.
+    [ComImport, Guid("000214F9-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellLinkW
+    {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder path, int length, IntPtr findData, uint flags);
+        void GetIDList(out IntPtr itemList);
+        void SetIDList(IntPtr itemList);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder description, int length);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string description);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder directory, int length);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string directory);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder arguments, int length);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string arguments);
+        void GetHotkey(out short hotkey);
+        void SetHotkey(short hotkey);
+        void GetShowCmd(out int command);
+        void SetShowCmd(int command);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder path, int length, out int index);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string path, int index);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string path, uint reserved);
+        void Resolve(IntPtr owner, uint flags);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string path);
     }
 }
 
@@ -146,7 +258,7 @@ internal sealed class UsageToggleForm : Form
     {
         python = pythonPath;
         backend = backendPath;
-        dataDirectory = Path.GetFullPath(stateDirectory);
+        dataDirectory = CanonicalPaths.DataDirectory(stateDirectory);
         startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
         reviewRunner = LaunchReviewRunner;
         reviewPresenter = delegate(Form prompt) { prompt.Show(this); };
@@ -625,12 +737,7 @@ internal sealed class UsageToggleForm : Form
                 OpenWindow();
                 return;
             }
-            path = Path.GetFullPath(path);
-            string reviews = Path.GetFullPath(Path.Combine(dataDirectory, "reviews")) + Path.DirectorySeparatorChar;
-            if (!path.StartsWith(reviews, StringComparison.OrdinalIgnoreCase)
-                || !String.Equals(Path.GetExtension(path), ".md", StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
-                throw new InvalidOperationException("このアプリの見直し結果を確認できませんでした。");
-            reportOpener(path);
+            reportOpener(ValidateReportPath(path));
         }
         catch (Exception error)
         {
@@ -644,6 +751,17 @@ internal sealed class UsageToggleForm : Form
             reportBusy = false;
             if (!IsDisposed && !exiting) { reportButton.Enabled = true; reportMenu.Enabled = true; }
         }
+    }
+
+    private string ValidateReportPath(string path)
+    {
+        string report = CanonicalPaths.Existing(path);
+        string reviews = CanonicalPaths.Existing(Path.Combine(dataDirectory, "reviews"))
+            .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!report.StartsWith(reviews, StringComparison.OrdinalIgnoreCase)
+            || !String.Equals(Path.GetExtension(report), ".md", StringComparison.OrdinalIgnoreCase) || !File.Exists(report))
+            throw new InvalidOperationException("このアプリの見直し結果を確認できませんでした。");
+        return report;
     }
 
     private static void OpenReportDocument(string path)
@@ -747,32 +865,11 @@ internal sealed class UsageToggleForm : Form
         return arguments;
     }
 
-    private static object ShortcutProperty(object shortcut, string name, object value, bool write)
-    {
-        return shortcut.GetType().InvokeMember(name, write ? BindingFlags.SetProperty : BindingFlags.GetProperty,
-            null, shortcut, write ? new object[] { value } : null);
-    }
-
     private bool StartupEnabled()
     {
         string path = StartupShortcutPath();
         if (!File.Exists(path)) return false;
-        object shell = null;
-        object shortcut = null;
-        try
-        {
-            shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell", true));
-            shortcut = shell.GetType().InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { path });
-            return String.Equals((string)ShortcutProperty(shortcut, "Description", null, false), StartupDescription, StringComparison.Ordinal)
-                && String.Equals(Path.GetFileName((string)ShortcutProperty(shortcut, "TargetPath", null, false)),
-                    Path.GetFileName(Application.ExecutablePath), StringComparison.OrdinalIgnoreCase)
-                && String.Equals((string)ShortcutProperty(shortcut, "Arguments", null, false), StartupArguments(), StringComparison.OrdinalIgnoreCase);
-        }
-        finally
-        {
-            if (shortcut != null && Marshal.IsComObject(shortcut)) Marshal.FinalReleaseComObject(shortcut);
-            if (shell != null && Marshal.IsComObject(shell)) Marshal.FinalReleaseComObject(shell);
-        }
+        return StartupShortcuts.Matches(path, Application.ExecutablePath, StartupArguments(), StartupDescription);
     }
 
     private void RefreshStartupState()
@@ -806,26 +903,8 @@ internal sealed class UsageToggleForm : Form
             return;
         }
         Directory.CreateDirectory(startupDirectory);
-        object shell = null;
-        object shortcut = null;
-        try
-        {
-            shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell", true));
-            shortcut = shell.GetType().InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { path });
-            ShortcutProperty(shortcut, "TargetPath", Application.ExecutablePath, true);
-            ShortcutProperty(shortcut, "Arguments", StartupArguments(), true);
-            ShortcutProperty(shortcut, "WorkingDirectory", Application.StartupPath, true);
-            ShortcutProperty(shortcut, "Description", StartupDescription, true);
-            ShortcutProperty(shortcut, "IconLocation", Application.ExecutablePath + ",0", true);
-            ShortcutProperty(shortcut, "WindowStyle", 7, true);
-            shortcut.GetType().InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
-            if (!StartupEnabled()) throw new InvalidOperationException("自動起動の保存結果を確認できませんでした。");
-        }
-        finally
-        {
-            if (shortcut != null && Marshal.IsComObject(shortcut)) Marshal.FinalReleaseComObject(shortcut);
-            if (shell != null && Marshal.IsComObject(shell)) Marshal.FinalReleaseComObject(shell);
-        }
+        StartupShortcuts.Save(path, Application.ExecutablePath, StartupArguments(), Application.StartupPath, StartupDescription);
+        if (!StartupEnabled()) throw new InvalidOperationException("自動起動の保存結果を確認できませんでした。");
     }
 
     private async Task CheckReviewAsync(bool manual)
