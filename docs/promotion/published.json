@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-09-09T06:42:36.981Z",
+  "recordedAt": "2026-09-09T07:00:53.981Z",
   "release": "v0.2.0",
   "demo": {
     "file": "docs/images/demo.png",
@@ -36,14 +36,34 @@
     },
     {
       "platform": "X",
-      "status": "send_error_publication_unverified",
+      "status": "not_published",
       "url": null,
       "author": "dorodango_zeusu",
       "preparedText": "x.txt",
       "submittedAt": "2026-09-09T06:29:53.073Z",
       "attempts": 1,
       "profileReloadError": "ERR_CONNECTION_CLOSED",
-      "draftRetained": true
+      "draftRetainedAfterAttempt": true,
+      "notPublishedConfirmedBy": "user",
+      "confirmationDate": "2026-09-09",
+      "retriedAfterConfirmation": false
+    },
+    {
+      "platform": "Qiita",
+      "status": "published",
+      "url": "https://qiita.com/DoroDango/items/435ec033e0382c0ec52a",
+      "author": "DoroDango",
+      "audience": "public",
+      "preparedText": "qiita.md",
+      "submittedAt": "2026-09-09T07:00:13.394Z",
+      "signedInReadVerified": true,
+      "anonymousPublicReadVerified": null,
+      "anonymousReadError": "Connection reset before HTTP response; public web fetch unavailable. Independent anonymous visibility remains unverified.",
+      "linkedResourcesPubliclyVerified": 9,
+      "automaticXShare": false,
+      "tags": ["Codex", "Windows", "Python", "C#"],
+      "publicImageCount": 1,
+      "publicImageAltVerified": true
     }
   ]
 }
