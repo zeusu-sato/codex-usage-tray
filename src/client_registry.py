@@ -70,7 +70,7 @@ def descriptor(binary, client_id, label, extension_version="standalone", provide
 
 def discover(home=None, which=shutil.which, provider="codex", *, platform_name=None, machine=None):
     platform_name = sys.platform if platform_name is None else platform_name
-    if platform_name not in ("win32", "darwin") or provider not in ("codex", "claude"):
+    if platform_name not in ("win32", "darwin", "linux") or provider not in ("codex", "claude"):
         return []
     home = Path(home or Path.home())
     arch = native_arch(machine)
@@ -99,7 +99,7 @@ def discover(home=None, which=shutil.which, provider="codex", *, platform_name=N
                               extension / "resources/native-binary" / name]
             else:
                 # The official extension maps darwin/arm64 to macos-aarch64.
-                system = "windows" if platform_name == "win32" else "macos"
+                system = {"win32": "windows", "darwin": "macos", "linux": "linux"}[platform_name]
                 candidates = [extension / "bin" / (system + "-" + arch) / name]
             binary = next((path for path in candidates if path.is_file()), candidates[-1])
             found.append(descriptor(binary, client_id, label, str(entry["version"]), provider,

@@ -6,6 +6,8 @@ CodexとClaude CodeのUsage残量を、Windowsの通知領域・Macのメニュ�
 
 **v0.4.1はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
 
+[Linux 試作版](linux/README.ja.md)もソースから起動できます。Kubuntu 26.04 / KDE Wayland で Codex・Claude の実残量表示と5分ごとの更新を確認しています。クライアント選択とバージョン監視にも対応しますが、AI見直し・追加対策・Linux配布パッケージはまだ含みません。
+
 ![Demo：テスト用の残量を表示した、追加対策未設定のアプリ画面](docs/images/demo.png)
 
 実際のアカウント情報を使わないデモ画像です。[capture-dual-demo.ps1](windows/capture-dual-demo.ps1)でネイティブUIから撮影しています。

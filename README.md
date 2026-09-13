@@ -6,6 +6,8 @@ An unofficial Windows system-tray and macOS menu-bar app that keeps your reporte
 
 **v0.4.1 is an early beta for Windows x64 and macOS 13+ (Apple Silicon / Intel). The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
 
+An experimental [Linux tray (Japanese setup guide)](linux/README.ja.md) can also run from source. Live Codex/Claude quota display and five-minute refresh were verified on Kubuntu 26.04 with KDE Wayland. Client selection and version monitoring are included; AI review, instruction switches, and Linux distribution packages are not included yet.
+
 ![Demo: native app with synthetic quota data and no additional policy enabled](docs/images/demo.png)
 
 Demo screenshot using test data, not real accounts. Captured from the native UI with [capture-dual-demo.ps1](windows/capture-dual-demo.ps1).

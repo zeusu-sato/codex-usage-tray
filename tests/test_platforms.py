@@ -301,10 +301,18 @@ class PosixLifecycleTests(unittest.TestCase):
                       'install_termination_handlers()\ntry:\n print("ready",flush=True)\n time.sleep(60)\n'
                       'finally:\n pathlib.Path(sys.argv[1]).write_text("cleaned")\n')
             env = dict(os.environ, PYTHONPATH=str(Path(external_process.__file__).parent))
-            process = subprocess.Popen([sys.executable, '-u', '-c', script, str(marker)], env=env, stdout=subprocess.PIPE)
-            self.assertEqual(process.stdout.readline(), b'ready\n')
-            process.terminate(); process.wait(timeout=3); process.stdout.close()
-            self.assertEqual(marker.read_text(), 'cleaned')
+            process = subprocess.Popen([sys.executable, '-u', '-c', script, str(marker)], env=env,
+                                       stdout=subprocess.PIPE, **external_process.metadata_process_options())
+            try:
+                self.assertEqual(process.stdout.readline(), b'ready\n')
+                process.terminate()
+                process.wait(timeout=3)
+                self.assertEqual(marker.read_text(), 'cleaned')
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=3)
+                process.stdout.close()
 
     def test_sigterm_backend_reaps_metadata_group_and_descendants(self):
         native = ('import subprocess,sys,time; subprocess.Popen([sys.executable,"-c","import time; time.sleep(60)"]); '
