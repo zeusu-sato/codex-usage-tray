@@ -1,5 +1,8 @@
 # Privacy / プライバシー
 
+The experimental Linux source UI uses the same shared metadata backend and provider data separation. State is stored under `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`; relative XDG paths use the default. The Linux UI exposes quota reads, client selection, and version monitoring only. See the [Linux guide](../linux/README.ja.md).
+Linux 試作版も共通の取得処理と製品別保存先を使います。保存先は `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`（相対 XDG パスは既定値に戻します）です。Linux UI は残量取得・クライアント選択・バージョン監視に対応します。[Linux の説明](../linux/README.ja.md)もご覧ください。
+
 This document describes **v0.4.1**, including experimental Claude Code support. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint.
 
 ## Routine operation

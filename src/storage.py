@@ -11,6 +11,11 @@ import time
 
 
 def default_data_dir():
+    if sys.platform == "linux":
+        root = Path(os.environ.get("XDG_DATA_HOME", ""))
+        if not root.is_absolute():
+            root = Path.home() / ".local/share"
+        return root / "CodexUsageTray"
     if sys.platform == "darwin":
         return Path.home() / "Library/Application Support/CodexUsageTray"
     root = os.environ.get("LOCALAPPDATA")

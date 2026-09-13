@@ -1,5 +1,11 @@
 # Claude metadata compatibility evidence
 
+## Linux 2.1.270 observation (2026-09-13)
+
+The installed official VS Code Insiders extension `anthropic.claude-code-2.1.270-linux-x64` was inspected on Kubuntu 26.04.1 / KDE Wayland. Its extension wrapper retains the experimental `get_usage` request and `skip_behaviors` option; its native CLI retains the initialization controls and global five-hour/weekly response fields used by the adapter. The existing two-message exchange successfully returned both quota windows and account-continuity metadata using the client's existing login. A null five-hour reset time preserved the known amount, as intended. No prompt, AI inference, private transcript, or credential-file read was performed by the tray. This observation adds Linux evidence; it does not change the compatibility boundary below or establish future-version compatibility.
+
+## Original v0.4.1 inspection
+
 This is a static inspection record for the v0.4.1 change, made on 2026-09-09. It covers locally installed official **Windows x64** VS Code extension packages, not a live account, a Mac binary, or a guarantee about future releases. No Claude process, inference request, private transcript, or credential file was used for this inspection. No provider binaries are distributed here.
 
 Separately, the updated adapter successfully retrieved quota from the installed Windows Claude 2.1.266 client while the policy version mismatch remained active. That observation does not establish Mac account/Keychain behavior or future compatibility.
