@@ -68,7 +68,7 @@ def descriptor(binary, client_id, label, extension_version="standalone", provide
             "binary_path": str(binary), "binary_size": stat.st_size, "binary_mtime_ns": stat.st_mtime_ns}
 
 
-def discover(home=None, which=shutil.which, provider="codex", *, platform_name=None, machine=None):
+def discover(home=None, which=shutil.which, provider="codex", *, platform_name=None, machine=None, path=None):
     platform_name = sys.platform if platform_name is None else platform_name
     if platform_name not in ("win32", "darwin") or provider not in ("codex", "claude"):
         return []
@@ -109,6 +109,10 @@ def discover(home=None, which=shutil.which, provider="codex", *, platform_name=N
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
             continue
     binary = which(name)
+    if binary and inside_extension_root(binary, roots):
+        # An editor terminal put its extension binary first on PATH. The user's
+        # standalone CLI may still follow it, so search the remaining directories.
+        binary = standalone_on_path(name, roots, os.environ.get("PATH", "") if path is None else path)
     candidates = [Path(binary)] if binary else []
     if platform_name == "darwin":
         candidates.extend(path / name for path in default_cli_directories(home))
@@ -131,8 +135,17 @@ def discover(home=None, which=shutil.which, provider="codex", *, platform_name=N
 
 
 def inside_extension_root(path, roots):
-    path = Path(path)
+    try:
+        path = Path(path).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
     return any(path == root or root in path.parents for root in roots)
+
+
+def standalone_on_path(name, roots, search_path):
+    """First executable on PATH outside every editor extensions root, in PATH order."""
+    remaining = [entry for entry in search_path.split(os.pathsep) if entry and not inside_extension_root(entry, roots)]
+    return shutil.which(name, path=os.pathsep.join(remaining)) if remaining else None
 
 
 def settings(folder):

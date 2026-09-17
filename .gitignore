@@ -16,3 +16,5 @@ active-policy.json
 proposal.json
 /reviews/
 /backups/
+# Worker reports contain machine-specific paths.
+/reports/

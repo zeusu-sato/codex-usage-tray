@@ -110,6 +110,36 @@ class ClientTests(unittest.TestCase):
                 self.assertEqual(clients.choose_client(folder)['extension_version'], '26.908.40401')
                 self.assertEqual(clients.client_command(folder, 'client-list')['selected_id'], 'vscode-insiders')
 
+    def test_standalone_cli_behind_extension_binary_on_path_stays_selectable(self):
+        """Editor terminals put the extension's claude.exe first on PATH; the user's
+        standalone CLI further along PATH must remain a candidate and the choice."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            extensions = root / '.vscode-insiders/extensions'
+            extension = extensions / 'anthropic.claude-code-2.1.273-win32-x64/resources/native-binary/claude.exe'
+            extension.parent.mkdir(parents=True)
+            extension.write_bytes(b'extension')
+            (extensions / 'extensions.json').write_text(json.dumps([{
+                'identifier': {'id': 'anthropic.claude-code'}, 'version': '2.1.273',
+                'relativeLocation': 'anthropic.claude-code-2.1.273-win32-x64'}]))
+            standalone = root / '.local/bin/claude.exe'
+            standalone.parent.mkdir(parents=True)
+            standalone.write_bytes(b'standalone')
+            options = {'which': lambda _: str(extension), 'provider': 'claude', 'platform_name': 'win32', 'machine': 'AMD64'}
+            search = os.pathsep.join((str(extension.parent), str(standalone.parent)))
+            found = clients.discover(root, path=search, **options)
+            self.assertEqual([(item['client_id'], item['binary_path']) for item in found],
+                             [('vscode-insiders', str(extension)), ('cli-path', str(standalone))])
+            # Only the extension on PATH: no separate CLI is invented.
+            self.assertEqual([item['client_id'] for item in clients.discover(root, path=str(extension.parent), **options)],
+                             ['vscode-insiders'])
+            folder = root / 'data'
+            folder.mkdir()
+            write_json(folder / 'settings.json', {'schema_version': 1, 'provider': 'claude', 'selected_client': 'cli-path'})
+            with patch.object(clients, 'discover', return_value=found):
+                self.assertEqual(clients.choose_client(folder)['binary_path'], str(standalone))
+                self.assertEqual(clients.client_command(folder, 'client-list')['selected_id'], 'cli-path')
+
     def test_missing_selected_client_follows_registered_extension(self):
         values = [{'client_id': 'vscode', 'label': 'VS Code', 'extension_version': '1'},
                   {'client_id': 'cli-path', 'label': 'Codex CLI (PATH)', 'extension_version': 'standalone'}]

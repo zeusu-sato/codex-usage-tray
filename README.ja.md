@@ -40,7 +40,7 @@ Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、*
 
 1. 使用するCodex・Claude Codeを別途インストールし、それぞれでログインしてください。VS Code / VS Code Insidersの拡張機能、または`PATH`上のネイティブ実行ファイルを検出します。Claudeは版を確認できた**2.1.263以降の安定版**と互換性のある残量応答が必要です。未導入側は未確認表示になります。このアプリのためにClaudeを旧版へ戻す必要はありません。
 2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
-3. 同じ製品の対応クライアントが複数ある場合、初期状態ではVS Code / VS Code Insidersに登録中の拡張機能を監視します。`PATH`上のネイティブCLIは各トレイアイコンのメニューから選べますが、拡張機能がある間は自動では選びません。両方のエディターに登録されている場合は監視対象を選んでください。エディターの登録から外れた旧フォルダー（エディターのターミナルが残した`PATH`の参照を含む）は別のインストールとして数えません。CodexとClaudeの選択は独立しています。
+3. 同じ製品の対応クライアントが複数ある場合、初期状態ではVS Code / VS Code Insidersに登録中の拡張機能を監視します。`PATH`上のネイティブCLIは各トレイアイコンのメニューから選べますが、拡張機能がある間は自動では選びません。両方のエディターに登録されている場合は監視対象を選んでください。エディターの登録から外れた旧フォルダー（エディターのターミナルが残した`PATH`の参照を含む）は別のインストールとして数えず、`PATH`の後ろにある単体CLIは引き続き検出します。CodexとClaudeの選択は独立しています。
 4. 常に残量を表示するには、Windowsの **^** 内からアイコンを通知領域へドラッグしてください。表示位置はWindows側の設定です。[Microsoft公式の説明](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows)でもこの操作を案内しています。
 
 ウィンドウを閉じると通知領域に残ります。各アイコンのクリックで対応するタブを開き、メニューの **終了** で常駐を終了します。同じデータ保存先でアプリを再起動すると、既存のウィンドウを開きます。Windowsログイン時の起動は初期状態では無効です。必要ならメニューの **Windowsログイン時に起動** を有効にしてください。`CodexUsageTray.exe --tray`でウィンドウを隠した状態から起動できます。
