@@ -47,6 +47,26 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual((self.root/'quota-state.json').read_bytes(),sentinel)
         self.assertEqual(client_registry.provider_for(self.folder),'claude')
 
+    def test_failure_categories_stay_diagnosable_without_raw_details(self):
+        cases=[(client_registry.ClientError('選択したCodexが見つかりません。'),'client_unavailable'),
+               (claude_quota.quota.QuotaError('timeout'),'timeout'),
+               (claude_quota.quota.QuotaError('account_unavailable'),'account_unavailable'),
+               (claude_quota.quota.QuotaError('unsupported_version'),'unsupported_version'),
+               (claude_quota.quota.QuotaError('incomplete_windows'),'incompatible_protocol'),
+               (OSError(5,'private path /secret-location'),'unavailable'),
+               (claude_quota.quota.QuotaError('Raw server text: 500 /secret-location'),'unavailable')]
+        for index,(error,expected) in enumerate(cases):
+            with self.subTest(expected=expected):
+                identity=patch.object(client_registry,'current_identity',side_effect=error) if isinstance(error,client_registry.ClientError) \
+                    else patch.object(client_registry,'current_identity',return_value=self.identity)
+                with identity,patch.object(claude_quota.claude_adapter,'request_usage',side_effect=error):
+                    reply=claude_quota.quota_command(self.folder,self.now+timedelta(minutes=index))
+                cache=json.loads((self.folder/'quota-state.json').read_text(encoding='utf-8'))
+                self.assertEqual(cache['error'],expected)
+                self.assertFalse(cache['last_ok'])
+                self.assertFalse(reply['ok'])
+                self.assertNotIn('secret-location',json.dumps(cache))
+
     def test_scope_change_discards_history(self):
         self.read()
         second=copy.deepcopy(self.payload);second['scope_key']='b'*64

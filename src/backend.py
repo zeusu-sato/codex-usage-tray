@@ -94,7 +94,7 @@ def main(argv=None):
         elif args.command.startswith("monitor-"):
             result = version_monitor.unavailable_reply(detail)
             if args.provider == "claude":
-                result["needs_client_selection"] = len(client_registry.discover(provider="claude")) > 1
+                result["needs_client_selection"] = client_registry.needs_selection(client_registry.discover(provider="claude"))
         elif args.command == "usage-check":
             result = quota_monitor.unavailable_reply(now)
         else:

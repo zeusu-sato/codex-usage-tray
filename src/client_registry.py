@@ -78,8 +78,10 @@ def discover(home=None, which=shutil.which, provider="codex", *, platform_name=N
         return []
     name = provider + (".exe" if platform_name == "win32" else "")
     found = []
+    roots = []
     for client_id, label, directory_name in (("vscode", "VS Code", ".vscode"), ("vscode-insiders", "VS Code Insiders", ".vscode-insiders")):
         root = (home / directory_name / "extensions").resolve()
+        roots.append(root)
         try:
             entries = read_json(root / "extensions.json", [])
             extension_id = "anthropic.claude-code" if provider == "claude" else "openai.chatgpt"
@@ -115,13 +117,22 @@ def discover(home=None, which=shutil.which, provider="codex", *, platform_name=N
             suffix = " CLI (PATH)" if platform_name == "win32" else " CLI"
             item = descriptor(candidate, "cli-path", ("Claude Code" if provider == "claude" else "Codex") + suffix,
                               provider=provider, platform_name=platform_name, machine=machine)
-            if all(item["binary_path"] != existing["binary_path"] for existing in found):
-                found.append(item)
-            # PATH precedence is preserved; fallback directories are for Finder.
-            break
         except (OSError, ValueError, TypeError, AttributeError):
-            pass
+            continue
+        if inside_extension_root(item["binary_path"], roots) or any(item["binary_path"] == existing["binary_path"] for existing in found):
+            # Editor terminals prepend their extension's bin folder to PATH. That
+            # binary is the registered extension itself or an obsolete copy that
+            # extensions.json no longer lists, never a separate standalone CLI.
+            continue
+        found.append(item)
+        # PATH precedence is preserved; fallback directories are for Finder.
+        break
     return found
+
+
+def inside_extension_root(path, roots):
+    path = Path(path)
+    return any(path == root or root in path.parents for root in roots)
 
 
 def settings(folder):
@@ -146,6 +157,24 @@ def display_name(folder):
     return "Claude Code" if provider_for(folder) == "claude" else "Codex"
 
 
+def default_client(clients):
+    """Without an explicit choice, follow the editor-registered extension.
+
+    A standalone CLI on PATH stays selectable but does not become the default
+    next to an extension; two registered editors still need the user's choice.
+    """
+    extensions = [client for client in clients if client["client_id"] != "cli-path"]
+    if len(extensions) == 1:
+        return extensions[0]
+    if not extensions and len(clients) == 1:
+        return clients[0]
+    return None
+
+
+def needs_selection(clients):
+    return len(clients) > 1 and default_client(clients) is None
+
+
 def choose_client(folder):
     clients = clients_for(folder)
     selected = settings(folder).get("selected_client")
@@ -153,11 +182,16 @@ def choose_client(folder):
         matches = [client for client in clients if client["client_id"] == selected]
         if len(matches) == 1:
             return matches[0]
-        raise ClientError("選択したCodexが見つかりません。Codexを選び直してください。")
-    if len(clients) == 1:
-        return clients[0]
+    # An updated, re-registered, or removed installation must not stop reads.
+    # The registered extension (or the only remaining client) takes over, and
+    # the version monitor reports that identity change separately.
+    default = default_client(clients)
+    if default is not None:
+        return default
     if not clients:
         raise ClientError("Codexが見つかりません。VS Code版またはCLI版をインストールしてログインしてください。")
+    if selected:
+        raise ClientError("選択したCodexが見つかりません。Codexを選び直してください。")
     raise ClientError("複数のCodexがあります。「Codexを選ぶ…」で使用するものを選んでください。")
 
 
@@ -174,7 +208,12 @@ def client_command(folder, command, client_id=None):
                 data.pop("reference", None)
                 data.pop("reference_kind", None)
                 write_json(Path(folder) / "settings.json", data)
-    return {"ok": True, "selected_id": settings(folder).get("selected_client", ""),
+    try:
+        # Report the client reads actually use, which may be the default rather than a stored choice.
+        selected_id = choose_client(folder)["client_id"]
+    except ClientError:
+        selected_id = settings(folder).get("selected_client", "")
+    return {"ok": True, "selected_id": selected_id,
             "clients": [{"id": client["client_id"], "label": client["label"] + " / " + client["extension_version"]} for client in clients]}
 
 

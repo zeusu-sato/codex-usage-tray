@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import re
 
-from client_registry import current_identity, discover, fingerprint, settings
+from client_registry import current_identity, discover, fingerprint, needs_selection, settings
 from storage import locked, read_json, write_json
 
 
@@ -54,4 +54,4 @@ def monitor_command(folder, command, now, signature=None):
 def unavailable_reply(detail):
     return {"ok": False, "mismatch": False, "alert": False, "signature": "", "title": "Codexを確認できません",
             "detail": detail, "checked_label": "", "baseline_label": "", "current_label": "",
-            "needs_client_selection": len(discover()) > 1}
+            "needs_client_selection": needs_selection(discover())}
