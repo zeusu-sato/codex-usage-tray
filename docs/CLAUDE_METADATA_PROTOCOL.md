@@ -1,5 +1,11 @@
 # Claude metadata compatibility evidence
 
+## Windows 2.1.291 observation (2026-10-06)
+
+The existing adapter successfully retrieved both global quota windows from the installed official Windows x64 VS Code Insiders Claude Code 2.1.291 extension. The packaged v0.4.1 backend also returned a current, validated snapshot with that extension explicitly selected. The exchange used only the fixed initialization and usage controls described below; no prompt or AI review was sent.
+
+The running 0.3.0 preview had rejected the updated client with `unsupported_version`. Replacing it with the existing v0.4.1 package restored quota reads in the original data directory, with the previous installation backed up. No production-code change was needed. The newer-version transport fixture now explicitly covers 2.1.285 and 2.1.291. This runtime observation does not establish future compatibility or a new static inspection of the provider binary; private quota values and account metadata are omitted from this record.
+
 ## Linux 2.1.270 observation (2026-09-13)
 
 The installed official VS Code Insiders extension `anthropic.claude-code-2.1.270-linux-x64` was inspected on Kubuntu 26.04.1 / KDE Wayland. Its extension wrapper retains the experimental `get_usage` request and `skip_behaviors` option; its native CLI retains the initialization controls and global five-hour/weekly response fields used by the adapter. The existing two-message exchange successfully returned both quota windows and account-continuity metadata using the client's existing login. A null five-hour reset time preserved the known amount, as intended. No prompt, AI inference, private transcript, or credential-file read was performed by the tray. This observation adds Linux evidence; it does not change the compatibility boundary below or establish future-version compatibility.

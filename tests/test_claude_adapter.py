@@ -225,7 +225,7 @@ class ClaudeTransportTest(unittest.TestCase):
     def test_newer_versions_use_only_the_same_metadata_controls(self):
         behavior = ("emit(" + repr(envelope(claude.INITIALIZE_ID)) + ")\nread()\n"
                     "emit(" + repr(envelope(claude.USAGE_ID, usage())) + ")\n")
-        for version in ("2.1.264", "2.1.266", "2.1.999", "2.2.0", "3.0.0"):
+        for version in ("2.1.264", "2.1.266", "2.1.285", "2.1.291", "2.1.999", "2.2.0", "3.0.0"):
             with self.subTest(version=version):
                 result, sent, _, _ = self.run_fake(behavior, version=version)
                 self.assertEqual(sent, [claude._initialize(), claude._get_usage()])
