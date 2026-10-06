@@ -1,6 +1,7 @@
 """Provider-isolated Claude snapshots. Only global 5-hour and weekly allowance."""
 from datetime import datetime
 from pathlib import Path
+import re
 import subprocess
 import secrets
 
@@ -53,6 +54,22 @@ def response(cache, now):
     return result
 
 
+def error_category(error):
+    """Fixed local category names only, so a failed read stays diagnosable.
+
+    Client selection problems and transport categories are kept apart, as the
+    Codex cache already does; anything else is the generic unavailable.
+    """
+    if isinstance(error, client_registry.ClientError):
+        return "client_unavailable"
+    code = str(error) if isinstance(error, quota.QuotaError) else "unavailable"
+    if code == "unsupported_version":
+        return code
+    if code in ("protocol", "unsupported_response", "incomplete_windows"):
+        return "incompatible_protocol"
+    return code if re.fullmatch(r"[a-z_]{1,40}", code) else "unavailable"
+
+
 def quota_command(folder, now):
     folder = Path(folder)
     with quota.quota_lock(folder):
@@ -98,9 +115,6 @@ def quota_command(folder, now):
                 quota.QuotaError, subprocess.SubprocessError) as error:
             # Never persist raw process/server output or account identifiers.
             cache.update(attempted_at=now.isoformat(), last_ok=False)
-            code = str(error) if isinstance(error, quota.QuotaError) else "unavailable"
-            cache["error"] = ("unsupported_version" if code == "unsupported_version" else
-                              "incompatible_protocol" if code in ("protocol", "unsupported_response", "incomplete_windows") else
-                              "unavailable")
+            cache["error"] = error_category(error)
         write_json(folder / "quota-state.json", cache)
         return response(cache, now)
