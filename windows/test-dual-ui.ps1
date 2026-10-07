@@ -2,6 +2,7 @@
 $ErrorActionPreference='Stop'
 $CaptureDemo=$env:CODEX_USAGE_CAPTURE_DEMO -eq '1'
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+. (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
 $root=Join-Path (Split-Path $PSScriptRoot -Parent) ('build\dual-ui-'+(Get-Date -Format yyyyMMdd-HHmmss))
 [void][IO.Directory]::CreateDirectory((Join-Path $root 'providers\claude'))
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -223,7 +224,7 @@ try{
      [DualUiTest]::Capture($session,$root,$index)
  }
  [DualUiTest]::CapturePreviews($session,$root)
-}finally{if($session){[DualUiTest]::Stop($session)}}
+}finally{if($session){[DualUiTest]::Stop($session)};Remove-TestTrayRegistrations}
 $commands=Get-ChildItem -LiteralPath $root -Filter 'command-*.txt' -Recurse | ForEach-Object {Get-Content -LiteralPath $_.FullName}
 if($commands -contains 'review-run' -or $commands -contains 'review-decide'){throw 'Unexpected AI-related action'}
 if($CaptureDemo){Write-Output 'PASS: synthetic dual-provider demo, no configured policies, no inference launch.'}

@@ -116,7 +116,8 @@ public static class DemoCapture {
     }
 }
 '@
-[DemoCapture]::Run($AssemblyPath, $fixtureBackend, $data, $OutputPath)
+. (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
+try { [DemoCapture]::Run($AssemblyPath, $fixtureBackend, $data, $OutputPath) } finally { Remove-TestTrayRegistrations }
 $commands = @(Get-ChildItem -LiteralPath $data -Filter 'command-*.txt' | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw })
 if ($commands | Where-Object { $_ -notin @('ui-status', 'monitor-check', 'usage-check') }) { throw 'Unexpected command in the demo fixture.' }
 Get-Item -LiteralPath $OutputPath | Select-Object FullName, Length
