@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
+. (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
 $testRoot = Join-Path (Split-Path $PSScriptRoot -Parent) ('build\ui-tests-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 [void][System.IO.Directory]::CreateDirectory($testRoot)
 $fixtureBackend = Join-Path $testRoot 'FixtureBackend.exe'
@@ -444,5 +445,6 @@ try {
             Stop-Process -Id $process.Id
         }
     }
+    Remove-TestTrayRegistrations @($nativeExe)
 }
 Write-Output "Artifacts: $testRoot"
