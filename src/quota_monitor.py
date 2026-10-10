@@ -4,122 +4,32 @@ Uses the installed official app-server and its existing login. This module never
 reads credentials, talks to undocumented HTTP endpoints, or submits a prompt.
 """
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
-import ctypes
-import errno
+from datetime import datetime
 import hashlib
-from ctypes import wintypes
 import json
-import math
 import os
 from pathlib import Path
 import queue
-import signal
 import subprocess
-import sys
 import threading
 import time
 
 from storage import atomic_write, exclusive_file
 from external_process import dll_search_context, environment, metadata_process_options
 import usage_forecast
+from quota_support.errors import QuotaError
+from quota_support.process_group import _kill_metadata_group, kill_children_on_exit
+from quota_support.codex_reply import MAX_AGE_SECONDS, JST, number, reset_time, normalize, label, reply
 
 
 ALLOWED_METHODS = frozenset(("initialize", "initialized", "account/rateLimits/read"))
 MIN_REFRESH_SECONDS = 30
-MAX_AGE_SECONDS = 10 * 60
-JST = timezone(timedelta(hours=9))
-
-
-class QuotaError(Exception):
-    """Only stable local error categories; never expose raw server errors."""
-
-
 def send_read_only(stream, message, allow_model_list=False):
     if (message.get("method") not in ALLOWED_METHODS
             and not (allow_model_list and message.get("method") == "model/list")):
         raise QuotaError("forbidden_method")
     stream.write(json.dumps(message) + "\n")
     stream.flush()
-
-
-def _kill_metadata_group(process, group):
-    try:
-        os.killpg(group, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-    except PermissionError as error:
-        # Darwin excludes zombies from killpg's eligible targets and returns
-        # EPERM while a leader is exiting, before waitpid can reap it. Allow a
-        # short bounded wait for our child, then suppress that error only if its
-        # entire group is confirmed gone.
-        # Do not retry SIGKILL after reaping: the group ID could have been reused.
-        if sys.platform != "darwin" or error.errno != errno.EPERM:
-            raise
-        if process.poll() is None:
-            try:
-                process.wait(timeout=0.5)
-            except subprocess.TimeoutExpired:
-                error.add_note("Metadata group cleanup: child did not exit within the 0.5 second Darwin grace.")
-                raise error from None
-        try:
-            os.killpg(group, 0)
-        except ProcessLookupError:
-            return
-        except OSError as probe_error:
-            error.add_note("Metadata group cleanup: group probe failed after child was reaped.")
-            raise error from probe_error
-        error.add_note("Metadata group cleanup: group still exists after child was reaped.")
-        raise error
-
-
-@contextmanager
-def kill_children_on_exit(process):
-    """Windows Job or POSIX private process group; metadata only, never the UI group."""
-    if os.name != "nt":
-        try:
-            group = os.getpgid(process.pid)
-        except ProcessLookupError:
-            group = process.pid  # Exited leader may still have live descendants.
-        if group != process.pid or group == os.getpgrp():
-            raise QuotaError("process_guard")
-        try:
-            yield
-        finally:
-            _kill_metadata_group(process, group)
-        return
-    class BasicLimits(ctypes.Structure):
-        _fields_ = [("process_time", ctypes.c_int64), ("job_time", ctypes.c_int64),
-                    ("flags", wintypes.DWORD), ("min_ws", ctypes.c_size_t), ("max_ws", ctypes.c_size_t),
-                    ("active", wintypes.DWORD), ("affinity", ctypes.c_size_t),
-                    ("priority", wintypes.DWORD), ("scheduling", wintypes.DWORD)]
-    class IoCounters(ctypes.Structure):
-        _fields_ = [(name, ctypes.c_uint64) for name in ("read_ops", "write_ops", "other_ops", "read", "write", "other")]
-    class ExtendedLimits(ctypes.Structure):
-        _fields_ = [("basic", BasicLimits), ("io", IoCounters),
-                    ("process_memory", ctypes.c_size_t), ("job_memory", ctypes.c_size_t),
-                    ("peak_process_memory", ctypes.c_size_t), ("peak_job_memory", ctypes.c_size_t)]
-    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-    kernel.CreateJobObjectW.argtypes = (ctypes.c_void_p, wintypes.LPCWSTR)
-    kernel.CreateJobObjectW.restype = wintypes.HANDLE
-    kernel.SetInformationJobObject.argtypes = (wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD)
-    kernel.SetInformationJobObject.restype = wintypes.BOOL
-    kernel.AssignProcessToJobObject.argtypes = (wintypes.HANDLE, wintypes.HANDLE)
-    kernel.AssignProcessToJobObject.restype = wintypes.BOOL
-    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
-    kernel.CloseHandle.restype = wintypes.BOOL
-    job = kernel.CreateJobObjectW(None, None)
-    if not job:
-        raise QuotaError("process_guard")
-    try:
-        limits = ExtendedLimits()
-        limits.basic.flags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-        if (not kernel.SetInformationJobObject(job, 9, ctypes.byref(limits), ctypes.sizeof(limits))
-                or not kernel.AssignProcessToJobObject(job, wintypes.HANDLE(int(process._handle)))):
-            raise QuotaError("process_guard")
-        yield
-    finally:
-        kernel.CloseHandle(job)
 
 
 def request_rate_limits(binary, timeout=16):
@@ -208,139 +118,6 @@ def request_metadata(binary, method, params=None, timeout=16):
             process.kill()
             process.wait(timeout=1)
         process.stdout.close()
-
-
-def number(value):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-        raise QuotaError("unsupported_response")
-    return value
-
-
-def reset_time(value):
-    if value is None:
-        return None
-    number(value)
-    if not isinstance(value, int) or value < 0:
-        raise QuotaError("unsupported_response")
-    datetime.fromtimestamp(value, timezone.utc)  # Reject timestamps this PC cannot display.
-    return value
-
-
-def normalize(result):
-    """Keep only the Codex quota, never substitute Spark/reserve or token totals."""
-    buckets = result.get("rateLimitsByLimitId")
-    if buckets is not None:
-        if not isinstance(buckets, dict) or "codex" not in buckets:
-            raise QuotaError("unsupported_response")
-        bucket = buckets["codex"]
-    else:
-        bucket = result.get("rateLimits")
-    if not isinstance(bucket, dict) or bucket.get("limitId") not in (None, "codex"):
-        raise QuotaError("unsupported_response")
-    windows = []
-    for key in ("primary", "secondary"):
-        raw = bucket.get(key)
-        if raw is None:
-            continue
-        if not isinstance(raw, dict):
-            raise QuotaError("unsupported_response")
-        used = number(raw.get("usedPercent"))
-        if used < 0:
-            raise QuotaError("unsupported_response")
-        duration = raw.get("windowDurationMins")
-        if duration is not None and (number(duration) <= 0 or not isinstance(duration, int)):
-            raise QuotaError("unsupported_response")
-        windows.append({"kind": key, "remaining_percent": max(0, 100 - used),
-                        "duration_mins": duration, "resets_at": reset_time(raw.get("resetsAt"))})
-    individual = bucket.get("individualLimit")
-    if individual is not None:
-        if not isinstance(individual, dict):
-            raise QuotaError("unsupported_response")
-        remaining = number(individual.get("remainingPercent"))
-        if not 0 <= remaining <= 100:
-            raise QuotaError("unsupported_response")
-        windows.append({"kind": "individual", "remaining_percent": remaining, "duration_mins": None,
-                        "resets_at": reset_time(individual.get("resetsAt"))})
-    if not windows:
-        raise QuotaError("no_windows")
-    blocked = bucket.get("spendControlReached") is True or bucket.get("rateLimitReachedType") is not None
-    return {"windows": windows, "blocked": blocked}
-
-
-def label(window):
-    if window["kind"] == "individual":
-        return "個人上限"
-    duration = window["duration_mins"]
-    if duration == 10080:
-        return "Weekly"
-    if duration is None:
-        return "枠1" if window["kind"] == "primary" else "枠2"
-    if duration % 1440 == 0:
-        return str(duration // 1440) + "日枠"
-    if duration % 60 == 0:
-        return str(duration // 60) + "時間枠"
-    return str(duration) + "分枠"
-
-
-def reply(cache, now):
-    snapshot = cache.get("snapshot")
-    if snapshot is not None:
-        if (not isinstance(snapshot, dict) or not isinstance(snapshot.get("windows"), list)
-                or not 1 <= len(snapshot["windows"]) <= 3 or not isinstance(snapshot.get("blocked"), bool)):
-            raise ValueError("Invalid cached snapshot")
-        seen = set()
-        for window in snapshot["windows"]:
-            if window["kind"] not in ("primary", "secondary", "individual") or window["kind"] in seen:
-                raise ValueError("Invalid cached window")
-            seen.add(window["kind"])
-            if not 0 <= number(window["remaining_percent"]) <= 100:
-                raise ValueError("Invalid cached remaining quota")
-            duration = window["duration_mins"]
-            if duration is not None and (number(duration) <= 0 or not isinstance(duration, int)):
-                raise ValueError("Invalid cached window duration")
-            reset_time(window["resets_at"])
-    fetched = datetime.fromisoformat(cache["fetched_at"]) if snapshot else None
-    if fetched is not None and fetched.tzinfo is None:
-        raise ValueError("Cached timestamp must include timezone")
-    stale = (snapshot is None or not cache.get("last_ok", False)
-             or not 0 <= (now - fetched).total_seconds() <= MAX_AGE_SECONDS
-             or any(w["resets_at"] is not None and w["resets_at"] <= now.timestamp() for w in snapshot["windows"]))
-    rows = []
-    if snapshot:
-        for window in snapshot["windows"]:
-            reset = window["resets_at"]
-            rows.append({"label": label(window), "remaining_percent": window["remaining_percent"],
-                         "resets_label": ("リセット " + datetime.fromtimestamp(reset, JST).strftime("%m/%d %H:%M JST")
-                                          if reset is not None else "リセット時刻: 未提供")})
-    blocked = snapshot is not None and snapshot.get("blocked", False)
-    remaining = min((row["remaining_percent"] for row in rows), default=None)
-    details = [f'{r["label"]}: 残り {r["remaining_percent"]:g}%  ·  {r["resets_label"]}' for r in rows]
-    checked = "最終取得: " + fetched.astimezone(JST).strftime("%m/%d %H:%M:%S JST") if fetched else "取得成功の記録はありません"
-    if stale:
-        title = "Usageを確認できません"
-        details.insert(0, "現在値は未確認です。" + ("以下は前回取得した残量です。" if rows else ""))
-        details.append("接続・Codexのログイン状態をご確認ください。5分ごとに再確認します。")
-        tooltip = "Codex Usage 未確認" + (" / 前回 " + fetched.astimezone(JST).strftime("%m/%d %H:%M") if fetched else "")
-    elif blocked:
-        title = "利用制限が通知されています"
-        details.append("サーバーが利用制限を通知しています。残量だけでは利用可否を判断できません。")
-        tooltip = "Codex Usage 利用制限あり / " + fetched.astimezone(JST).strftime("%H:%M確認")
-    else:
-        title = f"Usage 残り {remaining:g}%"
-        chosen = min(rows, key=lambda row: row["remaining_percent"])
-        tooltip = f'Codex {chosen["label"]} 残り{remaining:g}% / ' + chosen["resets_label"] + " / " + fetched.astimezone(JST).strftime("%H:%M取得")
-    if len(rows) > 1:
-        details.append("トレイには、このCodex枠のうち最も少ない残量を表示します。")
-    forecast = (usage_forecast.pending("unavailable", "現在の残量を確認できるまで予測を保留します。")
-                if stale or blocked else usage_forecast.forecast(cache.get("history"), snapshot["windows"], now.timestamp(), label))
-    if not stale and not blocked:
-        short = {"comfortable": "余裕あり", "tight": "ペース注意", "at_risk": "不足注意",
-                 "collecting": "判定待ち", "unavailable": "見通し未確認"}[forecast["status"]]
-        affected = "(" + forecast["window_label"] + ")" if forecast["window_label"] else ""
-        tooltip = short + affected + " / " + tooltip
-    return {"ok": not stale, "stale": stale, "title": title, "detail": "\n".join(details),
-            "checked_label": checked, "tooltip": tooltip[:63], "remaining_percent": None if stale or blocked else remaining,
-            "windows": rows, "blocked": blocked, "forecast": forecast}
 
 
 @contextmanager
