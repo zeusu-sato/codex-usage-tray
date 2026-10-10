@@ -1,0 +1,95 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Text;
+using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Web.Script.Serialization;
+using System.Windows.Forms;
+
+internal sealed partial class UsageToggleForm : Form
+{
+    private readonly string python;
+    private readonly string backend;
+    private readonly string dataDirectory;
+    private readonly string provider;
+    internal Action HostOpen;
+    internal Action HostExit;
+    private readonly Label summary;
+    private readonly Label detail;
+    private readonly Label expiry;
+    private readonly CheckBox toggle;
+    private readonly Label monitorStatus;
+    private readonly Label usageValue;
+    private readonly Label usageTitle;
+    private readonly Label usageDetail;
+    private readonly Label usageForecast;
+    private readonly Label usageChecked;
+    private readonly Label mitigationHeading;
+    private readonly Label trayHint;
+    private readonly Button refreshUsage;
+    private readonly Button reviewButton;
+    private readonly Button reportButton;
+    private readonly Label reviewFeedback;
+    private readonly NotifyIcon trayIcon;
+    private readonly ContextMenuStrip trayMenu;
+    private readonly ToolStripMenuItem checkNow;
+    private readonly ToolStripMenuItem reviewMenu;
+    private readonly ToolStripMenuItem reportMenu;
+    private readonly ToolStripMenuItem clientMenu;
+    private readonly ToolStripMenuItem startupMenu;
+    private readonly System.Windows.Forms.Timer monitorTimer;
+    private readonly System.Windows.Forms.Timer usageTimer;
+    private readonly EventWaitHandle showWindowEvent;
+    private readonly object backendLock = new object();
+    private readonly object usageLock = new object();
+    private readonly object processLock = new object();
+    private readonly HashSet<BackendJob> activeJobs = new HashSet<BackendJob>();
+    private Icon usageIcon;
+    private RegisteredWaitHandle showWindowWait;
+    private bool busy;
+    private bool monitorBusy;
+    private bool usageBusy;
+    private bool reviewBusy;
+    private bool reportBusy;
+    private bool clientMismatch;
+    private bool clientAvailable;
+    private bool clientSelectionBusy;
+    private bool clientSwitching;
+    private bool clientSelectionPrompted;
+    private bool acknowledgementBusy;
+    private bool initialized;
+    private bool enabled;
+    private bool showRequested;
+    private bool exiting;
+    private string pendingBalloonSignature;
+    private DateTime pendingBalloonAt;
+    private string pendingAcknowledgement;
+    private string displayedSignature;
+    private string usageTooltip = "Codex Usage: 残量を確認しています";
+    private string monitorTooltipSuffix = "";
+    private string lastUsageDetail;
+    private string lastUsageValue;
+    private string currentVersionSignature;
+    private string promptedSignature;
+    private ReviewPromptForm reviewPrompt;
+    private Action<string> reviewRunner;
+    private Action<Form> reviewPresenter;
+    private Action<Form> clientPresenter;
+    private Action<string> reportOpener;
+    private ClientPickerForm clientPicker;
+    private string startupDirectory;
+    private const string StartupDescription = "Codex Usage Tray managed startup";
+
+    public UsageToggleForm(string pythonPath, string backendPath, string stateDirectory, bool startInTray, EventWaitHandle showWindow)
+        : this(pythonPath, backendPath, stateDirectory, startInTray, showWindow, "codex") { }
+
+}
