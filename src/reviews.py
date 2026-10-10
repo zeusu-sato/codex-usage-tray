@@ -1,13 +1,9 @@
 """An explicit, fresh Yes starts one visible review. Polling never calls a model."""
-import ctypes
-from ctypes import wintypes
 from datetime import datetime, timezone
-import json
 import os
 from pathlib import Path
 import re
 import subprocess
-import sys
 import uuid
 
 from client_registry import current_identity, fingerprint, settings, provider_for, display_name
@@ -15,6 +11,8 @@ from external_process import dll_search_context, environment
 from policy_manager import digest, proposal
 from storage import atomic_write, locked, read_json, write_json
 from version_monitor import signature_for
+from review_support.process_identity import _ProcBSDInfo, darwin_process_identity, process_identity
+from review_support.prompt import build_prompt
 
 
 class ReviewError(ValueError):
@@ -36,64 +34,6 @@ def current_change(folder, signature):
     return reference, current
 
 
-class _ProcBSDInfo(ctypes.Structure):
-    # Apple's public ABI: https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/proc_info.h
-    # PROC_PIDTBSDINFO includes the kernel's microsecond process-start timestamp.
-    _fields_ = ([(name, ctypes.c_uint32) for name in
-                 ("flags", "status", "xstatus", "pid", "ppid", "uid", "gid", "ruid", "rgid", "svuid", "svgid", "reserved")]
-                + [("comm", ctypes.c_char * 16), ("name", ctypes.c_char * 32)]
-                + [(name, ctypes.c_uint32) for name in ("nfiles", "pgid", "pjobc", "tdev", "tpgid")]
-                + [("nice", ctypes.c_int32), ("started_seconds", ctypes.c_uint64), ("started_microseconds", ctypes.c_uint64)])
-
-
-def darwin_process_identity(pid):
-    try:
-        library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
-        query = library.proc_pidinfo
-        query.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_int)
-        query.restype = ctypes.c_int
-        info = _ProcBSDInfo()
-        size = ctypes.sizeof(info)
-        if (query(pid, 3, 0, ctypes.byref(info), size) != size or info.pid != pid
-                or info.status == 5 or info.flags & 4 or info.started_seconds == 0):
-            return None
-        return "darwin:" + str(info.started_seconds) + ":" + str(info.started_microseconds)
-    except (OSError, AttributeError):
-        return None
-
-
-def process_identity(pid):
-    if isinstance(pid, bool) or not isinstance(pid, int) or not 0 < pid <= 0x7fffffff:
-        return None
-    if sys.platform == "darwin":
-        return darwin_process_identity(pid)
-    if os.name != "nt":
-        try:
-            fields = Path("/proc", str(pid), "stat").read_text().rsplit(")", 1)[1].split()
-            boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
-            return "linux:" + boot + ":" + fields[19] if fields[0] != "Z" else None
-        except (OSError, ValueError, IndexError):
-            return None
-    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-    kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
-    kernel.OpenProcess.restype = wintypes.HANDLE
-    kernel.GetProcessTimes.argtypes = (wintypes.HANDLE, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)
-    kernel.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
-    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
-    handle = kernel.OpenProcess(0x1000, False, int(pid))
-    if not handle:
-        return None
-    try:
-        code = wintypes.DWORD()
-        times = [ctypes.c_uint64() for _ in range(4)]
-        if (not kernel.GetExitCodeProcess(handle, ctypes.byref(code)) or code.value != 259
-                or not kernel.GetProcessTimes(handle, *(ctypes.byref(t) for t in times))):
-            return None
-        return str(times[0].value)
-    finally:
-        kernel.CloseHandle(handle)
-
-
 def running(record):
     return (record.get("status") == "running" and record.get("process_created") is not None
             and process_identity(record.get("pid", 0)) == record["process_created"])
@@ -111,42 +51,6 @@ def reply(signature, record=None):
             "detail": ("見直し用のCodex画面が起動しています。" if active else
                        "はい (Yes) を押すと、その時点で利用可能な最上位モデル・最大推論強度で調査し、Usageを使用します。\n"
                        "いいえ (No) ならAIを起動しません。通常の監視は続きます。")}
-
-
-def build_prompt(reference, current):
-    target = fingerprint(current)
-    template = {"schema_version": 1, "review_complete": True, "fingerprint": target,
-                "summary": "根拠に基づく結論", "instructions": "不要・未検証なら空文字",
-                "sources": ["https://official.example/exact-source"],
-                "validation": ["確認した項目と結果"], "quality_preserved": True}
-    text = f"""ユーザーはCodex Usage Trayで明示的にYesを選び、Usage対策の見直しを依頼しました。
-この作業フォルダーに調査結果と必要な対策案を実装してください。回答とレポートは日本語で。
-
-監視の基準（観測記録であり、対策が有効という証明ではない）: {json.dumps(reference, ensure_ascii=False)}
-現在の環境: {json.dumps(current, ensure_ascii=False)}
-
-条件:
-- 思考の質・精度が最優先。時間は増えてもよい。選択済みの最上位モデル・最大推論強度を維持する。
-- モデル、推論強度、必要な文脈、証拠、独立検証を削ってUsageを減らさない。SubAgentの一律禁止や必要な検証の省略を対策にしない。
-- 現在の公式情報とローカルの実装・設定を確認する。バージョンの不一致だけでは不具合や改善済みと断定しない。因果関係や節約率を捏造しない。
-- 公式側の改善を妨げる古い対策は不要と判断する。固定解除日は設けない。
-- 通常の常駐監視にAI推論を導入しない。推論を使う反復ベンチマーク、外部への投稿、認証情報の読み出し・出力は禁止。
-- 書き込み対象はこの作業フォルダー。ユーザーのグローバル設定、AGENTS.md、親フォルダーの状態や配布アプリを変更しない。
-- 追加指示を提案するなら、根拠・副作用・検証方法をreport.mdに記録し、品質を保つ条件付きの最小限の指示にする。
-- instructionsはユーザーが別途ONを選んだときのみ、所有マーカーで囲まれたAGENTS.mdの追加指示として適用される。
-- 検証できない対策はinstructionsを空文字にして、その制約と必要な次の手順を報告する。完成した根拠がないならreview_completeをfalseにする。
-
-完了時はこのフォルダーのreport.mdに根拠・結論・変更案・検証・残る制約を記録し、review-result.jsonを以下の構造で保存してください。
-sourcesは実際に確認した一次情報のURL、validationは実際の確認結果に置き換えてください。
-{json.dumps(template, ensure_ascii=False, indent=2)}
-
-対策が不要と確認できた場合、instructionsは空文字でよいです。終了後、このアプリが成果物の形式と環境の一致を確認します。
-アプリが見直し済みと記録することは、AIの結論の正しさを独立して保証するものではありません。
-"""
-    if current.get("provider") == "claude":
-        text = text.replace("AGENTS.md", "CLAUDE.md")
-        text = "調査対象はVS Codeで使用するClaude Codeです。調査に使うCodexとは別の製品です。Claude Codeの公式資料と対象実装に基づいて判断してください。\n" + text
-    return text
 
 
 def review_command(folder, command, now, signature, decision=None):
