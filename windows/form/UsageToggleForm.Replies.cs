@@ -98,7 +98,7 @@ internal sealed partial class UsageToggleForm
         string kind = RequireString(credit, "kind");
         string text = RequireString(credit, "tray_text");
         if ((kind != "codex_credits" && kind != "claude_extra_usage")
-            || String.IsNullOrWhiteSpace(text) || text.Length > 5) throw new FormatException();
+            || text == null || !System.Text.RegularExpressions.Regex.IsMatch(text, @"\A(?:[0-9]{1,3}|[1-9][0-9]?[kMG]|\.[1-9][MG]|\u221e|\u00a4)\z")) throw new FormatException();
         foreach (char c in text) if (Char.IsControl(c) || Char.IsSurrogate(c)) throw new FormatException();
         return new CreditReply { Kind = kind, TrayText = text,
             AmountKnown = RequireBoolean(credit, "amount_known"),

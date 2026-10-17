@@ -189,8 +189,8 @@ public static class DualUiTest {
         Invoke(session, delegate {
             Type symbols = session.Host.GetType().Assembly.GetType("TraySymbols", true);
             MethodInfo create = symbols.GetMethod("Create", BindingFlags.Static | BindingFlags.NonPublic);
-            string[] texts = { "812", "61k", "999k", "1.2M", "∞", "¤", "$688", "$1.2k" };
-            string[] names = { "812", "61k", "999k", "1.2M", "infinity", "currency", "dollar688", "dollar1.2k" };
+            string[] texts = { "812", "61k", ".9M", ".1M", "∞", "¤", "688", "1k" };
+            string[] names = { "812", "61k", ".9M", ".1M", "infinity", "currency", "688", "1k" };
             for (int i = 0; i < texts.Length; i++) {
                 using (Icon icon = (Icon)create.Invoke(null, new object[] { (double?)100, Color.FromArgb(106,76,196), "codex", texts[i] })) {
                     SaveIcon(icon, Path.Combine(folder, "credit-" + names[i]), true);
@@ -271,7 +271,7 @@ try{
      $title=if($index -eq 0){'Credit 利用中'}else{'追加利用中'}
      $summary=if($index -eq 0){'残り61,794クレジット'}else{'追加利用：今月の上限まで残り $688.00（使用 $0.00）'}
      $path=if($index -eq 0){Join-Path $root 'fixture.json'}else{Join-Path $root 'providers\claude\fixture.json'}
-     foreach($text in $(if($index -eq 0){@('61k')}else{@('$688','∞','¤')})){
+     foreach($text in $(if($index -eq 0){@('61k')}else{@('688','∞','¤')})){
          $credit=@{kind=$(if($index -eq 0){'codex_credits'}else{'claude_extra_usage'});tray_text=$text;amount_known=($text -ne '¤');title=$title;summary=$summary}
          [IO.File]::WriteAllText($path,(@{remaining=0;credit=$credit}|ConvertTo-Json -Depth 5),$encoding)
          $task=[DualUiTest]::RefreshCredit($session,$index)
@@ -282,7 +282,7 @@ try{
          [DualUiTest]::Capture($session,$root,$index)
      }
  }
- Write-Output 'PASS: dual-provider Credit modes (61k/$688/∞/¤), titles, summaries, tooltips, and purple tray backgrounds.'
+ Write-Output 'PASS: dual-provider Credit modes (61k/688/∞/¤), titles, summaries, tooltips, and purple tray backgrounds.'
 
 }finally{if($session){[DualUiTest]::Stop($session)};Remove-TestTrayRegistrations}
 $commands=Get-ChildItem -LiteralPath $root -Filter 'command-*.txt' -Recurse | ForEach-Object {Get-Content -LiteralPath $_.FullName}

@@ -115,24 +115,18 @@ def validate_credit(credit):
         raise ValueError("Invalid cached credit")
 
 
-def compact_credit(integer, dollars=False):
+def compact_credit(integer):
     if integer < 1000:
-        text = str(integer)
-    else:
-        unit, scale = ("k", 1000)
-        for candidate, divisor in (("M", 10**6), ("B", 10**9)):
-            if integer >= divisor:
-                unit, scale = candidate, divisor
-        if integer >= 10**12:
-            text = "999B"
-        elif integer < scale * 10 and (dollars or scale > 1000):
-            tenths = integer * 10 // scale
-            text = str(tenths // 10) + ("." + str(tenths % 10) if tenths % 10 else "") + unit
-        else:
-            text = str(integer // scale) + unit
-    if dollars and len(text) > 4:
-        text = "999B"
-    return ("$" if dollars else "") + text
+        return str(integer)
+    if integer < 100000:
+        return str(integer // 1000) + "k"
+    if integer < 1000000:
+        return "." + str(integer // 100000) + "M"
+    if integer < 100000000:
+        return str(integer // 1000000) + "M"
+    if integer < 1000000000:
+        return "." + str(integer // 100000000) + "G"
+    return str(min(integer // 1000000000, 99)) + "G"
 
 
 def credit_display(credit):
@@ -165,7 +159,7 @@ def credit_display(credit):
                 summary = "追加利用：上限なし（今月の使用 " + money(used) + "）" if used is not None else "追加利用：上限なし（今月の使用額 未提供）"
             elif credit["limit_known"] and used is not None:
                 left = max(Decimal(0), limit - used)
-                tray = compact_credit(int(left / 100), dollars=True)
+                tray = compact_credit(int(left / 100))
                 summary = "追加利用：今月の上限まで残り " + money(left) + "（使用 " + money(used) + "）"
             else:
                 tray, known = "¤", False
