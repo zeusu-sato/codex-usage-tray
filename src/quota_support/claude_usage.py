@@ -6,6 +6,7 @@ import math
 import re
 from uuid import UUID
 from quota_support.errors import QuotaError
+from quota_support.codex_reply import credit_number
 
 
 def _unique_object(pairs):
@@ -67,6 +68,10 @@ def _usage_fields(data, initialized, scope_salt=None):
                                      if field in value} if isinstance(value, dict) else None
                                for key, value in limits.items() if key in ("five_hour", "seven_day")}
                               if isinstance(limits, dict) else None)}
+    if isinstance(limits, dict) and isinstance(limits.get("extra_usage"), dict):
+        extra = limits["extra_usage"]
+        result["rate_limits"]["extra_usage"] = {key: extra[key] for key in
+            ("is_enabled", "monthly_limit", "used_credits", "currency") if key in extra}
     scope = _scope_key(initialized, scope_salt=scope_salt)
     if scope is not None:
         result["scope_key"] = scope
@@ -119,4 +124,15 @@ def normalize(result):
                         "duration_mins": duration, "resets_at": _reset_time(raw["resets_at"])})
     # Shared UI reserves blocked for an explicit non-quota restriction. Known
     # exhaustion remains numeric zero so it can be displayed as a red amount.
-    return {"windows": windows, "blocked": False}
+    credit = None
+    extra = limits.get("extra_usage")
+    if any(w["remaining_percent"] == 0 for w in windows) and isinstance(extra, dict) and extra.get("is_enabled") is True:
+        limit = extra.get("monthly_limit")
+        currency = extra.get("currency")
+        currency = "USD" if currency is None else currency
+        credit = {"kind": "claude_extra_usage",
+                  "currency": currency if isinstance(currency, str) and re.fullmatch(r"[A-Z]{3}", currency) else None,
+                  "monthly_limit": limit if credit_number(limit) else None,
+                  "limit_known": "monthly_limit" in extra and (limit is None or credit_number(limit)),
+                  "used_credits": extra.get("used_credits") if credit_number(extra.get("used_credits")) else None}
+    return {"windows": windows, "blocked": False, "credit": credit}

@@ -27,6 +27,72 @@ def wait_until(condition, seconds=10):
 
 
 class TrayTests(unittest.TestCase):
+    def test_credit_icons_validation_and_font_fit(self):
+        from PyQt6.QtGui import QColor, QFontMetrics
+        from tray_icon import CREDIT_COLOR, credit_value, text_font, value_color
+        credit = dict(kind="codex_credits", tray_text="61k", amount_known=True,
+                      title="Credit 利用中", summary="残り61,794クレジット")
+        reply = dict(ok=True, remaining_percent=0, credit=credit)
+        self.assertEqual(credit_value(reply), credit)
+        self.assertEqual(remaining_value(reply), 0)
+        for value in (0, 50, None):
+            for status in ("comfortable", "tight", "at_risk", "unavailable"):
+                self.assertNotEqual(CREDIT_COLOR.lower(), value_color(value, status).lower())
+        for text in ("812", "61k", "1.2M", "∞", "¤", "$688", "$1.2k"):
+            self.assertNotEqual(text, "C")
+            reply["credit"] = dict(credit, tray_text=text)
+            for size in (16, 22):
+                metrics = QFontMetrics(text_font(text, size))
+                self.assertLessEqual(max(metrics.horizontalAdvance(text), metrics.boundingRect(text).width()), size)
+                image = usage_icon("codex", reply).pixmap(size, size).toImage()
+                self.assertFalse(image.isNull())
+            with patch("tray_icon.QPainter") as painter_class:
+                usage_icon("codex", reply)
+                painter = painter_class.return_value
+                self.assertIn(QColor(CREDIT_COLOR), [call.args[0] for call in painter.setPen.call_args_list])
+                self.assertEqual([call.args[-1] for call in painter.drawText.call_args_list], ["C", text] * 5)
+                self.assertEqual(painter.fillRect.call_count, 5)
+        for field, bad in (("tray_text", ""), ("tray_text", "123456"), ("tray_text", 12),
+                           ("title", None), ("summary", []), ("amount_known", 1), ("kind", "other")):
+            reply["credit"] = dict(credit, **{field: bad})
+            self.assertIsNone(credit_value(reply))
+            self.assertIsNone(remaining_value(reply))
+        for bad in (True, [], "credit", 1):
+            reply["credit"] = bad
+            self.assertIsNone(remaining_value(reply))
+        reply["credit"] = None
+        self.assertEqual(remaining_value(reply), 0)
+        del reply["credit"]
+        self.assertEqual(remaining_value(reply), 0)
+
+    def test_credit_window_text_color_and_invalid_reply(self):
+        from types import SimpleNamespace
+        from PyQt6.QtWidgets import QLabel, QMenu
+        from provider_view import ProviderView
+        from tray_icon import CREDIT_COLOR
+        view = SimpleNamespace(job=SimpleNamespace(deleteLater=lambda: None), exiting=False,
+                               provider="codex", value=QLabel(), detail=QLabel(), forecast=QLabel(),
+                               checked=QLabel(), tray=QSystemTrayIcon(), menu=QMenu(), next_job=lambda: None)
+        view.menu.addAction("Open")
+        credit = dict(kind="claude_extra_usage", tray_text="$688", amount_known=True,
+                      title="追加利用中", summary="追加利用：残り $688.00")
+        reply = dict(ok=True, remaining_percent=0, credit=credit, tooltip="追加利用中",
+                     forecast=dict(title="見通しなし", detail="pending"))
+        for current, expected in ((credit, credit["title"]), (dict(credit, tray_text=""), "?"), (None, "0%")):
+            view.job = SimpleNamespace(deleteLater=lambda: None)
+            reply["credit"] = current
+            ProviderView.received(view, "usage-check", reply)
+            self.assertEqual(view.value.text(), expected)
+            if current is credit:
+                self.assertIn(CREDIT_COLOR, view.value.styleSheet())
+                self.assertEqual(view.detail.text(), credit["summary"])
+                self.assertIn(credit["title"], view.menu.actions()[0].text())
+                self.assertEqual(view.menu.actions()[0].toolTip(), credit["summary"])
+                self.assertEqual(view.forecast.text(), "見通しなし\npending")
+                self.assertIn(reply["tooltip"], view.tray.toolTip())
+            elif expected == "?":
+                self.assertIn("#88939e", view.value.styleSheet())
+
     def test_periodic_refresh_updates_both_trays_after_window_is_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -141,12 +141,14 @@ def quota_command(folder, now, binary=None):
         stat = resolved.stat()
         source = hashlib.sha256(str((str(resolved), stat.st_size, stat.st_mtime_ns)).encode()).hexdigest()
     with quota_lock(folder):
-        cache = {"schema_version": 1}
+        cache = {"schema_version": 2}
         try:
             existing = json.loads(path.read_text(encoding="utf-8"))
-            if existing.get("schema_version") == 1 and source is not None and existing.get("source") == source:
+            if existing.get("schema_version") in (1, 2) and source is not None and existing.get("source") == source:
                 reply(existing, now)  # Validate before retaining last-known data.
                 cache = existing
+                if cache["schema_version"] == 1 and isinstance(cache.get("snapshot"), dict):
+                    cache["snapshot"]["credit"] = None
         except (OSError, ValueError, TypeError, KeyError, AttributeError, OverflowError, QuotaError):
             pass
         try:
@@ -168,6 +170,7 @@ def quota_command(folder, now, binary=None):
         except (QuotaError, OSError, ValueError, TypeError, KeyError, AttributeError,
                 StopIteration, OverflowError, subprocess.SubprocessError) as error:
             cache["error"] = str(error) if isinstance(error, QuotaError) else "unavailable"
+        cache["schema_version"] = 2
         atomic_write(path, (json.dumps(cache, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
         return reply(cache, now)
 

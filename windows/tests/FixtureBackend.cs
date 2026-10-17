@@ -73,11 +73,19 @@ internal static class FixtureBackend
                 bool stale = Flag(config, "stale");
                 object forecast;
                 config.TryGetValue("forecast", out forecast);
-                result = new { ok = !stale && percent != null, stale = stale, remaining_percent = percent,
+                object credit;
+                config.TryGetValue("credit", out credit);
+                var creditData = credit as Dictionary<string, object>;
+                string creditTitle = creditData == null ? "" : Value(creditData, "title", "");
+                string creditSummary = creditData == null ? "" : Value(creditData, "summary", "");
+                if (credit != null) forecast = new { status = "unavailable", title = "Credit 利用中は見通しを表示しません。",
+                    detail = "", window_label = (string)null, observed_hours = (double?)null, projected_remaining_percent = (double?)null };
+                result = new { ok = credit != null || (!stale && percent != null), stale = credit != null ? false : stale, remaining_percent = percent,
+                    credit = credit,
                     blocked = Flag(config, "blocked"), forecast = forecast,
-                    title = percent == null ? "テスト状態: 残量は未確認" : "Codexの残り使用枠",
-                    detail = (stale ? "前回の記録です。" : "") + "週間枠のリセット: 09/15 15:29 JST",
-                    checked_label = "最終取得: テスト時刻", tooltip = stale ? "Codex Usage 未確認" : "Codex 残り" + percent + "% / 09/15 15:29 JST",
+                    title = credit != null ? creditTitle : percent == null ? "テスト状態: 残量は未確認" : "Codexの残り使用枠",
+                    detail = (credit != null ? creditSummary + "\n" : "") + (stale ? "前回の記録です。" : "") + "週間枠のリセット: 09/15 15:29 JST",
+                    checked_label = "最終取得: テスト時刻", tooltip = credit != null ? "Codex " + creditTitle + " / " + creditSummary + " / 12:34取得" : stale ? "Codex Usage 未確認" : "Codex 残り" + percent + "% / 09/15 15:29 JST",
                     windows = new object[0] };
                 break;
             case "review-status":

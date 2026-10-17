@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 . (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
-$testRoot = Join-Path (Split-Path $PSScriptRoot -Parent) ('build\ui-tests-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('credit-ui-tests-' + [Guid]::NewGuid().ToString('N'))
 [void][System.IO.Directory]::CreateDirectory($testRoot)
 $fixtureBackend = Join-Path $testRoot 'FixtureBackend.exe'
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -80,6 +80,36 @@ try {
     Write-Fixture $data @{ remaining = 98 }
     Refresh-Quota $window
     Write-Output 'PASS: forecast colors preserve actual quota, name the window, handle missing/invalid history, and respect stale/blocked/zero overrides.'
+
+    $purple = [Drawing.Color]::FromArgb(106, 76, 196).ToArgb()
+    if ($forecastColors.Values -contains $purple) { throw 'Credit color equals a normal color' }
+    foreach ($text in @('61k', '$688', '∞', '¤', '$1.2k')) {
+        $credit = @{kind='codex_credits';tray_text=$text;amount_known=$true;title='Credit 利用中';summary='残り61,794クレジット'}
+        Write-Fixture $data @{remaining=0;credit=$credit}
+        Refresh-Quota $window
+        if ($window.Controls['UsageRemaining'].Text -ne $credit.title -or [PublicUiTest]::IconBackground($window) -ne $purple -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $purple) { throw 'Credit title/color missing' }
+        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne 'Credit 利用中は見通しを表示しません。') { throw 'Credit explanation missing' }
+    }
+    Write-Output 'PASS: Credit title, summary, tooltip, forecast explanation, and distinct purple icon background.'
+    $invalidCredits = @('bad', @{}, @{kind='unknown';tray_text='61k';amount_known=$true;title='Credit 利用中';summary='credit'})
+    foreach ($badText in @('', '123456', 812, $null, "a`nb")) {
+        $invalidCredits += @{kind='codex_credits';tray_text=$badText;amount_known=$true;title='Credit 利用中';summary='credit'}
+    }
+    $invalidCredits += @{kind='codex_credits';tray_text='61k';amount_known='true';title='Credit 利用中';summary='credit'}
+    foreach ($field in @('kind', 'tray_text', 'amount_known', 'title', 'summary')) {
+        $bad = @{kind='codex_credits';tray_text='61k';amount_known=$true;title='Credit 利用中';summary='credit'}
+        $bad.Remove($field)
+        $invalidCredits += $bad
+    }
+    foreach ($bad in $invalidCredits) {
+        Write-Fixture $data @{remaining=0;credit=$bad}
+        Refresh-Quota $window
+        if ($window.Controls['UsageRemaining'].Text -ne '?' -or -not $window.Controls['UsageDetail'].Text.Contains('使用枠の応答を読み取れませんでした。')) { throw 'Malformed credit was accepted' }
+    }
+    Write-Fixture $data @{remaining=98;credit=$null}
+    Refresh-Quota $window
+    if ($window.Controls['UsageRemaining'].Text -ne '98%' -or [PublicUiTest]::IconBackground($window) -ne $gray) { throw 'Null credit changed normal quota display' }
+    Write-Output 'PASS: malformed Credit rejected; null Credit restores normal percentage and color.'
 
     Write-Fixture $data @{ remaining = 98; configured = $true }
     Wait-Task ([PublicUiTest]::Call($window, 'RunCommandAsync', @('ui-status')))

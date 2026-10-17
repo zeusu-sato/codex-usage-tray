@@ -35,13 +35,20 @@ internal sealed partial class UsageToggleForm
             UsageReply reply = await Task.Run(() => ReadUsageReply(CallBackend("usage-check")));
             if (IsDisposed || exiting) return;
             bool current = reply.Ok && !reply.Stale && !reply.Blocked && reply.RemainingPercent.HasValue;
-            usageValue.Text = current ? reply.RemainingPercent.Value.ToString("0.#", CultureInfo.InvariantCulture) + "%" : "?";
-            Color forecastColor = ForecastColor(current ? reply.RemainingPercent : null, reply.Forecast.Status);
+            usageValue.Text = reply.Credit != null ? reply.Credit.Title : current ? reply.RemainingPercent.Value.ToString("0.#", CultureInfo.InvariantCulture) + "%" : "?";
+            Color forecastColor = reply.Credit != null ? Color.FromArgb(106, 76, 196) : ForecastColor(current ? reply.RemainingPercent : null, reply.Forecast.Status);
+            float valueFontSize = reply.Credit != null ? 22F : 34F;
+            if (usageValue.Font.Size != valueFontSize)
+            {
+                Font previous = usageValue.Font;
+                usageValue.Font = new Font(previous.FontFamily, valueFontSize, FontStyle.Bold);
+                previous.Dispose();
+            }
             usageValue.ForeColor = forecastColor;
             usageTitle.Text = reply.Title;
             usageDetail.Text = reply.Detail;
             usageForecast.ForeColor = forecastColor;
-            usageForecast.Text = !current
+            usageForecast.Text = reply.Credit != null ? reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail) : !current
                 ? (reply.Blocked ? "見通し: 利用制限があるため判定できません" : "見通し: 現在の残量は未確認です")
                 : reply.RemainingPercent.Value == 0 ? "残量なし: 対象の利用枠の残量は0%です。"
                 : "見通し: " + reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail);
@@ -53,7 +60,7 @@ internal sealed partial class UsageToggleForm
                 lastUsageValue = usageValue.Text;
                 lastUsageDetail = reply.Detail;
             }
-            UpdateForecastIcon(current ? reply.RemainingPercent : null, reply.Forecast.Status);
+            UpdateForecastIcon(current ? reply.RemainingPercent : null, reply.Forecast.Status, reply.Credit);
             UpdateTrayTooltip();
             ResizeForText();
         }
@@ -105,9 +112,9 @@ internal sealed partial class UsageToggleForm
         UpdateForecastIcon(remaining, "collecting");
     }
 
-    private void UpdateForecastIcon(double? remaining, string status)
+    private void UpdateForecastIcon(double? remaining, string status, CreditReply credit = null)
     {
-        Icon next = TraySymbols.Create(remaining, ForecastColor(remaining, status), provider);
+        Icon next = TraySymbols.Create(remaining, credit != null ? Color.FromArgb(106, 76, 196) : ForecastColor(remaining, status), provider, credit != null ? credit.TrayText : null);
         Icon previous = usageIcon;
         usageIcon = next;
         trayIcon.Icon = next;

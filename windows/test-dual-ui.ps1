@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 $CaptureDemo=$env:CODEX_USAGE_CAPTURE_DEMO -eq '1'
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing
 . (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
-$root=Join-Path (Split-Path $PSScriptRoot -Parent) ('build\dual-ui-'+(Get-Date -Format yyyyMMdd-HHmmss))
+$root = Join-Path ([IO.Path]::GetTempPath()) ('credit-dual-ui-' + [Guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory((Join-Path $root 'providers\claude'))
 $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $fixture=Join-Path $root 'FixtureBackend.exe'
@@ -130,18 +130,18 @@ public static class DualUiTest {
             return null;
         });
     }
-    static void RequireNumberPixels(Bitmap bitmap, int minimum) {
+    static void RequireNumberPixels(Bitmap bitmap, int minimum, int brightness = 230) {
         int pixels = 0;
         // The symbol is only 18% opaque. Count bright foreground glyph pixels,
         // excluding the bottom gauge so it cannot hide missing number rendering.
         int bottom = bitmap.Height == 32 ? 26 : 12;
         for (int y = 0; y < bottom; y++) for (int x = 0; x < bitmap.Width; x++) {
             Color color = bitmap.GetPixel(x,y);
-            if (color.A >= 220 && color.R >= 230 && color.G >= 230 && color.B >= 230) pixels++;
+            if (color.A >= 220 && color.R >= brightness && color.G >= brightness && color.B >= brightness) pixels++;
         }
         Require(pixels >= minimum, "Missing foreground number/question mark in " + bitmap.Width + "px icon: " + pixels + " bright pixels");
     }
-    static void SaveIcon(Icon icon, string stem) {
+    static void SaveIcon(Icon icon, string stem, bool credit = false) {
         using (Bitmap actual = icon.ToBitmap()) {
             Require(actual.Width == 32 && actual.Height == 32, "Unexpected source icon size");
             actual.Save(stem + "-32.png");
@@ -150,7 +150,7 @@ public static class DualUiTest {
                 graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 graphics.DrawImage(actual, new Rectangle(0,0,16,16));
                 small.Save(stem + "-16.png");
-                RequireNumberPixels(small, 2);
+                RequireNumberPixels(small, 2, credit ? 180 : 230);
             }
             RequireNumberPixels(actual, 8);
         }
@@ -164,7 +164,7 @@ public static class DualUiTest {
                 bitmap.Save(Path.Combine(folder, "provider-" + index + ".png"));
             }
             string provider = index == 0 ? "codex" : "claude";
-            SaveIcon((Icon)Field(Views(host)[index], "usageIcon"), Path.Combine(folder, provider + "-icon"));
+            SaveIcon((Icon)Field(Views(host)[index], "usageIcon"), Path.Combine(folder, provider + "-icon"), Views(host)[index].Controls["UsageRemaining"].ForeColor.ToArgb() == Color.FromArgb(106,76,196).ToArgb());
             return null;
         });
     }
@@ -177,10 +177,51 @@ public static class DualUiTest {
                     string label = value.HasValue ? value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "unknown";
                     Color color = !value.HasValue ? Color.FromArgb(94,106,115)
                         : value == 24 ? Color.FromArgb(157,104,0) : Color.FromArgb(28,111,85);
-                    using (Icon icon = (Icon)create.Invoke(null, new object[] { value, color, provider }))
+                    using (Icon icon = (Icon)create.Invoke(null, new object[] { value, color, provider, null }))
                         SaveIcon(icon, Path.Combine(folder, provider + "-preview-" + label));
                 }
             }
+            return null;
+        });
+    }
+    public static void CaptureCreditPreviews(DualUiSession session, string folder) {
+        Directory.CreateDirectory(folder);
+        Invoke(session, delegate {
+            Type symbols = session.Host.GetType().Assembly.GetType("TraySymbols", true);
+            MethodInfo create = symbols.GetMethod("Create", BindingFlags.Static | BindingFlags.NonPublic);
+            string[] texts = { "812", "61k", "999k", "1.2M", "∞", "¤", "$688", "$1.2k" };
+            string[] names = { "812", "61k", "999k", "1.2M", "infinity", "currency", "dollar688", "dollar1.2k" };
+            for (int i = 0; i < texts.Length; i++) {
+                using (Icon icon = (Icon)create.Invoke(null, new object[] { (double?)100, Color.FromArgb(106,76,196), "codex", texts[i] })) {
+                    SaveIcon(icon, Path.Combine(folder, "credit-" + names[i]), true);
+                    using (Bitmap bitmap = icon.ToBitmap()) {
+                        for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++) {
+                            Color c = bitmap.GetPixel(x,y);
+                            if (c.R > 230 && c.G > 230 && c.B > 230)
+                                Require(x >= 1 && x <= 30 && y >= 1 && y <= 25, "Credit glyph outside padded text area: " + texts[i]);
+                        }
+                        Require(bitmap.GetPixel(15,28).R < 200, "Credit gauge must contain only the track");
+                    }
+                }
+            }
+            return null;
+        });
+    }
+    public static Task RefreshCredit(DualUiSession session, int index) {
+        return (Task)Invoke(session, delegate {
+            Form view = Views(session.Host)[index];
+            return view.GetType().GetMethod("CheckUsageAsync", Fields).Invoke(view, null);
+        });
+    }
+    public static void VerifyCredit(DualUiSession session, int index, string title, string summary) {
+        Invoke(session, delegate {
+            Form view = Views(session.Host)[index];
+            Require(view.Controls["UsageRemaining"].Text == title, "Credit title missing");
+            Require(view.Controls["UsageDetail"].Text.StartsWith(summary), "Credit summary missing");
+            Require(((string)Field(view,"usageTooltip")).Contains(title), "Credit tooltip missing");
+            Require(view.Controls["UsageForecast"].Text == "Credit 利用中は見通しを表示しません。", "Credit forecast explanation missing");
+            using (Bitmap bitmap = ((Icon)Field(view,"usageIcon")).ToBitmap())
+                Require(bitmap.GetPixel(0,0).ToArgb() == Color.FromArgb(106,76,196).ToArgb(), "Credit icon background mismatch");
             return null;
         });
     }
@@ -224,6 +265,25 @@ try{
      [DualUiTest]::Capture($session,$root,$index)
  }
  [DualUiTest]::CapturePreviews($session,$root)
+ [DualUiTest]::CaptureCreditPreviews($session,(Join-Path $env:USERPROFILE 'credit-icon-samples\windows'))
+ Write-Output 'PASS: eight Credit glyphs fit the padded 32px area, track has no fill, and 32/16px samples contain visible text.'
+ foreach($index in 0,1){
+     $title=if($index -eq 0){'Credit 利用中'}else{'追加利用中'}
+     $summary=if($index -eq 0){'残り61,794クレジット'}else{'追加利用：今月の上限まで残り $688.00（使用 $0.00）'}
+     $path=if($index -eq 0){Join-Path $root 'fixture.json'}else{Join-Path $root 'providers\claude\fixture.json'}
+     foreach($text in $(if($index -eq 0){@('61k')}else{@('$688','∞','¤')})){
+         $credit=@{kind=$(if($index -eq 0){'codex_credits'}else{'claude_extra_usage'});tray_text=$text;amount_known=($text -ne '¤');title=$title;summary=$summary}
+         [IO.File]::WriteAllText($path,(@{remaining=0;credit=$credit}|ConvertTo-Json -Depth 5),$encoding)
+         $task=[DualUiTest]::RefreshCredit($session,$index)
+         if(-not $task.Wait(12000)){throw 'Credit refresh timed out'}
+         $null=$task.GetAwaiter().GetResult()
+         [DualUiTest]::VerifyCredit($session,$index,$title,$summary)
+         [DualUiTest]::OpenProvider($session,$index)
+         [DualUiTest]::Capture($session,$root,$index)
+     }
+ }
+ Write-Output 'PASS: dual-provider Credit modes (61k/$688/∞/¤), titles, summaries, tooltips, and purple tray backgrounds.'
+
 }finally{if($session){[DualUiTest]::Stop($session)};Remove-TestTrayRegistrations}
 $commands=Get-ChildItem -LiteralPath $root -Filter 'command-*.txt' -Recurse | ForEach-Object {Get-Content -LiteralPath $_.FullName}
 if($commands -contains 'review-run' -or $commands -contains 'review-decide'){throw 'Unexpected AI-related action'}

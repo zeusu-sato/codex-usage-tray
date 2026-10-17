@@ -37,7 +37,7 @@ The extension's own experimental usage wrapper is also present in both `extensio
 
 ## Compatibility boundary
 
-The app requires an identified stable version at least 2.1.263, without an upper version pin. It sends exactly the fixed initialization and usage controls, with transcript analysis disabled, and never sends a prompt. Every read validates the response envelope and quota schema. Unexpected message types, behavioral analysis data, malformed or incomplete quota windows, output overflow, and timeouts fail without an AI fallback. Only global five-hour and weekly utilization/reset data and a salted pseudonymous scope may leave the adapter.
+The app requires an identified stable version at least 2.1.263, without an upper version pin. It sends exactly the fixed initialization and usage controls, with transcript analysis disabled, and never sends a prompt. Every read validates the response envelope and quota schema. Unexpected message types, behavioral analysis data, malformed or incomplete quota windows, output overflow, and timeouts fail without an AI fallback. Only global five-hour and weekly utilization/reset data, the four extra-usage fields described below, and a salted pseudonymous scope may leave the adapter.
 
 Checking for words in a binary would not prove their runtime meaning and would depend on packaging and bytecode layout. The app therefore does not scan binaries or start an extra help/capability process on each poll. A successful future-version exchange establishes only that the observed response meets the supported contract; it cannot prove every startup behavior is unchanged.
 
@@ -46,3 +46,7 @@ Safe mode is not a general isolation boundary. The [official CLI reference](http
 Policy retirement is separate: a changed client still invalidates old additional instructions even when quota metadata remains compatible. No AI review is required to restore compatible quota reads.
 
 Fixture regression checks should cover old/unparseable versions rejected before launch, identical controls for newer versions, no usage request after failed initialization, malformed/unexpected responses, cleanup, cache migration, and successful quota reads while old policy remains disabled. Fixture results and static inspection do not establish Mac account/Keychain behavior or completed release-package validation.
+
+## Credit mode
+
+Credit mode uses only fields in existing replies: Codex `credits.hasCredits`, `credits.unlimited`, `credits.balance`, `rateLimitReachedType`, and `spendControlReached` from the selected Codex bucket; Claude `rate_limits.extra_usage.is_enabled`, `monthly_limit`, `used_credits`, and `currency`. No new API, method, or token read is added. Claude amounts are in currency minor units; USD is displayed as the remaining amount up to this month’s limit, not an account balance. A null monthly limit means unlimited; invalid or missing limits are unknown. Non-USD amounts are not displayed. Credit mode is shown only after Usage exhaustion and does not produce a usage forecast. The quota cache writes schema 2 and still reads schema 1 without credit data or discarding history.

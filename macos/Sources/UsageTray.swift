@@ -18,8 +18,17 @@ final class ProviderState {
     var statusItem: NSStatusItem?
     init(_ id: String) { self.id = id }
     var name: String { id == "claude" ? "Claude Code" : "Codex" }
+    var credit: Reply? {
+        guard let credit = quota["credit"] as? Reply,
+              ["codex_credits", "claude_extra_usage"].contains(credit.text("kind")),
+              let text = credit["tray_text"] as? String, (1...5).contains(text.unicodeScalars.count),
+              let known = credit["amount_known"] as? NSNumber, CFGetTypeID(known) == CFBooleanGetTypeID(),
+              credit["title"] is String, credit["summary"] is String else { return nil }
+        return credit
+    }
     var remaining: Double? {
         guard quota.flag("ok"), !quota.flag("stale"), !quota.flag("blocked"),
+              (quota["credit"] == nil || quota["credit"] is NSNull || credit != nil),
               let number = quota["remaining_percent"] as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
               number.doubleValue.isFinite, (0...100).contains(number.doubleValue) else { return nil }
         return number.doubleValue
@@ -93,20 +102,21 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if initialized { refresh(states[selected], usage: false, monitor: false) }
     }
     func renderIcon(_ state: ProviderState) {
-        state.statusItem?.button?.image = TrayImage.make(provider: state.id, remaining: state.remaining, status: state.forecast.text("status"))
+        state.statusItem?.button?.image = TrayImage.make(provider: state.id, remaining: state.remaining, status: state.forecast.text("status"), credit: state.remaining == nil ? nil : state.credit)
         let tooltip = state.quota.text("tooltip")
-        state.statusItem?.button?.toolTip = state.name + " · " + (tooltip.isEmpty ? "残量を確認しています" : tooltip)
-        state.statusItem?.button?.setAccessibilityLabel(state.name + " 使用枠 " + (state.remaining.map { String(Int($0)) + "%" } ?? "未確認"))
+        state.statusItem?.button?.toolTip = state.credit != nil && state.remaining != nil ? tooltip : state.name + " · " + (tooltip.isEmpty ? "残量を確認しています" : tooltip)
+        state.statusItem?.button?.setAccessibilityLabel(state.name + " 使用枠 " + (state.remaining == nil ? "未確認" : state.credit?.text("title") ?? (state.remaining.map { String(Int($0)) + "%" } ?? "未確認")))
     }
     func render() {
         guard window != nil else { return }
         let state = states[selected]
         feedback.stringValue = state.feedback
         selector.selectedSegment = selected
-        remaining.stringValue = state.remaining.map { String(Int(floor($0))) + "%" } ?? "?"
-        remaining.textColor = TrayImage.color(state.remaining, state.forecast.text("status"))
+        let credit = state.remaining == nil ? nil : state.credit
+        remaining.stringValue = credit?.text("title") ?? (state.remaining.map { String(Int(floor($0))) + "%" } ?? "?")
+        remaining.textColor = TrayImage.color(state.remaining, state.forecast.text("status"), credit: credit)
         usageTitle.stringValue = state.quota.text("title").isEmpty ? state.name + "の残量を確認しています" : state.quota.text("title")
-        quotaDetail.stringValue = state.quota.text("detail")
+        quotaDetail.stringValue = credit?.text("summary") ?? state.quota.text("detail")
         checked.stringValue = state.quota.text("checked_label")
         forecastTitle.stringValue = state.forecast.text("title")
         forecastTitle.textColor = remaining.textColor; forecastDetail.stringValue = state.forecast.text("detail")

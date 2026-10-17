@@ -44,12 +44,12 @@ def response(cache, now):
     result = quota.reply(cache, now)
     for key in ("title", "detail", "tooltip"):
         result[key] = result[key].replace("Codex", "Claude Code")
-    result["detail"] += "\n対象: 全体の5時間枠・週間枠。モデル別の制限や追加利用分は含みません。"
+    result["detail"] += "\n対象: 全体の5時間枠・週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
     if cache.get("error") == "unsupported_version":
         result["detail"] = "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。\n選択したクライアントをご確認ください。\n" + result["detail"]
     elif cache.get("error") == "incompatible_protocol":
         result["detail"] = "Claude Codeの残量取得への応答が対応形式と一致しません。\n続く場合はアプリの対応更新が必要です。\n" + result["detail"]
-    if cache.get("last_ok") and not cache.get("account_scope"):
+    if cache.get("last_ok") and not cache.get("account_scope") and result["credit"] is None:
         result["forecast"] = usage_forecast.pending("unavailable", "アカウントの連続性を確認できないため、残量だけを表示します。")
     return result
 
@@ -73,19 +73,21 @@ def error_category(error):
 def quota_command(folder, now):
     folder = Path(folder)
     with quota.quota_lock(folder):
-        cache = {"schema_version": 1}
+        cache = {"schema_version": 2}
         try:
             client = client_registry.current_identity(folder)
             source = client_registry.fingerprint(client)
             try:
                 existing = read_json(folder / "quota-state.json", {})
-                if existing.get("schema_version") == 1 and existing.get("source") == source:
+                if existing.get("schema_version") in (1, 2) and existing.get("source") == source:
                     quota.reply(existing, now)
                     cache = existing
+                    if cache["schema_version"] == 1 and isinstance(cache.get("snapshot"), dict):
+                        cache["snapshot"]["credit"] = None
                 attempted = (datetime.fromisoformat(cache["attempted_at"])
                              if cache.get("attempted_at") and cache.get("transport_revision") == TRANSPORT_REVISION else None)
             except (OSError,ValueError,TypeError,KeyError,AttributeError,OverflowError,quota.QuotaError):
-                cache = {"schema_version":1}
+                cache = {"schema_version":2}
                 attempted = None
             if attempted and attempted.tzinfo and 0 <= (now-attempted).total_seconds() < quota.MIN_REFRESH_SECONDS:
                 return response(cache, now)
@@ -116,5 +118,6 @@ def quota_command(folder, now):
             # Never persist raw process/server output or account identifiers.
             cache.update(attempted_at=now.isoformat(), last_ok=False)
             cache["error"] = error_category(error)
+        cache["schema_version"] = 2
         write_json(folder / "quota-state.json", cache)
         return response(cache, now)
