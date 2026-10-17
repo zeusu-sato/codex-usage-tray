@@ -17,7 +17,7 @@ The installed Claude Code process handles its existing authentication and the ne
 
 The **2.1.263 and 2.1.266 Windows binaries** were statically inspected for this control path; this does not establish compatibility with every future version or Mac account. The process uses safe mode, empty user/project setting sources, no tools, and disabled browser integration and session persistence. Inherited VS Code integration hints are removed. Claude still manages its own authentication and may apply administrator-managed settings, including managed hooks under safe mode, as described in its [CLI reference](https://code.claude.com/docs/en/cli-reference). A changed client version still stops old additional instructions; that policy decision does not itself stop compatible metadata reads.
 
-Only global five-hour and weekly quota amounts and reset times leave the adapter, with an optional pseudonymous account scope. The scope is HMAC-SHA256 of bounded account email and, when present, organization, API-provider and token-source **metadata**, using an app-generated 32-byte random salt. Raw account fields are processed only in memory and are not returned, logged, or saved. Token-source metadata describes the authentication source; it is not an authentication token. The salt is local app data, not a provider credential. Missing or invalid account identity prevents history-based forecasting.
+Global five-hour and weekly quota amounts, reset times, and the four extra-usage fields described below leave the adapter, with an optional pseudonymous account scope. The scope is HMAC-SHA256 of bounded account email and, when present, organization, API-provider and token-source **metadata**, using an app-generated 32-byte random salt. Raw account fields are processed only in memory and are not returned, logged, or saved. Token-source metadata describes the authentication source; it is not an authentication token. The salt is local app data, not a provider credential. Missing or invalid account identity prevents history-based forecasting.
 
 The two tray icons may read symbol images from installed official VS Code / Insiders extensions. Images are rendered at 18% opacity, are not uploaded or bundled, and can be absent without preventing numeric quota display.
 
@@ -75,7 +75,7 @@ Claude対応は、版を確認できた**2.1.263以降の安定版**で内部`in
 
 公式Windows版2.1.263・2.1.266の該当処理を静的に確認していますが、すべての将来版やMacの実アカウントでの動作確認ではありません。取得用プロセスはsafe modeで起動し、ユーザー・プロジェクト設定、ツール、ブラウザー連携、セッション保存を無効にして、継承したVS Code連携用の環境変数を除きます。ただしClaude自身の認証や管理者設定は適用され、safe modeでも管理者設定のhookは動作し得ます。[公式CLI仕様](https://code.claude.com/docs/en/cli-reference)に従う範囲です。クライアント更新で旧追加対策は停止しますが、その判定だけで互換性のある残量取得を止めることはありません。
 
-Claudeでは全体の5時間枠・週間枠だけを取得し、メールと任意の組織・API提供元・認証元のメタデータから、メモリー上でHMAC-SHA256の識別値を作ります。アプリが生成した32バイトのランダムsaltを使い、**アカウント情報の原文は返却・ログ出力・保存しません**。認証元の名称はトークンそのものではありません。saltも認証情報ではなく、ローカル生成データです。識別できない場合は履歴からの予測を行いません。
+Claudeでは全体の5時間枠・週間枠と追加利用の4フィールドを取得し、メールと任意の組織・API提供元・認証元のメタデータから、メモリー上でHMAC-SHA256の識別値を作ります。アプリが生成した32バイトのランダムsaltを使い、**アカウント情報の原文は返却・ログ出力・保存しません**。認証元の名称はトークンそのものではありません。saltも認証情報ではなく、ローカル生成データです。識別できない場合は履歴からの予測を行いません。
 
 消費ペースの概算には、既存の5分ごとの取得結果から、各利用枠について最大24時間・289点の時刻と残量だけを保存します。保存先は既存の残量キャッシュです。AI推論、追加の通信、会話内容や作業内容の収集は行いません。
 
@@ -94,3 +94,9 @@ Claudeの状態は、その下の`providers\claude`に分けて保存します�
 Claudeの候補を別途有効にした場合は、`%USERPROFILE%\.claude`（または`CLAUDE_CONFIG_DIR`）の`CLAUDE.md`が対象です。製品ごとのスイッチは独立しています。CLAUDEのバックアップにも元の私的な指示が含まれます。
 
 Mac版の保存先は`~/Library/Application Support/CodexUsageTray`です。Claudeの状態は同じ構造の`providers/claude`へ分離します。ログイン時起動はMacのログイン項目登録を使います。「はい」の後だけ、承認済み見直しフォルダーへ引数を安全に引用した`.command`を作り、Terminalで対話AI見直しを開きます。アプリはKeychainの内容を読み取り・コピーしません。削除前に追加対策とログイン時起動をOFFにしてください。
+
+## Credit mode
+
+Credit mode uses only fields in existing replies: Codex `credits.hasCredits`, `credits.unlimited`, `credits.balance`, `rateLimitReachedType`, and `spendControlReached` from the selected Codex bucket; Claude `rate_limits.extra_usage.is_enabled`, `monthly_limit`, `used_credits`, and `currency`. No new API, method, or token read is added. Claude amounts are in currency minor units; USD is displayed as the remaining amount up to this month’s limit, not an account balance. A null monthly limit means unlimited; invalid or missing limits are unknown. Non-USD amounts are not displayed. Credit mode is shown only after Usage exhaustion and does not produce a usage forecast. The quota cache writes schema 2 and still reads schema 1 without credit data or discarding history.
+
+Creditモードでは既存の応答から上記のフィールドだけを追加で取り出します。新しいAPI・メソッド・トークンの読み出しは使いません。Claudeの金額は残高ではなく、今月の上限までの残りです。金額情報は既存の残量キャッシュに保存します。
