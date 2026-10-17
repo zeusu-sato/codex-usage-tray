@@ -83,7 +83,7 @@ try {
 
     $purple = [Drawing.Color]::FromArgb(106, 76, 196).ToArgb()
     if ($forecastColors.Values -contains $purple) { throw 'Credit color equals a normal color' }
-    foreach ($text in @('61k', '$688', '∞', '¤', '$1.2k')) {
+    foreach ($text in @('0', '999', '1k', '99k', '.1M', '.9M', '1M', '99M', '.1G', '.9G', '1G', '99G', '61k', '688', '∞', '¤', '1k')) {
         $credit = @{kind='codex_credits';tray_text=$text;amount_known=$true;title='Credit 利用中';summary='残り61,794クレジット'}
         Write-Fixture $data @{remaining=0;credit=$credit}
         Refresh-Quota $window
@@ -92,7 +92,7 @@ try {
     }
     Write-Output 'PASS: Credit title, summary, tooltip, forecast explanation, and distinct purple icon background.'
     $invalidCredits = @('bad', @{}, @{kind='unknown';tray_text='61k';amount_known=$true;title='Credit 利用中';summary='credit'})
-    foreach ($badText in @('', '123456', 812, $null, "a`nb")) {
+    foreach ($badText in @('', '123456', '$688', '$1.2k', '999k', '1.2M', '1000', '1B', 812, $null, "a`nb")) {
         $invalidCredits += @{kind='codex_credits';tray_text=$badText;amount_known=$true;title='Credit 利用中';summary='credit'}
     }
     $invalidCredits += @{kind='codex_credits';tray_text='61k';amount_known='true';title='Credit 利用中';summary='credit'}

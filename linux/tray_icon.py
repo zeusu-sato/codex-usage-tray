@@ -1,4 +1,5 @@
 import math
+import re
 
 from PyQt6.QtCore import QRectF, Qt
 from PyQt6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPixmap
@@ -14,7 +15,7 @@ def credit_value(reply):
     if (not isinstance(credit, dict)
             or credit.get("kind") not in ("codex_credits", "claude_extra_usage")
             or not isinstance(credit.get("tray_text"), str)
-            or not 1 <= len(credit["tray_text"]) <= 5
+            or not re.fullmatch(r"(?:[0-9]{1,3}|[1-9][0-9]?[kMG]|\.[1-9][MG]|\u221e|\u00a4)", credit["tray_text"])
             or not isinstance(credit.get("amount_known"), bool)
             or not isinstance(credit.get("title"), str)
             or not isinstance(credit.get("summary"), str)):

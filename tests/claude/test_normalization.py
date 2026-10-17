@@ -92,12 +92,12 @@ class ClaudeNormalizationTest(unittest.TestCase):
     def test_credit_modes_and_invalid_amounts(self):
         import claude_quota
         for extra, expected, summary in (
-            ({"monthly_limit": 68800, "used_credits": 0}, "$688", "残り $688.00（使用 $0.00）"),
-            ({"monthly_limit": 123456, "used_credits": 0}, "$1.2k", "$1,234.56"),
+            ({"monthly_limit": 68800, "used_credits": 0}, "688", "残り $688.00（使用 $0.00）"),
+            ({"monthly_limit": 123456, "used_credits": 0}, "1k", "$1,234.56"),
             ({"monthly_limit": None, "used_credits": 0}, "∞", "上限なし"),
             ({"monthly_limit": None, "used_credits": None}, "∞", "使用額 未提供"),
-            ({"monthly_limit": 1, "used_credits": 2}, "$0", "$0.00"),
-            ({"monthly_limit": 99.9, "used_credits": 0}, "$0", "$0.99"),
+            ({"monthly_limit": 1, "used_credits": 2}, "0", "$0.00"),
+            ({"monthly_limit": 99.9, "used_credits": 0}, "0", "$0.99"),
             ({"monthly_limit": 70000, "used_credits": None}, "¤", "上限 $700.00"),
             ({"monthly_limit": "bad", "used_credits": 0}, "¤", "金額未提供"),
             ({"currency": "EUR"}, "¤", "USD 以外"),
@@ -132,13 +132,18 @@ class ClaudeNormalizationTest(unittest.TestCase):
             data["rate_limits"]["extra_usage"] = {"is_enabled": True, "currency": currency}
             self.assertEqual(claude.normalize(data)["credit"]["currency"], expected)
 
-    def test_usd_tray_boundaries_truncate_and_stay_five_characters(self):
-        for dollars, tray in ((999, "$999"), (1000, "$1k"), (1234.99, "$1.2k"),
-                              (9999, "$9.9k"), (10000, "$10k"), (999999, "$999k"),
-                              (1000000, "$1M"), (1234567, "$1.2M"), (10000000, "$10M"),
-                              (10**12, "$999B")):
+    def test_usd_tray_boundaries_truncate_and_stay_three_characters(self):
+        for dollars, tray in (
+                (0, '0'), (999, '999'), (1000, '1k'),
+                (1999, '1k'), (9999, '9k'), (10000, '10k'),
+                (61794, '61k'), (99999, '99k'), (100000, '.1M'),
+                (123456, '.1M'), (999999, '.9M'), (1000000, '1M'),
+                (99999999, '99M'), (100000000, '.1G'), (999999999, '.9G'),
+                (1000000000, '1G'), (99999999999, '99G'), (100000000000, '99G'),
+                (1234.99, '1k'),
+        ):
             data = usage(100)
             data["rate_limits"]["extra_usage"] = {"is_enabled": True, "monthly_limit": dollars * 100, "used_credits": 0}
             result = quota.reply({"snapshot": claude.normalize(data), "last_ok": True, "fetched_at": NOW.isoformat()}, NOW)
             self.assertEqual(result["credit"]["tray_text"], tray)
-            self.assertLessEqual(len(tray), 5)
+            self.assertLessEqual(len(tray), 3)

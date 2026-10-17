@@ -51,7 +51,7 @@ class ProviderTests(unittest.TestCase):
         saved = json.loads(path.read_text(encoding='utf-8'))
         self.assertEqual(saved['schema_version'], 2)
         self.assertEqual(saved['history'][1]['samples'][0], history[1]['samples'][0])
-        self.assertEqual(result['credit']['tray_text'], '$688')
+        self.assertEqual(result['credit']['tray_text'], '688')
         self.assertTrue(result['tooltip'].startswith('Claude Code 追加利用中'))
         self.assertNotIn('残高', result['detail'])
 

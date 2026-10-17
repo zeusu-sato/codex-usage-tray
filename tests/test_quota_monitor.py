@@ -136,10 +136,15 @@ class QuotaMonitorTest(unittest.TestCase):
         return quota.reply({"snapshot": snapshot, "last_ok": True, "fetched_at": NOW.isoformat()}, NOW)
 
     def test_credit_balance_boundaries_and_truncation(self):
-        for balance, tray in ((999, "999"), (1000, "1k"), (61794, "61k"), (999999, "999k"),
-                              (1000000, "1M"), (1234567, "1.2M"), (9999999, "9.9M"),
-                              (10000000, "10M"), (1234567890, "1.2B"), (10**12, "999B"),
-                              ("61,794", "61k"), ("61794.5", "61k"), ("812.9", "812")):
+        for balance, tray in (
+                (0, '0'), (999, '999'), (1000, '1k'),
+                (1999, '1k'), (9999, '9k'), (10000, '10k'),
+                (61794, '61k'), (99999, '99k'), (100000, '.1M'),
+                (123456, '.1M'), (999999, '.9M'), (1000000, '1M'),
+                (99999999, '99M'), (100000000, '.1G'), (999999999, '.9G'),
+                (1000000000, '1G'), (99999999999, '99G'), (100000000000, '99G'),
+                ('61,794', '61k'), ('61794.5', '61k'), ('812.9', '812'),
+        ):
             with self.subTest(balance=balance):
                 result = self.credit_result(balance)
                 self.assertEqual(result["credit"]["tray_text"], tray)

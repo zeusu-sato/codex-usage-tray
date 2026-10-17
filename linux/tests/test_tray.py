@@ -38,7 +38,7 @@ class TrayTests(unittest.TestCase):
         for value in (0, 50, None):
             for status in ("comfortable", "tight", "at_risk", "unavailable"):
                 self.assertNotEqual(CREDIT_COLOR.lower(), value_color(value, status).lower())
-        for text in ("812", "61k", "1.2M", "∞", "¤", "$688", "$1.2k"):
+        for text in ("0", "999", "1k", "99k", ".9M", "1M", "99M", ".1G", ".9G", "1G", "99G", "812", "61k", ".1M", "∞", "¤", "688"):
             self.assertNotEqual(text, "C")
             reply["credit"] = dict(credit, tray_text=text)
             for size in (16, 22):
@@ -52,7 +52,8 @@ class TrayTests(unittest.TestCase):
                 self.assertIn(QColor(CREDIT_COLOR), [call.args[0] for call in painter.setPen.call_args_list])
                 self.assertEqual([call.args[-1] for call in painter.drawText.call_args_list], ["C", text] * 5)
                 self.assertEqual(painter.fillRect.call_count, 5)
-        for field, bad in (("tray_text", ""), ("tray_text", "123456"), ("tray_text", 12),
+        for field, bad in (("tray_text", ""), ("tray_text", "123456"), ("tray_text", "$688"), ("tray_text", "$1.2k"),
+                         ("tray_text", "999k"), ("tray_text", "1.2M"), ("tray_text", "1000"), ("tray_text", "1B"), ("tray_text", 12),
                            ("title", None), ("summary", []), ("amount_known", 1), ("kind", "other")):
             reply["credit"] = dict(credit, **{field: bad})
             self.assertIsNone(credit_value(reply))
@@ -74,7 +75,7 @@ class TrayTests(unittest.TestCase):
                                provider="codex", value=QLabel(), detail=QLabel(), forecast=QLabel(),
                                checked=QLabel(), tray=QSystemTrayIcon(), menu=QMenu(), next_job=lambda: None)
         view.menu.addAction("Open")
-        credit = dict(kind="claude_extra_usage", tray_text="$688", amount_known=True,
+        credit = dict(kind="claude_extra_usage", tray_text="688", amount_known=True,
                       title="追加利用中", summary="追加利用：残り $688.00")
         reply = dict(ok=True, remaining_percent=0, credit=credit, tooltip="追加利用中",
                      forecast=dict(title="見通しなし", detail="pending"))

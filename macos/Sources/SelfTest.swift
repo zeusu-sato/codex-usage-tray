@@ -110,14 +110,17 @@ func runSelfTests(output: URL) throws {
     for status in ["comfortable", "tight", "at_risk", "unavailable"] {
         try require(TrayImage.creditColor != TrayImage.color(50, status), "Credit color differs from usage colors")
     }
-    for text in ["812", "61k", "1.2M", "∞", "¤", "$688", "$1.2k"] {
+    for text in ["0", "999", "1k", "99k", ".9M", "1M", "99M", ".1G", ".9G", "1G", "99G", "812", "61k", ".1M", "∞", "¤", "688"] {
         let font = TrayImage.textFont(text)
         try require((text as NSString).size(withAttributes: [.font: font]).width <= 30, "Credit text fits 32pt icon")
         var sample = credit; sample["tray_text"] = text
+        state.quota["credit"] = sample
+        try require(state.credit != nil, "Valid credit text accepted")
         try savePNG(TrayImage.make(provider: "codex", remaining: 0, status: "unavailable", includeSymbol: false, credit: sample),
                     output.appendingPathComponent("icon-credit-\(text).png"))
     }
-    let invalidCredits: [(String, Any)] = [("tray_text", ""), ("tray_text", "123456"), ("tray_text", 12),
+    let invalidCredits: [(String, Any)] = [("tray_text", ""), ("tray_text", "123456"), ("tray_text", "$688"), ("tray_text", "$1.2k"),
+                         ("tray_text", "999k"), ("tray_text", "1.2M"), ("tray_text", "1000"), ("tray_text", "1B"), ("tray_text", 12),
                          ("title", NSNull()), ("summary", 12), ("amount_known", 1), ("kind", "other")]
     for (key, value) in invalidCredits {
         var invalid = credit; invalid[key] = value; state.quota["credit"] = invalid

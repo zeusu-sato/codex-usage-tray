@@ -21,7 +21,7 @@ final class ProviderState {
     var credit: Reply? {
         guard let credit = quota["credit"] as? Reply,
               ["codex_credits", "claude_extra_usage"].contains(credit.text("kind")),
-              let text = credit["tray_text"] as? String, (1...5).contains(text.unicodeScalars.count),
+              let text = credit["tray_text"] as? String, text.range(of: #"\A(?:[0-9]{1,3}|[1-9][0-9]?[kMG]|\.[1-9][MG]|\u221e|\u00a4)\z"#, options: .regularExpression) != nil,
               let known = credit["amount_known"] as? NSNumber, CFGetTypeID(known) == CFBooleanGetTypeID(),
               credit["title"] is String, credit["summary"] is String else { return nil }
         return credit
