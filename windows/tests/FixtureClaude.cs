@@ -76,10 +76,21 @@ public static class FixtureClaude
             string reset = DateTime.UtcNow.AddHours(4).ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'", CultureInfo.InvariantCulture);
             string weekly = DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd'T'HH:mm:ss.ffffff'Z'", CultureInfo.InvariantCulture);
             if (Environment.GetEnvironmentVariable("TRAY_CLAUDE_FIXTURE_NULL_RESET") == "1") reset = null;
-            Success("usage-tray-get-usage", new { rate_limits_available = true, rate_limits = new {
-                five_hour = new { utilization = 12, resets_at = reset },
-                seven_day = new { utilization = 27, resets_at = weekly },
-                seven_day_sonnet = new { utilization = 99, resets_at = weekly } },
+            string credit = Environment.GetEnvironmentVariable("TRAY_FIXTURE_CREDIT");
+            var limits = new Dictionary<string, object> {
+                { "five_hour", new { utilization = credit == null ? 12 : 100, resets_at = reset } },
+                { "seven_day", new { utilization = 27, resets_at = weekly } },
+                { "seven_day_sonnet", new { utilization = 99, resets_at = weekly } }
+            };
+            if (credit != null) {
+                var extra = new Dictionary<string, object> { { "is_enabled", true }, { "currency", "USD" } };
+                if (credit != "unknown") {
+                    extra["monthly_limit"] = credit == "unlimited" ? (object)null : Decimal.Parse(credit, CultureInfo.InvariantCulture);
+                    extra["used_credits"] = 0;
+                }
+                limits["extra_usage"] = extra;
+            }
+            Success("usage-tray-get-usage", new { rate_limits_available = true, rate_limits = limits,
                 behavior = "fixture-private-behavior" });
             return 0;
         }

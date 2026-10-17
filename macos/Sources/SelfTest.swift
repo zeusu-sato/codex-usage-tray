@@ -95,6 +95,40 @@ func runSelfTests(output: URL) throws {
     try require(stale.remaining == nil, "Stale reading hidden")
     stale.quota = ["ok": true, "remaining_percent": true]
     try require(stale.remaining == nil, "Boolean is not a quota")
+    let credit: Reply = ["kind": "codex_credits", "tray_text": "61k", "amount_known": true,
+                         "title": "Credit 利用中", "summary": "残り61,794クレジット"]
+    let savedQuota = state.quota
+    state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "tooltip": "Credit 利用中",
+                   "forecast": ["status": "unavailable", "title": "見通しなし", "detail": "pending"]]
+    controller.render(); controller.renderIcon(state)
+    try require(state.credit != nil && state.remaining == 0, "Credit parsed without changing remaining")
+    try require(controller.remaining.stringValue == credit.text("title"), "Credit title displayed")
+    try require(controller.quotaDetail.stringValue == credit.text("summary"), "Credit summary displayed")
+    try require(controller.forecastTitle.stringValue == "見通しなし", "Backend credit forecast preserved")
+    try require(state.statusItem?.button?.toolTip?.contains("Credit 利用中") == true, "Credit tooltip displayed")
+    try require(controller.remaining.textColor == TrayImage.creditColor, "Credit window color")
+    for status in ["comfortable", "tight", "at_risk", "unavailable"] {
+        try require(TrayImage.creditColor != TrayImage.color(50, status), "Credit color differs from usage colors")
+    }
+    for text in ["812", "61k", "1.2M", "∞", "¤", "$688", "$1.2k"] {
+        let font = TrayImage.textFont(text)
+        try require((text as NSString).size(withAttributes: [.font: font]).width <= 30, "Credit text fits 32pt icon")
+        var sample = credit; sample["tray_text"] = text
+        try savePNG(TrayImage.make(provider: "codex", remaining: 0, status: "unavailable", includeSymbol: false, credit: sample),
+                    output.appendingPathComponent("icon-credit-\(text).png"))
+    }
+    let invalidCredits: [(String, Any)] = [("tray_text", ""), ("tray_text", "123456"), ("tray_text", 12),
+                         ("title", NSNull()), ("summary", 12), ("amount_known", 1), ("kind", "other")]
+    for (key, value) in invalidCredits {
+        var invalid = credit; invalid[key] = value; state.quota["credit"] = invalid
+        controller.render()
+        try require(state.credit == nil && state.remaining == nil && controller.remaining.stringValue == "?", "Invalid credit hidden")
+    }
+    state.quota["credit"] = NSNull()
+    try require(state.credit == nil && state.remaining == 0, "Null credit uses usage mode")
+    state.quota.removeValue(forKey: "credit")
+    try require(state.credit == nil && state.remaining == 0, "Missing credit uses usage mode")
+    state.quota = savedQuota; controller.render()
     for id in ["codex", "claude"] { for value in [0.0, 8, 11, 68, 88, 100] {
         try savePNG(TrayImage.make(provider: id, remaining: value, status: "comfortable", includeSymbol: false), output.appendingPathComponent("icon-\(id)-\(Int(value)).png"))
     } }

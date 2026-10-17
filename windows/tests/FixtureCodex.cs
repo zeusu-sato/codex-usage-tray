@@ -22,7 +22,10 @@ public static class FixtureCodex {
                     Console.WriteLine("{\"id\":2,\"error\":{\"message\":\"fixture secret must not escape\"}}");
                 } else {
                     long reset = (long)(DateTime.UtcNow.AddDays(2) - new DateTime(1970, 1, 1)).TotalSeconds;
-                    Console.WriteLine("{\"id\":2,\"result\":{\"rateLimitsByLimitId\":{\"codex\":{\"limitId\":\"codex\",\"primary\":{\"usedPercent\":26,\"windowDurationMins\":10080,\"resetsAt\":" + reset + "}}}}}");
+                    string credit = Environment.GetEnvironmentVariable("TRAY_FIXTURE_CREDIT");
+                    string credits = credit == null ? "" : ",\"credits\":" + json.Serialize(new {
+                        hasCredits = true, unlimited = credit == "unlimited", balance = credit == "unknown" ? null : credit });
+                    Console.WriteLine("{\"id\":2,\"result\":{\"rateLimitsByLimitId\":{\"codex\":{\"limitId\":\"codex\",\"primary\":{\"usedPercent\":" + (credit == null ? "26" : "100") + ",\"windowDurationMins\":10080,\"resetsAt\":" + reset + "}" + credits + "}}}}");
                 }
                 return 0;
             } else { return 92; }

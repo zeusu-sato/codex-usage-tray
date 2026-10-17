@@ -76,13 +76,13 @@ internal static class TraySymbols
         }
     }
 
-    internal static Icon Create(double? remaining,Color background,string provider)
+    internal static Icon Create(double? remaining,Color background,string provider, string creditText = null)
     {
         using(var bitmap=new Bitmap(32,32,PixelFormat.Format32bppArgb))
         using(var g=Graphics.FromImage(bitmap))
         using(var fill=new SolidBrush(background))
         using(var format=new StringFormat(StringFormat.GenericTypographic))
-        using(var font=new Font("Segoe UI",remaining==100?17F:22F,FontStyle.Bold,GraphicsUnit.Pixel))
+        using(var font=new Font("Segoe UI",creditText==null&&remaining==100?17F:22F,FontStyle.Bold,GraphicsUnit.Pixel))
         {
             g.Clear(background);
             Bitmap symbol=Symbol(provider);
@@ -97,7 +97,7 @@ internal static class TraySymbols
                     g.DrawImage(symbol,new Rectangle((32-width)/2,(32-height)/2,width,height),0,0,symbol.Width,symbol.Height,GraphicsUnit.Pixel,attributes);
                 }
             }
-            string value=remaining.HasValue?Math.Floor(remaining.Value).ToString(CultureInfo.InvariantCulture):"?";
+            string value=creditText ?? (remaining.HasValue?Math.Floor(remaining.Value).ToString(CultureInfo.InvariantCulture):"?");
             format.Alignment=StringAlignment.Center;format.LineAlignment=StringAlignment.Center;
             using(var letters=new GraphicsPath())
             using(var outline=new Pen(Color.FromArgb(190,5,18,16),1.4F))
@@ -106,6 +106,13 @@ internal static class TraySymbols
                 // Build glyphs without a height limit, then center their visible bounds.
                 letters.AddString(value,font.FontFamily,(int)FontStyle.Bold,font.Size,new PointF(0,0),StringFormat.GenericTypographic);
                 RectangleF bounds=letters.GetBounds();
+                if(creditText!=null)
+                {
+                    // Leave one pixel at either side, including the 1.4px outline.
+                    float scale=Math.Min(1F,Math.Min(28.6F/bounds.Width,23.6F/bounds.Height));
+                    using(var fit=new Matrix()) { fit.Scale(scale,scale); letters.Transform(fit); }
+                    bounds=letters.GetBounds();
+                }
                 using(var placement=new Matrix())
                 {
                     placement.Translate((32-bounds.Width)/2-bounds.Left,(26-bounds.Height)/2-bounds.Top);
@@ -117,7 +124,7 @@ internal static class TraySymbols
             }
             g.SmoothingMode=SmoothingMode.None;
             using(var track=new SolidBrush(Color.FromArgb(64,0,0,0)))g.FillRectangle(track,2,27,28,3);
-            if(remaining.HasValue)g.FillRectangle(Brushes.White,2,27,(float)(28*remaining.Value/100),3);
+            if(creditText==null&&remaining.HasValue)g.FillRectangle(Brushes.White,2,27,(float)(28*remaining.Value/100),3);
             IntPtr handle=bitmap.GetHicon();
             try{using(var borrowed=Icon.FromHandle(handle))return (Icon)borrowed.Clone();}
             finally{DestroyIcon(handle);}

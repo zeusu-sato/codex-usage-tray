@@ -3,7 +3,9 @@ import AppKit
 enum TrayImage {
     private static var masks: [String: NSImage] = [:]
     private static var attempted: Set<String> = []
-    static func color(_ remaining: Double?, _ status: String) -> NSColor {
+    static let creditColor = NSColor(srgbRed: 0.416, green: 0.298, blue: 0.769, alpha: 1)
+    static func color(_ remaining: Double?, _ status: String, credit: Reply? = nil) -> NSColor {
+        if credit != nil { return creditColor }
         guard let remaining = remaining else { return NSColor(srgbRed: 0.37, green: 0.42, blue: 0.45, alpha: 1) }
         if remaining == 0 || status == "at_risk" { return NSColor(srgbRed: 0.68, green: 0.17, blue: 0.15, alpha: 1) }
         if status == "tight" { return NSColor(srgbRed: 0.62, green: 0.41, blue: 0, alpha: 1) }
@@ -48,10 +50,19 @@ enum TrayImage {
         guard right >= left, let image = mask.cgImage?.cropping(to: CGRect(x: left, y: top, width: right - left + 1, height: bottom - top + 1)) else { return nil }
         return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
     }
-    static func make(provider: String, remaining: Double?, status: String, includeSymbol: Bool = true) -> NSImage {
+    static func textFont(_ text: String) -> NSFont {
+        var size: CGFloat = text.count == 3 ? 13 : 16
+        while size > 1 {
+            let font = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .bold)
+            if (text as NSString).size(withAttributes: [.font: font]).width <= 30 { return font }
+            size -= 0.5
+        }
+        return NSFont.monospacedDigitSystemFont(ofSize: size, weight: .bold)
+    }
+    static func make(provider: String, remaining: Double?, status: String, includeSymbol: Bool = true, credit: Reply? = nil) -> NSImage {
         let size = NSSize(width: 32, height: 22)
         let result = NSImage(size: size, flipped: false) { bounds in
-            color(remaining, status).setFill()
+            color(remaining, status, credit: credit).setFill()
             NSBezierPath(roundedRect: bounds.insetBy(dx: 0, dy: 1), xRadius: 3, yRadius: 3).fill()
             if includeSymbol, let mark = symbol(provider) {
                 let scale = min(29 / mark.size.width, 20 / mark.size.height)
@@ -59,15 +70,15 @@ enum TrayImage {
                                     width: mark.size.width * scale, height: mark.size.height * scale)
                 mark.draw(in: target, from: .zero, operation: .sourceOver, fraction: 0.18)
             }
-            let text = remaining.map { String(Int(floor($0))) } ?? "?"
-            let attributes: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: text.count == 3 ? 13 : 16, weight: .bold),
+            let text = credit?.text("tray_text") ?? (remaining.map { String(Int(floor($0))) } ?? "?")
+            let attributes: [NSAttributedString.Key: Any] = [.font: textFont(text),
                 .foregroundColor: NSColor.white, .strokeColor: NSColor(srgbRed: 0.02, green: 0.07, blue: 0.06, alpha: 0.8), .strokeWidth: -3]
             let string = NSAttributedString(string: text, attributes: attributes)
             let measured = string.size()
             string.draw(at: NSPoint(x: (32 - measured.width) / 2, y: (24 - measured.height) / 2))
             NSColor.black.withAlphaComponent(0.25).setFill()
             NSRect(x: 3, y: 2, width: 26, height: 1.5).fill()
-            if let value = remaining { NSColor.white.setFill(); NSRect(x: 3, y: 2, width: 26 * value / 100, height: 1.5).fill() }
+            if credit == nil, let value = remaining { NSColor.white.setFill(); NSRect(x: 3, y: 2, width: 26 * value / 100, height: 1.5).fill() }
             return true
         }
         result.isTemplate = false

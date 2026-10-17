@@ -1,14 +1,43 @@
 import math
 
 from PyQt6.QtCore import QRectF, Qt
-from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from PyQt6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPixmap
 
 COLORS = {"comfortable": "#46b982", "tight": "#dba82e", "at_risk": "#ee625f"}
+
+
+CREDIT_COLOR = "#A68CFF"
+
+
+def credit_value(reply):
+    credit = reply.get("credit")
+    if (not isinstance(credit, dict)
+            or credit.get("kind") not in ("codex_credits", "claude_extra_usage")
+            or not isinstance(credit.get("tray_text"), str)
+            or not 1 <= len(credit["tray_text"]) <= 5
+            or not isinstance(credit.get("amount_known"), bool)
+            or not isinstance(credit.get("title"), str)
+            or not isinstance(credit.get("summary"), str)):
+        return None
+    return credit
+
+
+def text_font(text, size):
+    font = QFont("sans-serif")
+    font.setBold(True)
+    font.setPixelSize(round(size * (.52 if len(text) == 3 else .62)))
+    while font.pixelSize() > 1:
+        metrics = QFontMetrics(font)
+        if max(metrics.horizontalAdvance(text), metrics.boundingRect(text).width()) <= size:
+            break
+        font.setPixelSize(font.pixelSize() - 1)
+    return font
 
 
 def remaining_value(reply):
     value = reply.get("remaining_percent")
     if (reply.get("ok") is not True or reply.get("stale") or reply.get("blocked")
+            or (reply.get("credit") is not None and credit_value(reply) is None)
             or isinstance(value, bool) or not isinstance(value, (int, float))
             or not math.isfinite(value) or not 0 <= value <= 100):
         return None
@@ -23,10 +52,11 @@ def value_color(value, forecast):
 
 def usage_icon(provider, reply):
     value = remaining_value(reply)
-    text = "?" if value is None else str(math.floor(value))
-    color = QColor(value_color(value, reply.get("forecast", {}).get("status")))
+    credit = credit_value(reply) if value is not None else None
+    text = credit["tray_text"] if credit else "?" if value is None else str(math.floor(value))
+    color = QColor(CREDIT_COLOR if credit else value_color(value, reply.get("forecast", {}).get("status")))
     icon = QIcon()
-    for size in (22, 32, 48, 64):
+    for size in (16, 22, 32, 48, 64):
         pixmap = QPixmap(size, size)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
@@ -39,12 +69,15 @@ def usage_icon(provider, reply):
         painter.setFont(font)
         painter.drawText(QRectF(0, 0, size, size * .25), Qt.AlignmentFlag.AlignCenter,
                          "C" if provider == "codex" else "A")
-        font.setPixelSize(round(size * (.52 if len(text) == 3 else .62)))
+        if credit:
+            font = text_font(text, size)
+        else:
+            font.setPixelSize(round(size * (.52 if len(text) == 3 else .62)))
         painter.setFont(font)
         painter.setPen(color)
         painter.drawText(QRectF(0, size * .16, size, size * .74), Qt.AlignmentFlag.AlignCenter, text)
         painter.fillRect(QRectF(1, size * .92, size - 2, size * .07), QColor("#68727a"))
-        if value is not None:
+        if value is not None and credit is None:
             painter.fillRect(QRectF(1, size * .92, (size - 2) * value / 100, size * .07), color)
         painter.end()
         icon.addPixmap(pixmap)

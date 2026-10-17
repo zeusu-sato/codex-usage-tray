@@ -72,6 +72,7 @@ internal sealed partial class UsageToggleForm
                 reply.Blocked = (bool)blocked;
             }
             reply.Forecast = ReadForecastReply(data);
+            reply.Credit = ReadCreditReply(data);
             object remaining;
             if (!data.TryGetValue("remaining_percent", out remaining)) throw new FormatException();
             if (remaining != null)
@@ -86,6 +87,22 @@ internal sealed partial class UsageToggleForm
             return reply;
         }
         catch (FormatException) { throw new InvalidOperationException("使用枠の応答を読み取れませんでした。"); }
+    }
+
+    private static CreditReply ReadCreditReply(Dictionary<string, object> data)
+    {
+        object raw;
+        if (!data.TryGetValue("credit", out raw) || raw == null) return null;
+        var credit = raw as Dictionary<string, object>;
+        if (credit == null) throw new FormatException();
+        string kind = RequireString(credit, "kind");
+        string text = RequireString(credit, "tray_text");
+        if ((kind != "codex_credits" && kind != "claude_extra_usage")
+            || String.IsNullOrWhiteSpace(text) || text.Length > 5) throw new FormatException();
+        foreach (char c in text) if (Char.IsControl(c) || Char.IsSurrogate(c)) throw new FormatException();
+        return new CreditReply { Kind = kind, TrayText = text,
+            AmountKnown = RequireBoolean(credit, "amount_known"),
+            Title = RequireString(credit, "title"), Summary = RequireString(credit, "summary") };
     }
 
     private static ForecastReply ReadForecastReply(Dictionary<string, object> data)
@@ -185,11 +202,21 @@ internal sealed partial class UsageToggleForm
         public bool Stale;
         public bool Blocked;
         public ForecastReply Forecast;
+        public CreditReply Credit;
         public string Title;
         public string Detail;
         public string CheckedLabel;
         public string Tooltip;
         public double? RemainingPercent;
+    }
+
+    private sealed class CreditReply
+    {
+        public string Kind;
+        public string TrayText;
+        public bool AmountKnown;
+        public string Title;
+        public string Summary;
     }
 
     private sealed class ForecastReply

@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QMenu, QPushButton,
 
 from claude_adapter import MINIMUM_VERSION
 from backend_job import BackendJob
-from tray_icon import remaining_value, value_color, usage_icon
+from tray_icon import CREDIT_COLOR, credit_value, remaining_value, value_color, usage_icon
 
 PROVIDERS = {"codex": "Codex / GPT", "claude": "Claude Code"}
 
@@ -57,6 +57,7 @@ class ProviderView(QWidget):
         self.tray = QSystemTrayIcon(usage_icon(provider, {}), self)
         self.tray.setToolTip(PROVIDERS[provider] + " — 確認中")
         self.menu = QMenu(host)
+        self.menu.setToolTipsVisible(True)
         self.menu.addAction(PROVIDERS[provider] + " を開く", lambda: host.open_provider(provider))
         self.refresh_action = self.menu.addAction("今すぐ確認", self.refresh_all)
         self.menu.addAction("監視対象を選ぶ…", lambda: host.open_provider(provider))
@@ -114,14 +115,20 @@ class ProviderView(QWidget):
         if command == "usage-check":
             self.reply = reply
             value = remaining_value(reply)
-            self.value.setText("?" if value is None else f"{value:g}%")
+            credit = credit_value(reply) if value is not None else None
+            self.value.setText(credit["title"] if credit else "?" if value is None else f"{value:g}%")
             status = reply.get("forecast", {})
-            self.value.setStyleSheet("font-size: 56px; font-weight: bold; color: " + value_color(value, status.get("status")))
-            self.detail.setText(reply.get("detail", "現在値を確認できません。"))
+            self.value.setStyleSheet("font-size: 56px; font-weight: bold; color: " + (CREDIT_COLOR if credit else value_color(value, status.get("status"))))
+            self.detail.setText(credit["summary"] if credit else reply.get("detail", "現在値を確認できません。"))
             self.forecast.setText("\n".join(str(status[key]) for key in ("title", "detail") if status.get(key)))
             self.checked.setText(reply.get("checked_label", ""))
             self.tray.setIcon(usage_icon(self.provider, reply))
-            self.tray.setToolTip(PROVIDERS[self.provider] + "\n" + reply.get("tooltip", "Usage 未確認"))
+            open_action = self.menu.actions()[0]
+            open_action.setText(PROVIDERS[self.provider] + " を開く" + ("（" + credit["title"] + "）" if credit else ""))
+            open_action.setToolTip(credit["summary"] if credit else "")
+            open_action.setIcon(self.tray.icon())
+            self.tray.setToolTip(reply.get("tooltip", "Usage 未確認") if credit else
+                                 PROVIDERS[self.provider] + "\n" + reply.get("tooltip", "Usage 未確認"))
         elif command == "client-list" and reply.get("ok"):
             self.clients.clear()
             entries = reply.get("clients", [])
