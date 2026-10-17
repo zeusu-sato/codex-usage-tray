@@ -37,6 +37,24 @@ class ProviderTests(unittest.TestCase):
         with patch.object(client_registry,'current_identity',return_value=self.identity),patch.object(claude_quota.claude_adapter,'request_usage',return_value=payload or self.payload):
             return claude_quota.quota_command(self.folder,now or self.now)
 
+    def test_schema_one_keeps_history_and_credit_refresh_writes_two(self):
+        self.read()
+        path = self.folder / 'quota-state.json'
+        cache = json.loads(path.read_text(encoding='utf-8'))
+        history = copy.deepcopy(cache['history'])
+        cache['schema_version'] = 1
+        cache['snapshot'].pop('credit')
+        write_json(path, cache)
+        self.payload['rate_limits']['five_hour']['utilization'] = 100
+        self.payload['rate_limits']['extra_usage'] = {'is_enabled': True, 'monthly_limit': 68800, 'used_credits': 0}
+        result = self.read(now=self.now + timedelta(minutes=5))
+        saved = json.loads(path.read_text(encoding='utf-8'))
+        self.assertEqual(saved['schema_version'], 2)
+        self.assertEqual(saved['history'][1]['samples'][0], history[1]['samples'][0])
+        self.assertEqual(result['credit']['tray_text'], '$688')
+        self.assertTrue(result['tooltip'].startswith('Claude Code 追加利用中'))
+        self.assertNotIn('残高', result['detail'])
+
     def test_provider_storage_isolated(self):
         sentinel=b'{"codex":"untouched"}'
         (self.root/'quota-state.json').write_bytes(sentinel)

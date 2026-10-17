@@ -72,11 +72,13 @@ class QuotaMonitorTest(unittest.TestCase):
         for invalid in (None, True, "2", -1, float("nan"), float("inf")):
             with self.subTest(invalid=invalid), self.assertRaises(quota.QuotaError):
                 quota.normalize(response(invalid))
-        with self.assertRaises(quota.QuotaError):
+        # Unlimited credits do not replace the required Usage windows.
+        with self.assertRaisesRegex(quota.QuotaError, "no_windows"):
             quota.normalize({"rateLimits": {"primary": None, "credits": {"unlimited": True}}})
 
     def test_spend_control_is_not_shown_as_available_quota(self):
-        data = response()
+        data = response(100)
+        data["rateLimitsByLimitId"]["codex"]["credits"] = {"unlimited": True}
         data["rateLimitsByLimitId"]["codex"]["spendControlReached"] = True
         result = quota.reply({"snapshot": quota.normalize(data), "last_ok": True, "fetched_at": NOW.isoformat()}, NOW)
         self.assertIsNone(result["remaining_percent"])
@@ -126,6 +128,83 @@ class QuotaMonitorTest(unittest.TestCase):
             with self.assertRaises(quota.QuotaError):
                 quota.send_read_only(output, {"method": forbidden})
             self.assertEqual(output.getvalue(), "")
+
+    def credit_result(self, balance=None, unlimited=False, **fields):
+        raw = bucket(100)
+        raw.update(credits={"hasCredits": True, "unlimited": unlimited, "balance": balance}, **fields)
+        snapshot = quota.normalize({"rateLimits": raw})
+        return quota.reply({"snapshot": snapshot, "last_ok": True, "fetched_at": NOW.isoformat()}, NOW)
+
+    def test_credit_balance_boundaries_and_truncation(self):
+        for balance, tray in ((999, "999"), (1000, "1k"), (61794, "61k"), (999999, "999k"),
+                              (1000000, "1M"), (1234567, "1.2M"), (9999999, "9.9M"),
+                              (10000000, "10M"), (1234567890, "1.2B"), (10**12, "999B"),
+                              ("61,794", "61k"), ("61794.5", "61k"), ("812.9", "812")):
+            with self.subTest(balance=balance):
+                result = self.credit_result(balance)
+                self.assertEqual(result["credit"]["tray_text"], tray)
+                self.assertEqual(result["remaining_percent"], 0)
+                self.assertFalse(result["blocked"])
+                self.assertTrue(result["ok"])
+                self.assertEqual(result["forecast"]["status"], "unavailable")
+                self.assertTrue(result["detail"].startswith(result["credit"]["summary"] + "\nUsage は使い切っています。"))
+                self.assertTrue(result["tooltip"].startswith("Codex Credit 利用中"))
+        self.assertEqual(self.credit_result("61794.5")["credit"]["summary"], "残り61,794.5クレジット")
+        self.assertEqual(self.credit_result(unlimited=True)["credit"]["tray_text"], "∞")
+        for invalid in (None, "abc", "-1", "1e5", "", True, -1, 1.5, float("nan"), "1,23", "１"):
+            with self.subTest(invalid=invalid):
+                credit = self.credit_result(invalid)["credit"]
+                self.assertEqual(credit["tray_text"], "¤")
+                self.assertFalse(credit["amount_known"])
+
+    def test_credit_restrictions_and_strict_booleans(self):
+        for reached in ("workspace_owner_credits_depleted", "workspace_member_credits_depleted",
+                        "workspace_owner_usage_limit_reached", "workspace_member_usage_limit_reached", "future"):
+            result = self.credit_result(100, rateLimitReachedType=reached)
+            self.assertIsNone(result["credit"])
+            self.assertTrue(result["blocked"])
+        self.assertIsNone(self.credit_result(100, spendControlReached=True)["credit"])
+        raw = bucket(10)
+        raw.update(credits={"hasCredits": True}, rateLimitReachedType="rate_limit_reached")
+        snapshot = quota.normalize({"rateLimits": raw})
+        self.assertIsNotNone(snapshot["credit"])
+        self.assertEqual(snapshot["windows"][0]["remaining_percent"], 90)
+        for credits in (None, [], True, {"hasCredits": 1}, {"unlimited": "true"}):
+            raw.update(credits=credits)
+            self.assertIsNone(quota.normalize({"rateLimits": raw})["credit"])
+
+    def test_cached_credit_validation_staleness_and_schema_one(self):
+        raw = bucket(100)
+        raw["credits"] = {"hasCredits": True, "balance": "1000"}
+        cache = {"snapshot": quota.normalize({"rateLimits": raw}), "last_ok": True, "fetched_at": NOW.isoformat()}
+        self.assertIsNone(quota.reply(cache, NOW + timedelta(minutes=11))["credit"])
+        original = deepcopy(cache)
+        for invalid in ([], True, {}, {"kind": "unknown"},
+                        {"kind": "codex_credits", "unlimited": 1, "balance": None},
+                        {"kind": "codex_credits", "unlimited": False, "balance": "1e5"},
+                        {"kind": "claude_extra_usage", "currency": "USD", "monthly_limit": True,
+                         "used_credits": 0, "limit_known": True}):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                cache["snapshot"]["credit"] = invalid
+                quota.reply(cache, NOW)
+        original["schema_version"] = 1
+        self.assertIsNone(quota.reply(original, NOW)["credit"])
+
+    def test_schema_one_history_survives_and_writes_schema_two(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = self.folder(directory)
+            self.check(folder)
+            path = folder / "quota-state.json"
+            cache = json.loads(path.read_text(encoding="utf-8"))
+            history = cache["history"]
+            cache["schema_version"] = 1
+            cache["snapshot"].pop("credit")
+            path.write_text(json.dumps(cache), encoding="utf-8")
+            self.check(folder, NOW + timedelta(minutes=5), error=OSError())
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(saved["schema_version"], 2)
+            self.assertEqual(saved["history"], history)
+            self.assertIsNone(saved["snapshot"]["credit"])
 
     def fake_server(self, directory, behavior):
         # This is a plain Python process: no Codex, network, login, or inference.
