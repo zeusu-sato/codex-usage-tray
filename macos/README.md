@@ -1,10 +1,10 @@
 # Codex Usage Tray for macOS
 
-This guide describes **v0.4.1**, including the shared Claude metadata compatibility fix. Windows 2.1.266 quota retrieval was observed successfully; actual Mac account/Keychain access remains unverified.
+This guide describes **v0.5.0**, including the shared Claude metadata compatibility fix and Credit mode (a purple number after Usage is exhausted). Windows quota retrieval was observed successfully with Claude 2.1.266 and 2.1.291; actual Mac account/Keychain access remains unverified.
 
 macOS 13 or later. Separate native builds are provided for **Apple Silicon (arm64)** and **Intel (x86_64)**. The UI is Japanese; quota reset labels use JST, matching the Windows edition.
 
-1. Download the ZIP for your Mac from the [v0.4.1 release](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1) and extract it.
+1. Download the ZIP for your Mac from the [v0.5.0 release](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.0) and extract it.
 2. Move **Codex Usage Tray.app** to **Applications** before enabling login startup or additional instructions. Keep the app bundle intact; its Python backend is included.
 3. Open the app. The first launch shows the shared window; later launches use the menu bar. Click the Codex or Claude number to open that provider. Right-click either icon for refresh and quit.
 4. Install and log into your own Codex / Claude Code client. Registered VS Code and VS Code Insiders extensions and native CLI installations are detected. If there is more than one client, use **クライアントを選ぶ…**.
@@ -34,7 +34,7 @@ The package uses the hash-pinned Python.org CPython 3.13.15 macOS installer. `co
 
 macOS 13以降が対象です。Apple Silicon（M1以降）は`macos-arm64`、Intel Macは`macos-x86_64`のZIPを選び、展開した**Codex Usage Tray.appをアプリケーションフォルダーへ移動**してください。Pythonの追加導入は不要です。
 
-この手順はv0.4.1向けです。WindowsのClaude 2.1.266では残量取得の成功を確認していますが、Macの実アカウント／Keychainでの確認とは別です。
+この手順はv0.5.0向けです。WindowsのClaude 2.1.266・2.1.291では残量取得の成功を確認していますが、Macの実アカウント／Keychainでの確認とは別です。
 
 初回は共通画面を開き、以降はメニューバーに常駐します。Codex／Claudeの数字をクリックすると、そのサービスの詳細を表示します。VS Code拡張または公式CLIを導入し、各クライアントでログインしてください。複数ある場合は「クライアントを選ぶ…」から選択します。Claudeは版を確認できた2.1.263以降の安定版で取得を試す方式です。版の上限は固定せず、毎回の応答を検証し、非互換なら未確認表示にします。旧対策の停止だけを理由に残量取得は止めず、AIによる代替取得もしません。旧版へ戻す必要はありません。
 
