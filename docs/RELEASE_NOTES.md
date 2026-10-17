@@ -1,3 +1,26 @@
+# v0.5.0 — Credit mode and client update tracking
+
+Feature release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.0). Early beta with a Japanese UI.
+
+- Adds Credit mode. When Usage is exhausted but credits let you continue, the tray number turns purple. Codex shows its credit balance in at most three characters (for example `61k`), with the exact balance in the tooltip. Claude, when extra usage is on, shows the amount left up to this month's spending limit. **This is not an account balance.** `∞` means no limit and `¤` means an unknown amount. No forecast is made in this mode. The experimental Linux tray shows the same.
+- Credit mode reads a few more fields from the existing replies: Codex credit and limit-reached fields, and Claude's extra-usage switch, monthly limit, used amount, and currency. No new API, method, or token read is added. See [Privacy](PRIVACY.md#credit-mode).
+- Follows a registered client update instead of stopping quota reads, when the update replaces the extension folder or the selected installation disappears. The version check still reports the change.
+- Obsolete editor extension binaries left on `PATH` no longer hide a standalone CLI further along `PATH`.
+- Records a successful Windows quota read with Claude Code 2.1.291 and adds test coverage for newer client versions. See [protocol evidence](CLAUDE_METADATA_PROTOCOL.md).
+- UI tests no longer leave stale tray entries in the Windows taskbar settings. Large source files were split without behavior changes.
+
+Codex Credit mode was checked with a real account. Claude extra-usage display was checked only with synthetic data; a real Claude account in that state has not been tested. Mac real-account/Keychain behavior remains unverified, and Mac packages are still ad-hoc signed only.
+
+**Usageを使い切ったあともCreditで使い続けられるとき、トレイにCreditを紫の数字で表示します。** CodexはCreditの残高を最大3文字（例：`61k`）で表示し、ツールチップに正確な残高を出します。Claudeは追加利用がオンのとき、今月の上限までの残りを表示します。**Claudeの金額は本当の残高ではありません。** `∞`は上限なし、`¤`は金額不明です。このモードでは予測をしません。Linux試作版も同じ表示です。
+
+Credit表示のため、既存の応答から読み取る項目が増えました（CodexのCredit関連、Claudeの追加利用の有効・今月の上限・使用額・通貨）。新しいAPI・メソッド・トークンの読み出しはありません。詳しくは[プライバシー](PRIVACY.md#credit-mode)をご覧ください。
+
+クライアントを更新して登録中の拡張機能が入れ替わっても、残量取得を止めずに追従します。`PATH`に古いエディター拡張の実行ファイルが残っていても、単体CLIを見つけます。WindowsのClaude 2.1.291で残量取得を確認しました。UIテストがタスクバー設定に古いトレイ項目を残さないようにし、大きいファイルを動きを変えずに分割しています。
+
+実アカウントで確かめたのはCodexのCredit表示だけです。Claudeの追加利用の表示は架空データでのみ確認しています。Macの実アカウント／Keychainでの確認とApple公証は未実施です。
+
+---
+
 # v0.4.1 — Claude metadata compatibility
 
 Compatibility fix for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.4.1). Early beta with a Japanese UI.
