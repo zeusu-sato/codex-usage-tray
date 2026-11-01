@@ -85,6 +85,26 @@ class ProviderTests(unittest.TestCase):
                 self.assertFalse(reply['ok'])
                 self.assertNotIn('secret-location',json.dumps(cache))
 
+    def test_error_reasons_and_recovery(self):
+        path = self.folder / 'quota-state.json'
+        for index, reason in enumerate(('protocol', 'unsupported_response', 'incomplete_windows')):
+            with self.subTest(reason=reason), patch.object(client_registry, 'current_identity', return_value=self.identity), \
+                    patch.object(claude_quota.claude_adapter, 'request_usage', side_effect=claude_quota.quota.QuotaError(reason)):
+                claude_quota.quota_command(self.folder, self.now + timedelta(minutes=5 * index))
+                cache = json.loads(path.read_text(encoding='utf-8'))
+                self.assertEqual((cache['error'], cache['error_reason']), ('incompatible_protocol', reason))
+        self.read(now=self.now + timedelta(minutes=15))
+        self.assertNotIn('error_reason', json.loads(path.read_text(encoding='utf-8')))
+        result = self.read({'rate_limits_available': True, 'rate_limits': None}, self.now + timedelta(minutes=20))
+        cache = json.loads(path.read_text(encoding='utf-8'))
+        self.assertEqual(cache['error'], 'usage_temporarily_unavailable')
+        self.assertNotIn('error_reason', cache)
+        self.assertTrue(result['detail'].startswith('Claude Code が利用枠を一時的に取得できませんでした。\n5分ごとに再確認します。'))
+        self.assertNotIn('対応更新が必要', result['detail'])
+        self.read(now=self.now + timedelta(minutes=25))
+        cache = json.loads(path.read_text(encoding='utf-8'))
+        self.assertNotIn('error_reason', cache)
+
     def test_scope_change_discards_history(self):
         self.read()
         second=copy.deepcopy(self.payload);second['scope_key']='b'*64
