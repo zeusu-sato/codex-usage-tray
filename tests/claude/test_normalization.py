@@ -42,6 +42,9 @@ class ClaudeNormalizationTest(unittest.TestCase):
                 claude.normalize(data)
 
     def test_unavailable_or_missing_global_windows_never_claim_complete_usage(self):
+        for data in ({"rate_limits_available": True, "rate_limits": None}, {"rate_limits_available": True}):
+            with self.subTest(data=data), self.assertRaisesRegex(quota.QuotaError, "^usage_temporarily_unavailable$"):
+                claude.normalize(data)
         for available in (None, False, 0, 1, "true", [], {}):
             with self.subTest(available=available), self.assertRaises(quota.QuotaError):
                 claude.normalize(dict(usage(), rate_limits_available=available))

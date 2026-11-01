@@ -47,6 +47,8 @@ def response(cache, now):
     result["detail"] += "\n対象: 全体の5時間枠・週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
     if cache.get("error") == "unsupported_version":
         result["detail"] = "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。\n選択したクライアントをご確認ください。\n" + result["detail"]
+    elif cache.get("error") == "usage_temporarily_unavailable":
+        result["detail"] = "Claude Code が利用枠を一時的に取得できませんでした。\n5分ごとに再確認します。\n" + result["detail"]
     elif cache.get("error") == "incompatible_protocol":
         result["detail"] = "Claude Codeの残量取得への応答が対応形式と一致しません。\n続く場合はアプリの対応更新が必要です。\n" + result["detail"]
     if cache.get("last_ok") and not cache.get("account_scope") and result["credit"] is None:
@@ -113,11 +115,17 @@ def quota_command(folder, now):
                 cache["history"] = usage_forecast.record(cache.get("history"), snapshot["windows"], now.timestamp())
             cache.update(snapshot=snapshot, account_scope=scope, fetched_at=now.isoformat(), last_ok=True)
             cache.pop("error", None)
+            cache.pop("error_reason", None)
         except (OSError, ValueError, TypeError, KeyError, AttributeError, OverflowError,
                 quota.QuotaError, subprocess.SubprocessError) as error:
             # Never persist raw process/server output or account identifiers.
             cache.update(attempted_at=now.isoformat(), last_ok=False)
             cache["error"] = error_category(error)
+            reason = str(error) if isinstance(error, quota.QuotaError) else None
+            if reason in ("protocol", "unsupported_response", "incomplete_windows"):
+                cache["error_reason"] = reason
+            else:
+                cache.pop("error_reason", None)
         cache["schema_version"] = 2
         write_json(folder / "quota-state.json", cache)
         return response(cache, now)

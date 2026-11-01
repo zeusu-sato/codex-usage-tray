@@ -67,7 +67,7 @@ def _usage_fields(data, initialized, scope_salt=None):
               "rate_limits": ({key: {field: value[field] for field in ("utilization", "resets_at")
                                      if field in value} if isinstance(value, dict) else None
                                for key, value in limits.items() if key in ("five_hour", "seven_day")}
-                              if isinstance(limits, dict) else None)}
+                              if isinstance(limits, dict) else None if limits is None else [])}
     if isinstance(limits, dict) and isinstance(limits.get("extra_usage"), dict):
         extra = limits["extra_usage"]
         result["rate_limits"]["extra_usage"] = {key: extra[key] for key in
@@ -107,6 +107,8 @@ def normalize(result):
     if result.get("rate_limits_available") is not True:
         raise QuotaError("account_unavailable")
     limits = result.get("rate_limits")
+    if limits is None:
+        raise QuotaError("usage_temporarily_unavailable")
     if not isinstance(limits, dict):
         raise QuotaError("unsupported_response")
     windows = []
