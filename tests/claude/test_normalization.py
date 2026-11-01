@@ -48,7 +48,7 @@ class ClaudeNormalizationTest(unittest.TestCase):
         for available in (None, False, 0, 1, "true", [], {}):
             with self.subTest(available=available), self.assertRaises(quota.QuotaError):
                 claude.normalize(dict(usage(), rate_limits_available=available))
-        for source in ("five_hour", "seven_day"):
+        for source in ("seven_day",):
             for missing in (True, False):
                 data = usage()
                 if missing:
@@ -58,6 +58,24 @@ class ClaudeNormalizationTest(unittest.TestCase):
                 with self.subTest(source=source, missing=missing), self.assertRaisesRegex(
                         quota.QuotaError, "^incomplete_windows$"):
                     claude.normalize(data)
+
+    def test_optional_five_hour_and_weekly_credit(self):
+        for missing in (True, False):
+            data = usage(weekly=100)
+            if missing:
+                del data["rate_limits"]["five_hour"]
+            else:
+                data["rate_limits"]["five_hour"] = None
+            data["rate_limits"]["extra_usage"] = {"is_enabled": True}
+            result = claude.normalize(data)
+            self.assertEqual([w["kind"] for w in result["windows"]], ["secondary"])
+            self.assertEqual(result["windows"][0]["remaining_percent"], 0)
+            self.assertIsNotNone(result["credit"])
+        for invalid in (False, 0, "invalid", []):
+            data = usage()
+            data["rate_limits"]["five_hour"] = invalid
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(quota.QuotaError, "^unsupported_response$"):
+                claude.normalize(data)
 
     def test_invalid_schema_utilization_and_missing_reset_are_rejected(self):
         for invalid in (None, True, False, "9", -1, float("nan"), float("inf"), float("-inf"), [], {}):
