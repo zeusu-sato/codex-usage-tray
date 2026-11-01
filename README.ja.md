@@ -1,10 +1,10 @@
 # Codex Usage Tray
 
-[English](README.md) · [Windows・Mac版ダウンロード](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.0) · [プライバシー](docs/PRIVACY.md)
+[English](README.md) · [Windows・Mac版ダウンロード](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.1) · [プライバシー](docs/PRIVACY.md)
 
 CodexとClaude CodeのUsage残量を、Windowsの通知領域・Macのメニューバーに表示する非公式アプリです。数字とゲージで残量を確認でき、マウスを重ねると残量とリセット時刻を表示します。同じウィンドウから、各利用枠の詳細、Codexのバージョン、任意の追加対策を確認できます。
 
-**v0.5.0はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
+**v0.5.1はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
 
 **v0.5.0でCredit表示を追加しました。** Usageを使い切ってもCreditで使い続けられるときは、トレイの数字を紫で表示します。CodexはCreditの残高、Claudeは追加利用がオンのとき「今月の上限までの残り」です（Claudeは残高ではありません）。[残量表示の読み方](#残量表示の読み方)もご覧ください。
 
@@ -43,7 +43,7 @@ Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、*
 ## 使い始める
 
 1. 使用するCodex・Claude Codeを別途インストールし、それぞれでログインしてください。VS Code / VS Code Insidersの拡張機能、または`PATH`上のネイティブ実行ファイルを検出します。Claudeは版を確認できた**2.1.263以降の安定版**と互換性のある残量応答が必要です。未導入側は未確認表示になります。このアプリのためにClaudeを旧版へ戻す必要はありません。
-2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.0)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
+2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.1)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
 3. 同じ製品の対応クライアントが複数ある場合、初期状態ではVS Code / VS Code Insidersに登録中の拡張機能を監視します。`PATH`上のネイティブCLIは各トレイアイコンのメニューから選べますが、拡張機能がある間は自動では選びません。両方のエディターに登録されている場合は監視対象を選んでください。エディターの登録から外れた旧フォルダー（エディターのターミナルが残した`PATH`の参照を含む）は別のインストールとして数えず、`PATH`の後ろにある単体CLIは引き続き検出します。CodexとClaudeの選択は独立しています。
 4. 常に残量を表示するには、Windowsの **^** 内からアイコンを通知領域へドラッグしてください。表示位置はWindows側の設定です。[Microsoft公式の説明](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows)でもこの操作を案内しています。
 
@@ -120,7 +120,7 @@ powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.5.0の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集の見直しファイルを添付しないでください。
+この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.5.1の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集の見直しファイルを添付しないでください。
 
 配布ZIP全体を作る場合は、Windows x64、CPython 3.13.15、.NET Frameworkのコンパイラーを使用します。
 
@@ -129,4 +129,4 @@ python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.5.0-windows-x64.zip`と`SHA256SUMS.txt`を作成します。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。
+固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.5.1-windows-x64.zip`と`SHA256SUMS.txt`を作成します。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。
