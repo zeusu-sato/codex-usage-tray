@@ -97,7 +97,7 @@ def _reset_time(value):
 
 
 def normalize(result):
-    """Only the complete pair of global windows can report a current amount.
+    """The weekly global window is required; the five-hour window is optional.
 
     Null reset times retain a known amount without inventing a refill or forecast.
     Expired timestamps remain expired so the shared cache renderer marks them stale.
@@ -114,6 +114,8 @@ def normalize(result):
     windows = []
     for source, kind, duration in (("five_hour", "primary", 300), ("seven_day", "secondary", 10080)):
         if source not in limits or limits[source] is None:
+            if source == "five_hour":
+                continue
             raise QuotaError("incomplete_windows")
         raw = limits[source]
         if not isinstance(raw, dict) or "resets_at" not in raw:

@@ -55,6 +55,29 @@ class ProviderTests(unittest.TestCase):
         self.assertTrue(result['tooltip'].startswith('Claude Code 追加利用中'))
         self.assertNotIn('残高', result['detail'])
 
+    def test_weekly_only_cache_forecast_and_credit(self):
+        for missing in (True, False):
+            payload = copy.deepcopy(self.payload)
+            if missing:
+                del payload['rate_limits']['five_hour']
+            else:
+                payload['rate_limits']['five_hour'] = None
+            result = self.read(payload)
+            self.assertTrue(result['ok'])
+            self.assertEqual(result['remaining_percent'], 80)
+            self.assertEqual([w['label'] for w in result['windows']], ['Weekly'])
+            self.assertIn('週間枠（5時間枠はこのプランにはありません）', result['detail'])
+            self.assertIn('Weekly', result['tooltip'])
+            result = self.read(payload, self.now + timedelta(minutes=5))
+            cache = json.loads((self.folder / 'quota-state.json').read_text(encoding='utf-8'))
+            self.assertEqual([w['kind'] for w in cache['snapshot']['windows']], ['secondary'])
+            self.assertEqual([w['kind'] for w in cache['history']], ['secondary'])
+            self.assertIn('status', result['forecast'])
+            payload['rate_limits']['seven_day']['utilization'] = 100
+            payload['rate_limits']['extra_usage'] = {'is_enabled': True, 'monthly_limit': 1000, 'used_credits': 0}
+            result = self.read(payload, self.now + timedelta(minutes=10))
+            self.assertEqual(result['credit']['tray_text'], '10')
+
     def test_provider_storage_isolated(self):
         sentinel=b'{"codex":"untouched"}'
         (self.root/'quota-state.json').write_bytes(sentinel)

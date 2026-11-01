@@ -44,7 +44,11 @@ def response(cache, now):
     result = quota.reply(cache, now)
     for key in ("title", "detail", "tooltip"):
         result[key] = result[key].replace("Codex", "Claude Code")
-    result["detail"] += "\n対象: 全体の5時間枠・週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
+    windows = (cache.get("snapshot") or {}).get("windows", [])
+    if windows and not any(w["kind"] == "primary" for w in windows):
+        result["detail"] += "\n対象: 全体の週間枠（5時間枠はこのプランにはありません）。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
+    else:
+        result["detail"] += "\n対象: 全体の5時間枠・週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
     if cache.get("error") == "unsupported_version":
         result["detail"] = "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。\n選択したクライアントをご確認ください。\n" + result["detail"]
     elif cache.get("error") == "usage_temporarily_unavailable":
