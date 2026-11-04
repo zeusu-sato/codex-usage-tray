@@ -141,12 +141,12 @@ public static class PublicUiTest {
             using (Bitmap bitmap = ((Icon)Field(form, "usageIcon")).ToBitmap()) return bitmap.GetPixel(0, 0).ToArgb();
         }));
     }
-    public static IntPtr Window(int pid) {
+    public static IntPtr Window(int pid, string expectedTitle) {
         IntPtr found = IntPtr.Zero;
         EnumWindows(delegate(IntPtr handle, IntPtr state) {
             uint owner; GetWindowThreadProcessId(handle, out owner);
             var title = new StringBuilder(256); GetWindowText(handle, title, title.Capacity);
-            if (owner == pid && title.ToString() == "Codex + Claude Usage") { found = handle; return false; }
+            if (owner == pid && title.ToString() == expectedTitle) { found = handle; return false; }
             return true;
         }, IntPtr.Zero); return found;
     }

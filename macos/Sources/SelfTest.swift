@@ -49,6 +49,9 @@ func savePNG(_ image: NSImage, _ destination: URL) throws {
 }
 
 func runSelfTests(output: URL) throws {
+    try require(usageWindowTitle("0.5.1") == "Codex + Claude Usage 0.5.1", "Versioned window title")
+    try require(usageWindowTitle(nil) == "Codex + Claude Usage", "Window title without version")
+    try require(usageWindowTitle("") == "Codex + Claude Usage", "Window title with empty version")
     try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
     let fixture = FixtureBackend()
     let controller = UsageController(backend: fixture)

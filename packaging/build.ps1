@@ -26,7 +26,7 @@ try {
     $package = Join-Path $buildRoot 'CodexUsageTray'
     [void][System.IO.Directory]::CreateDirectory($package)
     Copy-Item -LiteralPath (Join-Path $buildRoot 'backend-dist\CodexUsageBackend') -Destination (Join-Path $package 'backend') -Recurse
-    & (Join-Path $root 'windows\build.ps1') -OutputDirectory $package
+    & (Join-Path $root 'windows\build.ps1') -OutputDirectory $package -Version $Version
     Copy-Item -LiteralPath (Join-Path $root 'README.md'), (Join-Path $root 'README.ja.md'), (Join-Path $root 'LICENSE') -Destination $package
     [void][System.IO.Directory]::CreateDirectory((Join-Path $package 'docs'))
     foreach ($name in @('PRIVACY.md', 'RELEASE_NOTES.md', 'CLAUDE_METADATA_PROTOCOL.md')) {
