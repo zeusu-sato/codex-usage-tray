@@ -1,6 +1,11 @@
 import AppKit
 import ServiceManagement
 
+func usageWindowTitle(_ version: String?) -> String {
+    guard let version = version, !version.isEmpty else { return "Codex + Claude Usage" }
+    return "Codex + Claude Usage " + version
+}
+
 extension UsageController {
     func row(_ views: [NSView]) -> NSStackView {
         let stack = NSStackView(views: views); stack.orientation = .horizontal; stack.spacing = 10; stack.alignment = .centerY
@@ -14,7 +19,7 @@ extension UsageController {
     }
     func buildWindow() {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Codex + Claude Usage"; window.minSize = NSSize(width: 520, height: 540); window.delegate = self
+        window.title = usageWindowTitle(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String); window.minSize = NSSize(width: 520, height: 540); window.delegate = self
         window.isReleasedWhenClosed = false; window.center()
         window.contentView = TrayBackground(frame: NSRect(x: 0, y: 0, width: 540, height: 760))
         selector.selectedSegment = selected; selector.target = self; selector.action = #selector(providerChanged(_:))

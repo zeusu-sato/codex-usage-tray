@@ -1,4 +1,4 @@
-﻿param([string] $AssemblyPath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'build\windows\CodexUsageTray.exe'))
+﻿param([string] $AssemblyPath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'build\windows\CodexUsageTray.exe'), [string] $Version = '')
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -137,6 +137,20 @@ try {
     [PublicUiTest]::CheckDynamicSwitchPaint($window)
     Write-Output 'PASS: repeated long/short text updates preserve layout separation and repaint opaque switch corners.'
 
+    $install = Join-Path $testRoot 'native package'
+    [void][System.IO.Directory]::CreateDirectory((Join-Path $install 'backend'))
+    Copy-Item -LiteralPath $AssemblyPath -Destination (Join-Path $install 'CodexUsageTray.exe')
+    Copy-Item -LiteralPath $fixtureBackend -Destination (Join-Path $install 'backend\CodexUsageBackend.exe')
+    $nativeData = Join-Path $testRoot 'native profile'
+    Write-Fixture $nativeData @{ remaining = $null }
+    $nativeExe = Join-Path $install 'CodexUsageTray.exe'
+    $native = Start-Process -FilePath $nativeExe -ArgumentList ('--tray --data-dir "' + $nativeData + '"') -WindowStyle Hidden -PassThru
+    $expectedTitle = 'Codex + Claude Usage' + $(if ($Version) { ' ' + $Version })
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    do { Start-Sleep -Milliseconds 50; $handle = [PublicUiTest]::Window($native.Id, $expectedTitle) } while ($handle -eq [IntPtr]::Zero -and $watch.ElapsedMilliseconds -lt 10000)
+    if ($handle -eq [IntPtr]::Zero -or [PublicUiTest]::IsWindowVisible($handle)) { throw '--tray did not start hidden' }
+    Write-Output "PASS: native window title is $expectedTitle."
+
     . (Join-Path $PSScriptRoot 'tests\ReviewAndStartupTests.ps1')
 
     $data = Join-Path $testRoot 'ambiguous profile'
@@ -171,26 +185,15 @@ try {
     Assert-Ended $childId
     Write-Output 'PASS: slow quota does not block toggles; disposal kills the fixture backend and its descendant.'
 
-    $install = Join-Path $testRoot 'native package'
-    [void][System.IO.Directory]::CreateDirectory((Join-Path $install 'backend'))
-    Copy-Item -LiteralPath $AssemblyPath -Destination (Join-Path $install 'CodexUsageTray.exe')
-    Copy-Item -LiteralPath $fixtureBackend -Destination (Join-Path $install 'backend\CodexUsageBackend.exe')
-    $data = Join-Path $testRoot 'native profile'
-    Write-Fixture $data @{ remaining = $null }
     $nativeDataAlias = Join-Path $testRoot 'native profile junction'
-    [void](New-Item -ItemType Junction -Path $nativeDataAlias -Target $data)
-    $nativeExe = Join-Path $install 'CodexUsageTray.exe'
-    $native = Start-Process -FilePath $nativeExe -ArgumentList ('--tray --data-dir "' + $data + '"') -WindowStyle Hidden -PassThru
-    $watch = [Diagnostics.Stopwatch]::StartNew()
-    do { Start-Sleep -Milliseconds 50; $handle = [PublicUiTest]::Window($native.Id) } while ($handle -eq [IntPtr]::Zero -and $watch.ElapsedMilliseconds -lt 10000)
-    if ($handle -eq [IntPtr]::Zero -or [PublicUiTest]::IsWindowVisible($handle)) { throw '--tray did not start hidden' }
+    [void](New-Item -ItemType Junction -Path $nativeDataAlias -Target $nativeData)
     [PublicUiTest]::MoveOffscreen($handle)
     $second = Start-Process -FilePath $nativeExe -ArgumentList ('--data-dir "' + $nativeDataAlias + '"') -WindowStyle Hidden -PassThru
     if (-not $second.WaitForExit(5000)) { throw 'Second instance remained running' }
     $watch.Restart()
     do {
         Start-Sleep -Milliseconds 20
-        $handle = [PublicUiTest]::Window($native.Id)
+        $handle = [PublicUiTest]::Window($native.Id, $expectedTitle)
     } while (($handle -eq [IntPtr]::Zero -or -not [PublicUiTest]::IsWindowVisible($handle)) -and $watch.ElapsedMilliseconds -lt 5000)
     if (-not [PublicUiTest]::IsWindowVisible($handle)) { throw 'First normal handoff did not restore the hidden native window' }
     [PublicUiTest]::Hide($handle)

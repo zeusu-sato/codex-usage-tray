@@ -6,6 +6,13 @@ $fixture = Join-Path $root ('build\portable smoke 日本語 ' + [guid]::NewGuid(
 Expand-Archive -LiteralPath $ZipPath -DestinationPath $fixture
 $package = Join-Path $fixture 'CodexUsageTray'
 $backend = Join-Path $package 'backend\CodexUsageBackend.exe'
+$zipName = [System.IO.Path]::GetFileName($ZipPath)
+if ($zipName -notmatch '^CodexUsageTray-(\d+\.\d+\.\d+(?:-[A-Za-z0-9.]+)?)-windows-x64\.zip$') { throw 'Invalid package ZIP name' }
+$expectedVersion = $Matches[1]
+$exe = Join-Path $package 'CodexUsageTray.exe'
+$productVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion
+if (-not $productVersion -or $productVersion -cne $expectedVersion) { throw "Package version mismatch: expected $expectedVersion, got $productVersion" }
+Write-Output "PASS: packaged executable version $productVersion matches ZIP name."
 $profile = Join-Path $fixture 'fixture profile'
 $data = Join-Path $fixture 'app data'
 $extensions = Join-Path $profile '.vscode\extensions'

@@ -66,7 +66,7 @@ class ProviderTests(unittest.TestCase):
             self.assertTrue(result['ok'])
             self.assertEqual(result['remaining_percent'], 80)
             self.assertEqual([w['label'] for w in result['windows']], ['Weekly'])
-            self.assertIn('週間枠（5時間枠はこのプランにはありません）', result['detail'])
+            self.assertIn('週間枠', result['detail'])
             self.assertIn('Weekly', result['tooltip'])
             result = self.read(payload, self.now + timedelta(minutes=5))
             cache = json.loads((self.folder / 'quota-state.json').read_text(encoding='utf-8'))

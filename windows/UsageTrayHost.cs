@@ -18,7 +18,9 @@ internal sealed class UsageTrayHost : Form
     {
         wake = show;
         showRequested = !tray;
-        Text = "Codex + Claude Usage";
+        var version = (System.Reflection.AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(
+            System.Reflection.Assembly.GetExecutingAssembly(), typeof(System.Reflection.AssemblyInformationalVersionAttribute));
+        Text = "Codex + Claude Usage" + (version != null && !String.IsNullOrEmpty(version.InformationalVersion) ? " " + version.InformationalVersion : "");
         Name = "UsageTrayHost";
         Font = new Font("Yu Gothic UI", 10.5F);
         AutoScaleMode = AutoScaleMode.Dpi;
