@@ -50,8 +50,8 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let remaining = NSTextField(labelWithString: "?")
     let usageTitle = NSTextField(wrappingLabelWithString: "残量を確認しています")
     let quotaDetail = NSTextField(wrappingLabelWithString: "")
-    let checked = NSTextField(wrappingLabelWithString: "通常監視ではAIを使いません")
-    let forecastTitle = NSTextField(wrappingLabelWithString: "見通しを確認しています")
+    let checked = NSTextField(wrappingLabelWithString: "")
+    let forecastTitle = NSTextField(wrappingLabelWithString: "予測を確認しています")
     let forecastDetail = NSTextField(wrappingLabelWithString: "")
     let policyTitle = NSTextField(wrappingLabelWithString: "追加対策")
     let policyDetail = NSTextField(wrappingLabelWithString: "")
@@ -61,8 +61,8 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let monitorDetail = NSTextField(wrappingLabelWithString: "")
     let feedback = NSTextField(wrappingLabelWithString: "")
     let refreshButton = NSButton(title: "更新", target: nil, action: nil)
-    let reviewButton = NSButton(title: "AIで見直す…", target: nil, action: nil)
-    let reportButton = NSButton(title: "結果を開く", target: nil, action: nil)
+    let reviewButton = NSButton(title: "AIレビュー…", target: nil, action: nil)
+    let reportButton = NSButton(title: "AIレビューの結果", target: nil, action: nil)
     let clientButton = NSButton(title: "クライアントを選ぶ…", target: nil, action: nil)
     let loginButton = NSButton(checkboxWithTitle: "ログイン時に起動", target: nil, action: nil)
     let quitButton = NSButton(title: "終了", target: nil, action: nil)
@@ -215,9 +215,9 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
             guard reply.flag("ok"), reply.flag("can_review"), manual || reply.flag("should_prompt") else { self.releaseModal(); return }
             state.busy = true; state.prompted.insert(signature)
             self.selected = self.states.firstIndex { $0 === state }!; self.render(); self.showWindow()
-            let alert = NSAlert(); alert.messageText = state.name + "の対策をAIで見直しますか？"
-            alert.informativeText = reply.text("detail") + "\n\n「はい」でTerminalを開き、対話形式で見直します。Claudeの見直しにもCodexのUsageを使います。"
-            alert.addButton(withTitle: "いいえ (No)"); alert.addButton(withTitle: "はい (Yes)")
+            let alert = NSAlert(); alert.messageText = state.name + "のAIレビューを開始しますか？"
+            alert.informativeText = reply.text("detail") + "\n\n「はい」でTerminalを開き、対話形式でAIレビューを行います。ClaudeのAIレビューにもCodexのUsageを使います。"
+            alert.addButton(withTitle: "いいえ"); alert.addButton(withTitle: "はい")
             alert.beginSheetModal(for: self.window) { response in
                 self.releaseModal(); state.busy = false
                 guard !self.exiting else { return }
@@ -225,7 +225,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.perform(state, command: "review-decide", extra: ["--signature", signature, "--decision", yes ? "yes" : "no"]) { decision in
                     if yes {
                         guard decision.flag("ok"), !decision.text("request_path").isEmpty, let actual = self.backend as? Backend else {
-                            self.setFeedback("AI見直しを開始できませんでした。状態を更新してください。", for: state); return
+                            self.setFeedback("AIレビューを開始できませんでした。状態を更新してください。", for: state); return
                         }
                         do {
                             let launcher = try actual.reviewLauncher(provider: state.id, request: decision.text("request_path"))
@@ -234,11 +234,11 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                                 DispatchQueue.main.async {
                                     guard !self.exiting else { return }
                                     if let error = error { self.failure(error, for: state) }
-                                    else { self.setFeedback("Terminalで見直しを開始しました。完了後、結果を確認してください。", for: state) }
+                                    else { self.setFeedback("TerminalでAIレビューを開始しました。完了後、結果を確認してください。", for: state) }
                                 }
                             }
                         } catch { self.failure(error, for: state) }
-                    } else { self.setFeedback("AI見直しは開始していません。通常の監視を続けます。", for: state) }
+                    } else { self.setFeedback("AIレビューは開始していません。通常の監視を続けます。", for: state) }
                 }
             }
         }
