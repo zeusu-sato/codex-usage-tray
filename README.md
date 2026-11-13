@@ -36,16 +36,16 @@ Claude monitoring requires an existing Claude Code installation and login. Revie
 
 Native Mac UI captured on an Apple Silicon GitHub runner. These are test readings, not a live account.
 
-Download the `macos-arm64` ZIP for Apple Silicon or `macos-x86_64` for Intel, extract it, and move **Codex Usage Tray.app** into **Applications**. Python is included. The beta is ad-hoc signed but **not Developer ID signed or notarized**; see the [Mac installation guide](macos/README.md) for Apple's normal per-app approval procedure and validation limits. Mac account/Keychain access and interactive review still require a user Mac; synthetic CI tests do not establish those results.
+Download the `macos-arm64` ZIP for Apple Silicon or `macos-x86_64` for Intel, extract it, and move **Codex Usage Tray.app** into **Applications**. Python is included. The beta is ad-hoc signed but **not Developer ID signed or notarized**; see the [Mac installation guide](macos/README.md) for Apple's normal per-app approval procedure and validation limits. On November 1, v0.5.1 retrieved Codex and Claude weekly quota with real accounts on an M1 Mac; Codex matched `/status`. Whether Claude matches claude.ai, Keychain behavior, interactive review, and login restart remain unverified.
 
 ## Get started on Windows
 
 1. Install the clients you use and sign in through them. The app detects Codex and Claude Code in VS Code / VS Code Insiders, or their native executable on `PATH`. Claude monitoring requires an identified stable version **2.1.263 or newer** and compatible metadata responses. An absent client stays unknown in its own tab; do not downgrade Claude just for this app.
-2. Download the Windows x64 ZIP from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.1), extract the **whole folder**, and run `CodexUsageTray.exe`. Keep its `backend` folder alongside it. The release includes the Python runtime, so you do not need to install Python or Anaconda. Codex and Claude Code themselves are not bundled.
+2. Download `CodexUsageTray-Setup-<version>.exe` from [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/latest) and run it. It needs no administrator rights and installs to `%LOCALAPPDATA%\Programs\CodexUsageTray`. The installer is unsigned, so SmartScreen warns on first run; choose **More info** → **Run anyway**. Python is included; Codex and Claude Code themselves are not bundled. The ZIP is still available: extract the **whole folder** and run `CodexUsageTray.exe` next to its `backend` folder.
 3. If more than one installation of a provider is available, the app monitors the extension registered in VS Code / VS Code Insiders by default. A native CLI on `PATH` stays selectable from the tray menu but is not chosen automatically next to an extension; if both editors register the extension, choose one. Obsolete extension folders that the editor no longer registers, including a stale `PATH` entry left by an editor terminal, do not count as separate installations; a standalone CLI further along `PATH` is still detected. The Codex and Claude selections are independent.
 4. To keep the number visible, drag each icon from the Windows **^** overflow area into the system tray. Windows controls icon visibility. [Microsoft's taskbar guidance](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows) explains this setting.
 
-Closing the window keeps the app in the tray. Click either icon to open its corresponding tab; choose **終了** to exit. Starting the app again opens the existing instance for the same data directory. Login startup is off initially; enable **Windowsログイン時に起動** in the tray menu if wanted. `CodexUsageTray.exe --tray` starts hidden.
+Closing the window keeps the app in the tray. Click either icon to open its corresponding tab; choose **終了** to exit. Starting the app again opens the existing instance for the same data directory. Login startup is off initially; enable **Windowsログイン時に起動** in the tray menu if wanted. If you later run `CodexUsageTray.exe` from a different location, that item shows as off; the app does not rewrite the existing entry. `CodexUsageTray.exe --tray` starts hidden.
 
 ## Read the gauge
 
@@ -102,7 +102,9 @@ State is stored under `%LOCALAPPDATA%\CodexUsageTray`: minimal quota snapshots, 
 
 If the gauge shows `?`, check the selected Codex or Claude client and its login, use **今すぐ確認** or **更新**, and inspect the message in the window. An unsupported account, incompatible response, missing client, or unavailable connection can leave the value unknown. A version-change alert alone does not require an AI review to resume quota reads. This app does not initiate login or require you to paste a token.
 
-To remove the app, first turn off any enabled additional policy and login startup, choose **終了**, then delete the extracted application folder. Remove `%LOCALAPPDATA%\CodexUsageTray` separately only if you no longer need its reports or backups. Move an installation only after disabling startup and any active policy, because those can refer to its executable path. Updates are manual; the app does not update itself or run recurring online research.
+To remove the app, first turn off any enabled additional policy. For the installer version, uninstall it from Windows **Settings** → **Apps**; this also removes the login-startup shortcut the app created. For the ZIP version, also turn off login startup, choose **終了**, then delete the extracted folder. In both cases `%LOCALAPPDATA%\CodexUsageTray` remains; remove it separately only if you no longer need its reports or backups. Move an installation only after disabling startup and any active policy, because those can refer to its executable path.
+
+The Windows app checks for new versions about 15 seconds after start and every 24 hours after that, with an anonymous GET to this repository's releases on `api.github.com`. It sends no credentials, email address, quota, or identifier; the User-Agent is just `CodexUsageTray`. As with any connection, GitHub receives your IP address. When a newer version exists, the menu and window show **v… にアップデート**. Only when you click it does the app download the installer, and it runs the installer only if it matches the release's `SHA256SUMS.txt`. Updates never install automatically. The app runs no recurring AI research.
 
 ## Source and development
 
@@ -118,11 +120,11 @@ powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 
 These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.5.1. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
 
-For a complete portable package, use Windows x64 with CPython 3.13.15 and the .NET Framework compiler:
+For the complete ZIP and installer, use Windows x64 with CPython 3.13.15 and the .NET Framework compiler:
 
 ```powershell
 python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.5.1-windows-x64.zip` with `SHA256SUMS.txt`. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.
+The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.5.1-windows-x64.zip` with `SHA256SUMS.txt`. Building the installer requires Inno Setup 6; without it, only the ZIP is built. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.
