@@ -3,7 +3,7 @@
 The experimental Linux source UI uses the same shared metadata backend and provider data separation. State is stored under `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`; relative XDG paths use the default. The Linux UI exposes quota reads, client selection, and version monitoring only. See the [Linux guide](../linux/README.ja.md).
 Linux 試作版も共通の取得処理と製品別保存先を使います。保存先は `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`（相対 XDG パスは既定値に戻します）です。Linux UI は残量取得・クライアント選択・バージョン監視に対応します。[Linux の説明](../linux/README.ja.md)もご覧ください。
 
-This document describes **v0.5.1**, including experimental Claude Code support and Credit mode. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint.
+This document describes **v0.5.1**, including experimental Claude Code support and Credit mode. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint. The only recurring connection the app itself makes is the anonymous release check described below.
 
 ## Routine operation
 
@@ -43,11 +43,15 @@ If you enable login startup, the app also creates its own per-user Startup short
 
 The Claude switch instead targets global `CLAUDE.md` under `%USERPROFILE%\.claude`, or `CLAUDE_CONFIG_DIR` when set. Its backup can likewise contain the entire previous file. Enabling one provider's proposal does not enable the other's.
 
+## Checking for new versions (Windows)
+
+The Windows app sends an anonymous GET to `https://api.github.com/repos/zeusu-sato/codex-usage-tray/releases` about 15 seconds after start and every 24 hours after that. The request carries no credentials, cookies, email address, quota, or identifier, and its User-Agent is just `CodexUsageTray`. As with any connection, GitHub receives your IP address and handles it under its own policies. When a newer version exists, the menu and window show **v… にアップデート**. Only clicking it downloads the installer and the release's `SHA256SUMS.txt` from GitHub; the installer runs only if its SHA256 matches. Nothing is updated automatically. The Mac and Linux editions do not perform this check.
+
 ## Only an explicit Yes starts AI
 
 Version changes can open a confirmation, but **No, Escape, and closing that confirmation do not invoke AI**. A direct **Yes** prepares a short-lived request and opens a visible Codex review console. Before inference, the runner reads available-model metadata with `model/list`; uncertain model or reasoning-effort selection requires your choice in that console.
 
-The review itself is an AI task. Its prompt, selected client context, and any material that the review reads can be processed by Codex under your existing account. The review may research official sources and uses your Codex allowance. It uses a `workspace-write` sandbox scoped to the review folder and retains existing approval controls. This is separate from routine quota/version polling, which performs no AI inference or recurring online research.
+The review itself is an AI task. Its prompt, selected client context, and any material that the review reads can be processed by Codex under your existing account. The review may research official sources and uses your Codex allowance. It uses a `workspace-write` sandbox scoped to the review folder and retains existing approval controls. This is separate from routine quota/version polling, which performs no AI inference or online research; the app's only recurring connection of its own is the anonymous release check.
 
 **Reviewing Claude Code also runs through Codex and consumes Codex allowance only after Yes**. The confirmation identifies that distinction. It uses the same best-available-model and maximum-supported-reasoning selection flow; uncertain selection requires a choice before inference. Monitoring Claude does not require an AI review.
 
@@ -61,7 +65,7 @@ After an explicit Yes, a private executable `.command` launcher is placed inside
 
 ## Removal and sharing
 
-Turn off an enabled policy and login startup, then exit the app before deleting its installation. Local reports and backups remain in the data directory until you remove them yourself. Keep any backups you need. If the app's AGENTS block was edited manually, automatic removal protects the edited text; inspect it yourself before deleting related state.
+Turn off an enabled policy and login startup, then exit the app before deleting its installation. Uninstalling the Windows installer version from **Settings → Apps** also removes the app's own Startup shortcut, but leaves the data directory. Local reports and backups remain in the data directory until you remove them yourself. Keep any backups you need. If the app's AGENTS block was edited manually, automatic removal protects the edited text; inspect it yourself before deleting related state.
 
 For a public bug report, prefer the app version, operating-system version, selected client type/version, a redacted error message, and reproduction steps. Do not attach your data directory, Codex auth files, private AGENTS contents, or full AI review sessions. Demo screenshots should use fixture data and be labeled **Demo**.
 
@@ -69,7 +73,7 @@ For a public bug report, prefer the app version, operating-system version, selec
 
 Claude Codeの試験対応とCreditモードを含む**v0.5.1**について説明しています。
 
-このアプリ独自のアクセス解析やテレメトリー送信先はありません。定期的な残量取得は、インストール済みCodexを通して公式の`account/rateLimits/read`を呼びます。AIの会話・推論ターンは開始しませんが、残量を取得するCodex自身はサービスと通信する場合があります。バージョン確認はローカル処理です。
+このアプリ独自のアクセス解析やテレメトリー送信先はありません。定期的な残量取得は、インストール済みCodexを通して公式の`account/rateLimits/read`を呼びます。AIの会話・推論ターンは開始しませんが、残量を取得するCodex自身はサービスと通信する場合があります。バージョン確認はローカル処理です。アプリ自身の定期的な通信は、次に示す匿名のリリース確認だけです。
 
 Claude対応は、版を確認できた**2.1.263以降の安定版**で内部`initialize` / `get_usage`制御だけを試し、版の上限は固定しません。ローカル会話履歴の分析を省略するよう指定し、プロンプト・ユーザーメッセージは送りません。毎回の応答を検証し、非互換なら未確認表示にして、AIによる代替取得はしません。認証はClaude自身が扱い、アプリは認証ファイルを読まず、独自のHTTP取得も行いません。出力・時間に上限を設け、終了時に取得用プロセスを片付けます。安定した公開APIではありません。
 
@@ -85,11 +89,13 @@ Claudeでは全体の5時間枠・週間枠と追加利用の4フィールドを
 
 Claudeの状態は、その下の`providers\claude`に分けて保存します。残量キャッシュにはsalt・HMAC識別値・上限付き履歴と、アプリ更新後に旧版の取得停止状態を再試行するための取得方式の版番号も保存し、アカウントの変更時には履歴を区切ります。これは仮名化であり、暗号化や完全な匿名性を保証するものではありません。通知領域のシンボルはインストール済み公式拡張機能から読み、不透明度18%で表示します。画像の送信・同梱はせず、見つからなければ数字とゲージだけを表示します。
 
+Windows版は、起動の約15秒後と、その後24時間ごとに、`https://api.github.com/repos/zeusu-sato/codex-usage-tray/releases`へ匿名のGETを送り、新しい版を確認します。認証情報・Cookie・メールアドレス・残量・識別子は送らず、User-Agentは`CodexUsageTray`だけです。通常の通信と同様に、GitHubにはIPアドレスが届き、GitHubの方針に従って扱われます。新しい版があれば、メニューとウィンドウに **v… にアップデート** を表示します。押したときだけ、インストーラとリリースの`SHA256SUMS.txt`をGitHubからダウンロードし、SHA256が一致した場合だけ実行します。自動では更新しません。Mac版とLinux版はこの確認を行いません。
+
 **はい** を明示的に押したときだけ、表示されるCodexコンソールでAI見直しを始めます。**いいえ・Escape・×では開始しません**。AI見直しのプロンプトや調査対象は既存のCodex設定に従って処理され、Usageを消費します。通常の監視とは異なり、見直しでは公式情報のオンライン調査を行う場合があります。報告書を開く操作や、作成済み候補の有効・無効切り替えだけで、新しいAI見直しは始まりません。
 
 **Claudeの対策見直しにもCodexを使い、はいを選んだ場合だけCodexのUsageを消費します。** 確認画面でその区別を示し、従来と同じ最上位モデル・最大推論強度の選択手順を使います。選択が曖昧なら推論前に確認します。通常のClaude監視にAI見直しは必要ありません。
 
-追加対策を有効にするとグローバルなCodexの`AGENTS.md`へ管理対象ブロックを追加し、ログイン時起動を有効にするとユーザーのStartupに専用ショートカットを作成します。削除前に両方を無効にしてアプリを終了してください。報告書・バックアップは、不要と判断した後に保存先から別途削除できます。公開Issueに保存先全体や認証ファイル、個人の指示、AIの会話全体を添付しないでください。
+追加対策を有効にするとグローバルなCodexの`AGENTS.md`へ管理対象ブロックを追加し、ログイン時起動を有効にするとユーザーのStartupに専用ショートカットを作成します。削除前に両方を無効にしてアプリを終了してください。インストーラ版を **設定** → **アプリ** からアンインストールすると、アプリが作ったショートカットも削除しますが、保存先は残ります。報告書・バックアップは、不要と判断した後に保存先から別途削除できます。公開Issueに保存先全体や認証ファイル、個人の指示、AIの会話全体を添付しないでください。
 
 Claudeの候補を別途有効にした場合は、`%USERPROFILE%\.claude`（または`CLAUDE_CONFIG_DIR`）の`CLAUDE.md`が対象です。製品ごとのスイッチは独立しています。CLAUDEのバックアップにも元の私的な指示が含まれます。
 

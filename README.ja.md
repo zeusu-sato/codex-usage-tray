@@ -38,16 +38,16 @@ Apple SiliconのGitHub実行環境で描画したMac版の画面です。表示�
 
 Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、**Codex Usage Tray.appをアプリケーションフォルダーへ移動**して起動してください。Pythonの別途導入は不要です。
 
-このベータはアドホック署名のみで、**Developer ID署名・Apple公証は未実施**です。[Mac導入手順](macos/README.md)に通常の個別起動許可の方法を記載しています。Macの実アカウント／Keychain取得、対話AI見直し、ログイン再起動は実機確認が残っており、CIの架空データによるテストとは区別しています。
+このベータはアドホック署名のみで、**Developer ID署名・Apple公証は未実施**です。[Mac導入手順](macos/README.md)に通常の個別起動許可の方法を記載しています。11月1日にM1 Macの実アカウントで、v0.5.1がCodexとClaudeの週間枠の残量を取得し、Codexは`/status`の値と一致しました。Claudeの値とclaude.aiの一致、Keychainの動作、対話AI見直し、ログイン再起動は未確認です。
 
 ## 使い始める
 
 1. 使用するCodex・Claude Codeを別途インストールし、それぞれでログインしてください。VS Code / VS Code Insidersの拡張機能、または`PATH`上のネイティブ実行ファイルを検出します。Claudeは版を確認できた**2.1.263以降の安定版**と互換性のある残量応答が必要です。未導入側は未確認表示になります。このアプリのためにClaudeを旧版へ戻す必要はありません。
-2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.1)からWindows x64版ZIPをダウンロードし、**フォルダー全体を展開**して`CodexUsageTray.exe`を起動します。隣の`backend`フォルダーも必要です。Python実行環境を同梱しているため、PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。
+2. [Releases](https://github.com/zeusu-sato/codex-usage-tray/releases/latest)から`CodexUsageTray-Setup-<版>.exe`をダウンロードして実行します。管理者権限は不要で、`%LOCALAPPDATA%\Programs\CodexUsageTray`にインストールします。インストーラは未署名のため、初回はSmartScreenの警告が出ます。**詳細情報** → **実行** で進めてください。PythonやAnacondaのインストールは不要です。Codex・Claude Code本体は同梱していません。ZIP版も引き続き配布しています。ZIP版は**フォルダー全体を展開**し、`backend`フォルダーと同じ場所で`CodexUsageTray.exe`を起動します。
 3. 同じ製品の対応クライアントが複数ある場合、初期状態ではVS Code / VS Code Insidersに登録中の拡張機能を監視します。`PATH`上のネイティブCLIは各トレイアイコンのメニューから選べますが、拡張機能がある間は自動では選びません。両方のエディターに登録されている場合は監視対象を選んでください。エディターの登録から外れた旧フォルダー（エディターのターミナルが残した`PATH`の参照を含む）は別のインストールとして数えず、`PATH`の後ろにある単体CLIは引き続き検出します。CodexとClaudeの選択は独立しています。
 4. 常に残量を表示するには、Windowsの **^** 内からアイコンを通知領域へドラッグしてください。表示位置はWindows側の設定です。[Microsoft公式の説明](https://support.microsoft.com/en-us/windows/experience/personalization/customize-the-taskbar-in-windows)でもこの操作を案内しています。
 
-ウィンドウを閉じると通知領域に残ります。各アイコンのクリックで対応するタブを開き、メニューの **終了** で常駐を終了します。同じデータ保存先でアプリを再起動すると、既存のウィンドウを開きます。Windowsログイン時の起動は初期状態では無効です。必要ならメニューの **Windowsログイン時に起動** を有効にしてください。`CodexUsageTray.exe --tray`でウィンドウを隠した状態から起動できます。
+ウィンドウを閉じると通知領域に残ります。各アイコンのクリックで対応するタブを開き、メニューの **終了** で常駐を終了します。同じデータ保存先でアプリを再起動すると、既存のウィンドウを開きます。Windowsログイン時の起動は初期状態では無効です。必要ならメニューの **Windowsログイン時に起動** を有効にしてください。有効にした後で別の場所の`CodexUsageTray.exe`を起動すると、この項目はオフと表示されます。登録は自動では書き換えません。`CodexUsageTray.exe --tray`でウィンドウを隠した状態から起動できます。
 
 ## 残量表示の読み方
 
@@ -104,7 +104,9 @@ Apple Siliconは`macos-arm64`、Intel Macは`macos-x86_64`のZIPを展開し、*
 
 `?`が表示されたら、選択したCodexまたはClaudeとそのログイン状態を確認し、**今すぐ確認** または **更新** を実行してウィンドウの説明を読んでください。未対応のアカウント、非互換の応答、クライアント未検出、接続不能などで未確認になる場合があります。版変更の通知だけを理由に、残量取得のためのAI見直しは必要ありません。このアプリからログインしたり、トークンを貼り付けたりする必要もありません。
 
-削除するときは、先に有効な追加対策とログイン時起動を無効にし、**終了** を選んでから展開フォルダーを削除します。`%LOCALAPPDATA%\CodexUsageTray`は別に残るため、報告書やバックアップが不要な場合だけ削除してください。移動する場合も、実行ファイルへの参照を持つ追加対策とログイン時起動を先に無効にしてください。アプリの更新は手動です。自己更新や定期的なオンライン調査は行いません。
+削除するときは、先に有効な追加対策を無効にします。インストーラ版はWindowsの **設定** → **アプリ** からアンインストールします。このとき、アプリが作ったログイン時起動のショートカットも削除します。ZIP版は、ログイン時起動も無効にし、**終了** を選んでから展開フォルダーを削除します。どちらの場合も`%LOCALAPPDATA%\CodexUsageTray`は残るため、報告書やバックアップが不要な場合だけ削除してください。移動する場合も、実行ファイルへの参照を持つ追加対策とログイン時起動を先に無効にしてください。
+
+新しい版の確認はWindows版だけの機能です。起動の約15秒後と、その後24時間ごとに、`api.github.com`のこのリポジトリのリリース一覧へ匿名のGETを送ります。認証情報・メールアドレス・残量・識別子は送らず、User-Agentは`CodexUsageTray`だけです。通常の通信と同様に、GitHubにはIPアドレスが届きます。新しい版があれば、メニューとウィンドウに **v… にアップデート** を表示します。押したときだけインストーラをダウンロードし、リリースの`SHA256SUMS.txt`と一致した場合だけ実行します。自動では更新しません。定期的なAIによる調査は行いません。
 
 ## ソースコードと開発
 
@@ -122,11 +124,11 @@ powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 
 この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.5.1の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集の見直しファイルを添付しないでください。
 
-配布ZIP全体を作る場合は、Windows x64、CPython 3.13.15、.NET Frameworkのコンパイラーを使用します。
+配布ZIPとインストーラを作る場合は、Windows x64、CPython 3.13.15、.NET Frameworkのコンパイラーを使用します。
 
 ```powershell
 python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.5.1-windows-x64.zip`と`SHA256SUMS.txt`を作成します。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。
+固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.5.1-windows-x64.zip`と`SHA256SUMS.txt`を作成します。インストーラの作成にはInno Setup 6が必要で、無い場合はZIPだけを作ります。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。
