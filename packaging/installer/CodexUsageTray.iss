@@ -77,25 +77,31 @@ begin
 end;
 
 function StopAppProcesses: Boolean;
-var WMI, Processes, P: Variant; I, Attempt: Integer; Path, Base, Name: String; Found: Boolean;
+var Locator, WMI, Processes, P: Variant; I, Attempt: Integer; Path, Base, Name: String; Found: Boolean;
 begin
   Result := False;
   Base := AddBackslash(ExpandFileName(ExpandConstant('{app}')));
   try
-    WMI := CreateOleObject('WbemScripting.SWbemLocator').ConnectServer('.', 'root\cimv2');
+    Locator := CreateOleObject('WbemScripting.SWbemLocator');
+    WMI := Locator.ConnectServer('.', 'root\cimv2');
     for Attempt := 1 to 100 do begin
       Found := False;
       Processes := WMI.ExecQuery('SELECT * FROM Win32_Process WHERE Name = ''CodexUsageTray.exe'' OR Name = ''CodexUsageBackend.exe''');
       for I := 0 to Processes.Count - 1 do begin
-        P := Processes.ItemIndex(I);
-        if not VarIsNull(P.ExecutablePath) then begin
-          Path := ExpandFileName(P.ExecutablePath);
-          Name := ExtractFileName(Path);
-          if (CompareText(Copy(Path, 1, Length(Base)), Base) = 0) and
-             ((CompareText(Name, 'CodexUsageTray.exe') = 0) or (CompareText(Name, 'CodexUsageBackend.exe') = 0)) then begin
-            Found := True;
-            if P.Terminate() <> 0 then begin Log('Could not stop ' + Path); exit; end;
+        try
+          P := Processes.ItemIndex(I);
+          if not VarIsNull(P.ExecutablePath) then begin
+            Path := ExpandFileName(P.ExecutablePath);
+            Name := ExtractFileName(Path);
+            if (CompareText(Copy(Path, 1, Length(Base)), Base) = 0) and
+               ((CompareText(Name, 'CodexUsageTray.exe') = 0) or (CompareText(Name, 'CodexUsageBackend.exe') = 0)) then begin
+              Found := True;
+              if P.Terminate <> 0 then Log('Could not stop ' + Path);
+            end;
           end;
+        except
+          Found := True;
+          Log('Could not inspect or stop process; retrying: ' + GetExceptionMessage);
         end;
       end;
       if not Found then begin Result := True; exit; end;
@@ -118,16 +124,23 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-var Shell, Shortcut: Variant; Link: String;
+var Shell, Shortcut: Variant; Link, Description, Target, Expected: String;
 begin
   if CurUninstallStep = usUninstall then begin
     Link := ExpandConstant('{userstartup}\CodexUsageTray-managed.lnk');
+    Log('Startup shortcut path: [' + Link + ']');
     if FileExists(Link) then begin
       try
         Shell := CreateOleObject('WScript.Shell');
         Shortcut := Shell.CreateShortcut(Link);
-        if (Shortcut.Description = 'Codex Usage Tray managed startup') and
-           (CompareText(ExpandFileName(Shortcut.TargetPath), ExpandFileName(ExpandConstant('{app}\CodexUsageTray.exe'))) = 0) then
+        Description := Shortcut.Description;
+        Target := Shortcut.TargetPath;
+        Expected := ExpandFileName(ExpandConstant('{app}\CodexUsageTray.exe'));
+        Log('Startup shortcut description: [' + Description + ']');
+        Log('Startup shortcut target: [' + Target + ']');
+        Log('Startup shortcut expected target: [' + Expected + ']');
+        if (Description = 'Codex Usage Tray managed startup') and
+           (CompareText(ExpandFileName(Target), Expected) = 0) then
           DeleteFile(Link);
       except
         Log('Could not inspect startup shortcut: ' + GetExceptionMessage);
