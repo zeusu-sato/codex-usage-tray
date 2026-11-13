@@ -2,7 +2,9 @@ param(
     [string] $Python = 'python',
     [string] $Version = '0.5.1',
     [string] $OutputDirectory = '',
-    [switch] $SkipDependencyInstall
+    [switch] $SkipDependencyInstall,
+    [string] $InnoSetupCompiler = '',
+    [switch] $RequireInstaller
 )
 $ErrorActionPreference = 'Stop'
 $root = [System.IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
@@ -43,8 +45,20 @@ try {
     $zip = Join-Path $OutputDirectory "CodexUsageTray-$Version-windows-x64.zip"
     if (Test-Path -LiteralPath $zip) { throw 'Output ZIP already exists; choose a new output directory.' }
     Compress-Archive -LiteralPath $package -DestinationPath $zip -CompressionLevel Optimal
+    $compilerCandidates = @($InnoSetupCompiler, "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe", "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe")
+    $compiler = $compilerCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } | Select-Object -First 1
+    $installer = Join-Path $OutputDirectory "CodexUsageTray-Setup-$Version.exe"
+    if ($compiler) {
+        if (Test-Path -LiteralPath $installer) { throw 'Output installer already exists; choose a new output directory.' }
+        $numericVersion = ($Version -split '-', 2)[0] + '.0'
+        & $compiler "/DAppVersion=$Version" "/DNumericVersion=$numericVersion" "/DSourceDir=$package" "/DOutputDir=$OutputDirectory" (Join-Path $PSScriptRoot 'installer\CodexUsageTray.iss')
+        if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+    } elseif ($RequireInstaller) { throw 'Inno Setup compiler not found' }
+    else { Write-Warning 'Inno Setup compiler not found; skipping installer.' }
     $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-    [System.IO.File]::WriteAllText((Join-Path $OutputDirectory 'SHA256SUMS.txt'), "$hash  $([System.IO.Path]::GetFileName($zip))`n", [System.Text.UTF8Encoding]::new($false))
+    $sums = "$hash  $([System.IO.Path]::GetFileName($zip))`n"
+    if ($compiler) { $sums += "$((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($installer))`n" }
+    [System.IO.File]::WriteAllText((Join-Path $OutputDirectory 'SHA256SUMS.txt'), $sums, [System.Text.UTF8Encoding]::new($false))
     Write-Output "Package: $package"
     Get-Item -LiteralPath $zip | Select-Object Name, Length
     Write-Output "SHA256: $hash"

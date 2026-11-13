@@ -15,9 +15,16 @@ jobs:
         with:
           python-version: '3.13.15'
           architecture: x64
+      - name: Install Inno Setup if needed
+        shell: powershell
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' }
+          }
       - name: Build and test portable package without AI or account access
         shell: powershell
-        run: .\packaging\build.ps1 -Python python
+        run: .\packaging\build.ps1 -Python python -RequireInstaller
       - name: Run native UI tests with a fixture backend
         shell: powershell
         run: |
@@ -26,14 +33,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'UI tests failed' }
           powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
           if ($LASTEXITCODE -ne 0) { throw 'Dual-provider UI tests failed' }
+          powershell.exe -NoProfile -STA -File .\windows\test-update.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Update UI tests failed' }
       - name: Test packaged runtime without an installed Python on PATH
         shell: powershell
         run: .\packaging\test-package.ps1 -ZipPath .\dist\CodexUsageTray-0.5.1-windows-x64.zip
+      - name: Test installer
+        shell: powershell
+        run: .\packaging\test-installer.ps1 -InstallerPath .\dist\CodexUsageTray-Setup-0.5.1.exe -ZipPath .\dist\CodexUsageTray-0.5.1-windows-x64.zip
       - name: Upload portable Windows package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: CodexUsageTray-windows-x64
           path: |
             dist/*.zip
+            dist/*.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
