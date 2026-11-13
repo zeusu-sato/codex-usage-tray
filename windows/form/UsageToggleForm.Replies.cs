@@ -28,6 +28,8 @@ internal sealed partial class UsageToggleForm
             reply.Title = RequireString(data, "title");
             reply.Detail = RequireString(data, "detail");
             reply.ExpiresLabel = RequireString(data, "expires_label");
+            object tooltip;
+            reply.Tooltip = data.TryGetValue("tooltip", out tooltip) && tooltip is string ? (string)tooltip : "";
             return reply;
         }
         catch (FormatException) { throw new InvalidOperationException("設定の応答を読み取れませんでした。"); }
@@ -109,7 +111,7 @@ internal sealed partial class UsageToggleForm
     {
         ForecastReply collecting = new ForecastReply {
             Status = "collecting", Title = "データを集めています",
-            Detail = "まだ見通しを判定できません。残量の更新時に再確認します。"
+            Detail = "まだ予測を判定できません。残量の更新時に再確認します。"
         };
         object raw;
         if (!data.TryGetValue("forecast", out raw) || !(raw is Dictionary<string, object>)) return collecting;
@@ -155,7 +157,7 @@ internal sealed partial class UsageToggleForm
             reply.RequestPath = RequireString(data, "request_path");
             return reply;
         }
-        catch (FormatException) { throw new InvalidOperationException("見直し設定の応答を読み取れませんでした。"); }
+        catch (FormatException) { throw new InvalidOperationException("AIレビュー設定の応答を読み取れませんでした。"); }
     }
 
     private static bool RequireBoolean(Dictionary<string, object> data, string key)
@@ -180,6 +182,7 @@ internal sealed partial class UsageToggleForm
         public string Title;
         public string Detail;
         public string ExpiresLabel;
+        public string Tooltip;
     }
 
     private sealed class MonitorReply

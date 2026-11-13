@@ -31,7 +31,7 @@ internal sealed class ReviewPromptForm : Form
         Signature = signature;
         decide = decision;
         Name = "AiReviewConfirmation";
-        Text = "AIで対策を見直しますか";
+        Text = "AIレビューを開始しますか";
         AccessibleName = Text;
         Font = new Font("Yu Gothic UI", 10F);
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -64,7 +64,7 @@ internal sealed class ReviewPromptForm : Form
         yesButton = new Button();
         yesButton.Name = "ReviewYes";
         yesButton.Text = "はい";
-        yesButton.AccessibleName = "はい、AIで見直しを開始する";
+        yesButton.AccessibleName = "はい、AIレビューを開始";
         yesButton.Size = new Size(112, 34);
         yesButton.Location = new Point(240, 190);
         yesButton.TabIndex = 1;

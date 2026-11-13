@@ -10,7 +10,7 @@ $fixture=Join-Path $root 'FixtureBackend.exe'
 & $compiler /nologo /target:exe /codepage:65001 "/out:$fixture" /reference:System.Web.Extensions.dll (Join-Path $PSScriptRoot 'tests\FixtureBackend.cs')
 if($LASTEXITCODE -ne 0){throw 'Fixture compilation failed'}
 $encoding=[Text.UTF8Encoding]::new($false)
-$forecast=@{status='comfortable';title='余裕があります';detail='テスト用の見通しです';window_label='Weekly';observed_hours=12;projected_remaining_percent=50}
+$forecast=@{status='comfortable';title='余裕があります';detail='テスト用の予測です';window_label='Weekly';observed_hours=12;projected_remaining_percent=50}
 [IO.File]::WriteAllText((Join-Path $root 'fixture.json'),(@{remaining=68;configured=(-not $CaptureDemo);forecast=$forecast}|ConvertTo-Json -Depth 5),$encoding)
 $forecast.status='tight';$forecast.title='ペースに注意'
 [IO.File]::WriteAllText((Join-Path $root 'providers\claude\fixture.json'),(@{remaining=24;configured=(-not $CaptureDemo);forecast=$forecast}|ConvertTo-Json -Depth 5),$encoding)
@@ -219,7 +219,7 @@ public static class DualUiTest {
             Require(view.Controls["UsageRemaining"].Text == title, "Credit title missing");
             Require(view.Controls["UsageDetail"].Text.StartsWith(summary), "Credit summary missing");
             Require(((string)Field(view,"usageTooltip")).Contains(title), "Credit tooltip missing");
-            Require(view.Controls["UsageForecast"].Text == "Credit 利用中は見通しを表示しません。", "Credit forecast explanation missing");
+            Require(view.Controls["UsageForecast"].Text == "Credit 利用中は予測を表示しません。", "Credit forecast explanation missing");
             using (Bitmap bitmap = ((Icon)Field(view,"usageIcon")).ToBitmap())
                 Require(bitmap.GetPixel(0,0).ToArgb() == Color.FromArgb(106,76,196).ToArgb(), "Credit icon background mismatch");
             return null;

@@ -49,11 +49,11 @@ class ProviderView(QWidget):
         for label in (self.detail, self.forecast, self.checked, self.monitor):
             layout.addWidget(label)
         layout.addStretch()
-        layout.addWidget(text_label("残量は5分ごと、バージョンは15分ごとに確認します。\n"
-                                    "通常の確認でAI推論は使いません。時刻はJSTです。"))
+        self.refresh.setToolTip("残量は5分ごと、バージョンは15分ごとに確認します。\n"
+                                "通常の確認でAI推論は使いません。時刻はJSTです。")
         if provider == "claude":
-            layout.addWidget(text_label("Claude Code " + ".".join(map(str, MINIMUM_VERSION))
-                                        + " 以降の安定版で試験対応。全体の5時間枠・週間枠を表示します。"))
+            self.value.setToolTip("Claude Code " + ".".join(map(str, MINIMUM_VERSION))
+                                  + " 以降の安定版で試験対応。全体の5時間枠・週間枠を表示します。")
         self.tray = QSystemTrayIcon(usage_icon(provider, {}), self)
         self.tray.setToolTip(PROVIDERS[provider] + " — 確認中")
         self.menu = QMenu(host)
@@ -124,7 +124,7 @@ class ProviderView(QWidget):
             self.checked.setText(reply.get("checked_label", ""))
             self.tray.setIcon(usage_icon(self.provider, reply))
             open_action = self.menu.actions()[0]
-            open_action.setText(PROVIDERS[self.provider] + " を開く" + ("（" + credit["title"] + "）" if credit else ""))
+            open_action.setText(PROVIDERS[self.provider] + " を開く" + (" · " + credit["title"] if credit else ""))
             open_action.setToolTip(credit["summary"] if credit else "")
             open_action.setIcon(self.tray.icon())
             self.tray.setToolTip(reply.get("tooltip", "Usage 未確認") if credit else
@@ -162,7 +162,7 @@ class ProviderView(QWidget):
         self.forecast.clear()
         self.checked.clear()
         self.tray.setIcon(usage_icon(self.provider, {}))
-        self.tray.setToolTip(PROVIDERS[self.provider] + " — 切り替え中")
+        self.tray.setToolTip(PROVIDERS[self.provider] + " — 切替中")
         self.queue.extend((("client-select", ("--client-id", client_id)), ("client-list", ()),
                            ("monitor-check", ()), ("usage-check", ())))
         self.next_job()

@@ -57,7 +57,7 @@ internal sealed partial class UsageToggleForm
         catch (Exception error)
         {
             if (IsDisposed || exiting) return;
-            reviewFeedback.Text = "見直し結果を開けませんでした。\n" + error.Message;
+            reviewFeedback.Text = "AIレビューの結果を開けませんでした。\n" + error.Message;
             ResizeForText();
             OpenWindow();
         }
@@ -76,7 +76,7 @@ internal sealed partial class UsageToggleForm
             .TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         if (!report.StartsWith(reviews, StringComparison.OrdinalIgnoreCase)
             || !String.Equals(Path.GetExtension(report), ".md", StringComparison.OrdinalIgnoreCase) || !File.Exists(report))
-            throw new InvalidOperationException("このアプリの見直し結果を確認できませんでした。");
+            throw new InvalidOperationException("このアプリのAIレビューの結果を確認できませんでした。");
         return report;
     }
 
@@ -126,7 +126,7 @@ internal sealed partial class UsageToggleForm
         catch (Exception error)
         {
             if (IsDisposed || exiting) return;
-            reviewFeedback.Text = "見直しの確認に失敗しました。\n" + error.Message;
+            reviewFeedback.Text = "AIレビューの確認に失敗しました。\n" + error.Message;
             ResizeForText();
             if (manual) OpenWindow();
         }
@@ -151,19 +151,19 @@ internal sealed partial class UsageToggleForm
             if (yes)
             {
                 if (!Path.IsPathRooted(reply.RequestPath) || !File.Exists(reply.RequestPath))
-                    throw new InvalidOperationException("見直しの依頼ファイルを確認できませんでした。");
+                    throw new InvalidOperationException("AIレビューの依頼ファイルを確認できませんでした。");
                 // This launch is reachable only from the confirmation's explicit Yes click.
                 reviewRunner(reply.RequestPath);
-                reviewFeedback.Text = "AIによる見直し用のウィンドウを開きました。";
+                reviewFeedback.Text = "AIレビュー用のウィンドウを開きました。";
             }
-            else reviewFeedback.Text = "AIによる見直しは開始していません。必要なときに「AIで見直す…」から確認できます。";
+            else reviewFeedback.Text = "AIレビューは開始していません。必要なときに「AIレビュー…」から確認できます。";
             ResizeForText();
             return true;
         }
         catch (Exception error)
         {
             if (IsDisposed || exiting) return false;
-            reviewFeedback.Text = (yes ? "見直しを開始できませんでした。\n" : "選択を保存できませんでした。\n") + error.Message;
+            reviewFeedback.Text = (yes ? "AIレビューを開始できませんでした。\n" : "選択を保存できませんでした。\n") + error.Message;
             ResizeForText();
             if (reviewPrompt != null && !reviewPrompt.IsDisposed)
                 reviewPrompt.ShowFailure(error.Message + "\n再試行する場合は、もう一度選んでください。");
@@ -182,7 +182,7 @@ internal sealed partial class UsageToggleForm
         // The user-requested console continues independently if the tray app closes.
         using (Process launched = Process.Start(start))
         {
-            if (launched == null) throw new InvalidOperationException("見直し用ウィンドウを開けませんでした。");
+            if (launched == null) throw new InvalidOperationException("AIレビュー用ウィンドウを開けませんでした。");
         }
     }
 

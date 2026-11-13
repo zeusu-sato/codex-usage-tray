@@ -78,7 +78,7 @@ class TrayTests(unittest.TestCase):
         credit = dict(kind="claude_extra_usage", tray_text="688", amount_known=True,
                       title="追加利用中", summary="追加利用：残り $688.00")
         reply = dict(ok=True, remaining_percent=0, credit=credit, tooltip="追加利用中",
-                     forecast=dict(title="見通しなし", detail="pending"))
+                     forecast=dict(title="予測なし", detail="pending"))
         for current, expected in ((credit, credit["title"]), (dict(credit, tray_text=""), "?"), (None, "0%")):
             view.job = SimpleNamespace(deleteLater=lambda: None)
             reply["credit"] = current
@@ -89,7 +89,7 @@ class TrayTests(unittest.TestCase):
                 self.assertEqual(view.detail.text(), credit["summary"])
                 self.assertIn(credit["title"], view.menu.actions()[0].text())
                 self.assertEqual(view.menu.actions()[0].toolTip(), credit["summary"])
-                self.assertEqual(view.forecast.text(), "見通しなし\npending")
+                self.assertEqual(view.forecast.text(), "予測なし\npending")
                 self.assertIn(reply["tooltip"], view.tray.toolTip())
             elif expected == "?":
                 self.assertIn("#88939e", view.value.styleSheet())

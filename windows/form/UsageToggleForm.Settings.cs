@@ -92,7 +92,7 @@ internal sealed partial class UsageToggleForm
             usageTitle.Text = "選択したCodexの残量を確認しています…";
             usageDetail.Text = "";
             usageValue.ForeColor = UsageColor(null);
-            usageForecast.Text = "見通し: 現在の残量は未確認です";
+            usageForecast.Text = "予測: 現在の残量は未確認です";
             usageForecast.ForeColor = UsageColor(null);
             usageChecked.Text = "";
             usageTooltip = "Codex Usage: 選択した環境を確認中";

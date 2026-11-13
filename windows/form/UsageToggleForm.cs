@@ -34,7 +34,7 @@ internal sealed partial class UsageToggleForm : Form
     private readonly Label usageForecast;
     private readonly Label usageChecked;
     private readonly Label mitigationHeading;
-    private readonly Label trayHint;
+    private readonly ToolTip helpTooltip = new ToolTip();
     private readonly Button refreshUsage;
     private readonly Button reviewButton;
     private readonly Button reportButton;

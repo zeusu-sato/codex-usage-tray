@@ -5,16 +5,18 @@ $installer = (Resolve-Path -LiteralPath $InstallerPath).Path
 if ($ZipPath) { $ZipPath = (Resolve-Path -LiteralPath $ZipPath).Path }
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{76F70EFD-4C9D-472F-A3B9-577C640E8424}_is1'
 if (Test-Path -LiteralPath $key) { throw 'Existing installation detected; refusing to run.' }
-$fixture = Join-Path $root ('build\installer smoke 日本語 ' + [guid]::NewGuid().ToString('N'))
+$fixture = Join-Path $root ('build\installer smoke ' + [guid]::NewGuid().ToString('N'))
 $app = Join-Path $fixture 'installed app'
-$data = Join-Path $fixture 'test data'
+$data = Join-Path $fixture 'test data 日本語'
 $profile = Join-Path $fixture 'profile'
 $outside = Join-Path $fixture 'outside app'
-$link = Join-Path ([Environment]::GetFolderPath('Startup')) 'CodexUsageTray-managed.lnk'
+$link = Join-Path $profile 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\CodexUsageTray-managed.lnk'
 $testShortcut = -not (Test-Path -LiteralPath $link)
 $backup = $null
 if ($testShortcut -and (Test-Path -LiteralPath $link)) { $backup = [IO.File]::ReadAllBytes($link) }
 [void][IO.Directory]::CreateDirectory($data)
+[void][IO.Directory]::CreateDirectory((Split-Path $link -Parent))
+[void][IO.Directory]::CreateDirectory((Join-Path $fixture 'temp'))
 [IO.File]::WriteAllText((Join-Path $data 'sentinel.txt'), 'keep')
 function Start-Isolated([string] $File, [string] $Arguments) {
     $info = New-Object Diagnostics.ProcessStartInfo
@@ -22,6 +24,8 @@ function Start-Isolated([string] $File, [string] $Arguments) {
     $info.Arguments = $Arguments
     $info.UseShellExecute = $false
     $info.EnvironmentVariables['USERPROFILE'] = $profile
+    $info.EnvironmentVariables['TEMP'] = Join-Path $fixture 'temp'
+    $info.EnvironmentVariables['TMP'] = Join-Path $fixture 'temp'
     $info.EnvironmentVariables['CODEX_HOME'] = Join-Path $profile '.codex'
     $info.EnvironmentVariables['CLAUDE_CONFIG_DIR'] = Join-Path $profile '.claude'
     $info.EnvironmentVariables['CODEX_USAGE_TRAY_UPDATE_CHECK'] = '0'
@@ -58,7 +62,14 @@ function Set-Shortcut([string] $Target, [string] $Description) {
 function Uninstall-App {
     $process = Start-Isolated (Join-Path $app 'unins000.exe') "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$fixture\uninstall.log`""
     if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Uninstaller timed out' }
-    if ($process.ExitCode -ne 0) { throw "Uninstaller failed: $($process.ExitCode)" }
+    if ($process.ExitCode -ne 0) { Get-Content -LiteralPath "$fixture\uninstall.log"; throw "Uninstaller failed: $($process.ExitCode)" }
+    for ($i = 0; $i -lt 120; $i++) {
+        if ((Get-Content -LiteralPath "$fixture\uninstall.log" -ErrorAction SilentlyContinue) -match 'Log closed\.') { break }
+        Start-Sleep -Milliseconds 500
+    }
+    if ($i -eq 120) { throw 'Uninstaller cleanup timed out' }
+    Get-Content -LiteralPath "$fixture\uninstall.log" | Where-Object { $_ -match 'Startup shortcut|Could not inspect startup shortcut' }
+    if (@(Get-AppProcesses $app).Count) { throw 'Installed app process survived uninstall' }
     if (Test-Path -LiteralPath $key) { throw 'Uninstall registry key remains' }
     if (-not (Test-Path -LiteralPath (Join-Path $data 'sentinel.txt'))) { throw 'Data deleted' }
 }
@@ -108,6 +119,11 @@ try {
         Write-Output 'PASS: startup shortcut upgrade and uninstall cases.'
     } else { Write-Output 'SKIP: existing startup shortcut belongs to the user.' }
     Write-Output 'PASS: uninstall and data preservation.'
+} catch {
+    Write-Output "Startup shortcut path: [$link]"
+    if (Test-Path -LiteralPath "$fixture\uninstall.log") { Get-Content -LiteralPath "$fixture\uninstall.log" }
+    Write-Output $_.ScriptStackTrace
+    throw
 } finally {
     foreach ($folder in @($app, $outside)) { Get-AppProcesses $folder | Stop-Process -Force -ErrorAction SilentlyContinue }
     if (Test-Path -LiteralPath $key) {

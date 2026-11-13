@@ -105,14 +105,15 @@ def ui_snapshot(folder):
     if enabled:
         title, detail = "追加対策は有効です", "確認した環境で、ユーザーが選んだ追加指示を使用します。"
     elif candidate is None:
-        title, detail = "追加対策は未設定です", display_name(folder) + "の通常動作を使用します。必要なら「AIで見直す…」で調査できます。"
+        title, detail = "追加対策は未設定です", display_name(folder) + "の通常動作"
     elif candidate["fingerprint"] != current_fingerprint:
-        title, detail = "以前の追加対策は停止しています", "環境が変わったため、旧対策は適用しません。見直しが必要です。"
+        title, detail = "以前の追加対策は停止しています", "環境が変わったため、旧対策は適用しません。AIレビューが必要です。"
     elif not candidate["instructions"].strip():
         title, detail = "追加対策なしで使用します", candidate["summary"]
     else:
-        title, detail = "追加対策の候補があります", candidate["summary"] + "\n「見直し結果を開く」で内容を確認し、有効にしてください。"
+        title, detail = "追加対策の候補があります", candidate["summary"] + "\n「AIレビューの結果」で内容を確認し、有効にしてください。"
     return {"ok": True, "enabled": enabled, "can_enable": can_enable, "title": title, "detail": detail,
+            "tooltip": "追加対策は「AIレビュー…」で調査できます" if candidate is None and not enabled else "",
             "expires_label": "環境が変わると旧対策は適用しません · 固定期限なし"}
 
 

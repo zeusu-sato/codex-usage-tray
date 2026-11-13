@@ -89,7 +89,7 @@ try {
         Write-Fixture $data @{remaining=0;credit=$credit}
         Refresh-Quota $window
         if ($window.Controls['UsageRemaining'].Text -ne $credit.title -or [PublicUiTest]::IconBackground($window) -ne $purple -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $purple) { throw 'Credit title/color missing' }
-        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne 'Credit 利用中は見通しを表示しません。') { throw 'Credit explanation missing' }
+        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne 'Credit 利用中は予測を表示しません。') { throw 'Credit explanation missing' }
     }
     Write-Output 'PASS: Credit title, summary, tooltip, forecast explanation, and distinct purple icon background.'
     $invalidCredits = @('bad', @{}, @{kind='unknown';tray_text='61k';amount_known=$true;title='Credit 利用中';summary='credit'})

@@ -130,7 +130,7 @@ class ClaudeNormalizationTest(unittest.TestCase):
                 self.assertEqual(result["credit"]["tray_text"], expected)
                 self.assertIn(summary, result["detail"])
                 self.assertNotIn("残高", result["detail"])
-                self.assertEqual(result["forecast"]["detail"], "Credit 利用中は見通しを表示しません。")
+                self.assertEqual(result["forecast"]["detail"], "Credit 利用中は予測を表示しません。")
         for used, enabled in ((99, True), (100, False), (100, 1)):
             data = usage(used)
             data["rate_limits"]["extra_usage"] = {"is_enabled": enabled}

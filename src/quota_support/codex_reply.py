@@ -153,7 +153,7 @@ def credit_display(credit):
             def money(cents):
                 return "$" + format((cents / 100).quantize(Decimal("0.01"), rounding=ROUND_DOWN), ",.2f")
             if credit["currency"] != "USD":
-                tray, known, summary = "¤", False, "追加利用中（USD 以外の通貨のため金額は表示しません）"
+                tray, known, summary = "¤", False, "追加利用中 · USD 以外の通貨のため金額は表示しません"
             elif credit["limit_known"] and limit is None:
                 tray = "∞"
                 summary = "追加利用：上限なし（今月の使用 " + money(used) + "）" if used is not None else "追加利用：上限なし（今月の使用額 未提供）"
@@ -163,7 +163,7 @@ def credit_display(credit):
                 summary = "追加利用：今月の上限まで残り " + money(left) + "（使用 " + money(used) + "）"
             else:
                 tray, known = "¤", False
-                summary = "追加利用：今月の上限 " + money(limit) + "（使用額 未提供）" if limit is not None else "追加利用中（金額未提供）"
+                summary = "追加利用：今月の上限 " + money(limit) + "（使用額 未提供）" if limit is not None else "追加利用中 · 金額未提供"
             tooltip_summary = ("上限まで残り" + money(left)
                                if credit["currency"] == "USD" and credit["limit_known"] and limit is not None and used is not None
                                else summary)
@@ -248,10 +248,10 @@ def reply(cache, now):
     forecast = (usage_forecast.pending("unavailable", "現在の残量を確認できるまで予測を保留します。")
                 if stale or blocked or credit is not None else usage_forecast.forecast(cache.get("history"), snapshot["windows"], now.timestamp(), label))
     if credit is not None:
-        forecast = usage_forecast.pending("unavailable", "Credit 利用中は見通しを表示しません。")
+        forecast = usage_forecast.pending("unavailable", "Credit 利用中は予測を表示しません。")
     if not stale and not blocked and credit is None:
         short = {"comfortable": "余裕あり", "tight": "ペース注意", "at_risk": "不足注意",
-                 "collecting": "判定待ち", "unavailable": "見通し未確認"}[forecast["status"]]
+                 "collecting": "予測準備中", "unavailable": "予測未確認"}[forecast["status"]]
         affected = "(" + forecast["window_label"] + ")" if forecast["window_label"] else ""
         tooltip = short + affected + " / " + tooltip
     return {"ok": not stale, "stale": stale, "title": title, "detail": "\n".join(details),
