@@ -100,7 +100,7 @@ def choose_number(prompt, count, read_input):
 
 
 def select_for_review(binary, read_input=input):
-    print("利用可能なモデルと推論強度を確認しています（この照会はAI推論を使いません）。", flush=True)
+    print("利用可能なモデルと推論強度を確認しています。この照会はAI推論を使いません。", flush=True)
     try:
         models = catalog(binary)
     except QuotaError:
@@ -113,7 +113,7 @@ def select_for_review(binary, read_input=input):
         for index, item in enumerate(models, 1):
             print(f'{index}. {clean_text(item.get("displayName", item["model"]))} [{item["model"]}]')
             print("   " + clean_text(item.get("description", "")))
-        model = models[choose_number("最上位として使用するモデル番号（qで中止）: ", len(models), read_input)]
+        model = models[choose_number("最上位として使用するモデル番号 · qで中止: ", len(models), read_input)]
         model_choice = "explicit_user_selection"
     effort_choice = "maximum_supported"
     try:
@@ -123,7 +123,7 @@ def select_for_review(binary, read_input=input):
         values = efforts(model)
         for index, item in enumerate(model["supportedReasoningEfforts"], 1):
             print(f'{index}. {item["reasoningEffort"]}: {clean_text(item.get("description", ""))}')
-        effort = values[choose_number("最大の推論強度の番号（qで中止）: ", len(values), read_input)]
+        effort = values[choose_number("最大の推論強度の番号 · qで中止: ", len(values), read_input)]
         effort_choice = "explicit_user_selection"
     return {"model": model["model"], "effort": effort,
             "display_name": clean_text(model.get("displayName", model["model"])),

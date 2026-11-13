@@ -16,7 +16,7 @@ class PolicyWorkflowTests(WorkflowTestCase):
         self.assertFalse(snapshot["enabled"])
         self.assertTrue(snapshot["can_enable"])
         self.assertEqual(self.agents.read_bytes(), self.original)
-        self.assertTrue(self.observe()["baseline_label"].startswith("見直し済み:"))
+        self.assertTrue(self.observe()["baseline_label"].startswith("AIレビュー済み:"))
         report = reviews.latest_report(self.folder)
         self.assertEqual(Path(report["report_path"]), request.parent / "report.md")
         self.assertTrue(report["ok"])

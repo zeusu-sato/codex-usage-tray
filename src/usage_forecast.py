@@ -68,7 +68,7 @@ def record(history, windows, timestamp):
 
 
 def pending(status="collecting", detail=None):
-    return {"status": status, "title": "傾向の判定待ち" if status == "collecting" else "見通しは未確認です",
+    return {"status": status, "title": "予測準備中" if status == "collecting" else "予測は未確認です",
             "detail": detail or "履歴を集めています。通常の残量取得だけで計算します。",
             "window_label": None, "observed_hours": None, "projected_remaining_percent": None}
 
@@ -106,7 +106,7 @@ def assess_one(window, samples, now, name):
     return {"status": status, "title": title, "window_label": name, "observed_hours": round(hours, 1),
             "projected_remaining_percent": projected_remaining,
             "detail": name + f": 直近{hours:.1f}時間の平均から概算。リセット時の残量目安 {projected_remaining:g}%。\n"
-                      "使い方が変わると見通しも変わります。"}
+                      "使い方が変わると予測も変わります。"}
 
 
 def forecast(history, windows, now, labeler):
@@ -117,5 +117,5 @@ def forecast(history, windows, now, labeler):
     severity = {"comfortable": 0, "collecting": 1, "unavailable": 1, "tight": 2, "at_risk": 3}
     worst = dict(max(results, key=lambda r: severity[r["status"]]))
     if len(results) > 1:
-        worst["detail"] += "\n色は各利用枠の見通しのうち、最も注意が必要なものを示します。"
+        worst["detail"] += "\n色は各利用枠の予測のうち、最も注意が必要なものを示します。"
     return worst
