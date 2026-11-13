@@ -1,5 +1,9 @@
 # Claude metadata compatibility evidence
 
+## Mac v0.5.1 observation (2026-11-01)
+
+On an M1 Mac, v0.5.1 retrieved Codex quota and Claude weekly quota using real accounts. The Codex value matched `/status`; the Claude value has not yet been compared with claude.ai. Keychain behavior remains unverified.
+
 ## Windows 2.1.291 observation (2026-10-06)
 
 The existing adapter successfully retrieved both global quota windows from the installed official Windows x64 VS Code Insiders Claude Code 2.1.291 extension. The packaged v0.4.1 backend also returned a current, validated snapshot with that extension explicitly selected. The exchange used only the fixed initialization and usage controls described below; no prompt or AI review was sent.
