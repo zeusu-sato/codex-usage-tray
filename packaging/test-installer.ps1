@@ -63,6 +63,11 @@ function Uninstall-App {
     $process = Start-Isolated (Join-Path $app 'unins000.exe') "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$fixture\uninstall.log`""
     if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Uninstaller timed out' }
     if ($process.ExitCode -ne 0) { Get-Content -LiteralPath "$fixture\uninstall.log"; throw "Uninstaller failed: $($process.ExitCode)" }
+    for ($i = 0; $i -lt 120; $i++) {
+        if ((Get-Content -LiteralPath "$fixture\uninstall.log" -ErrorAction SilentlyContinue) -match 'Log closed\.') { break }
+        Start-Sleep -Milliseconds 500
+    }
+    if ($i -eq 120) { throw 'Uninstaller cleanup timed out' }
     Get-Content -LiteralPath "$fixture\uninstall.log" | Where-Object { $_ -match 'Startup shortcut|Could not inspect startup shortcut' }
     if (@(Get-AppProcesses $app).Count) { throw 'Installed app process survived uninstall' }
     if (Test-Path -LiteralPath $key) { throw 'Uninstall registry key remains' }
