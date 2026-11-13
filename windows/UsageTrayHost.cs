@@ -90,8 +90,9 @@ internal sealed class UsageTrayHost : Form
     {
         string text=availableUpdate==null?null:(updateBusy?"ダウンロード中…":"v"+availableUpdate.Version+" にアップデート");
         foreach(var view in views) view.SetUpdate(text,!updateBusy,StartUpdate);
-        updateLink.Text=text ?? ""; updateLink.Visible=text!=null && error==null; updateLink.Enabled=!updateBusy;
+        updateLink.Text=text ?? ""; updateLink.Visible=text!=null; updateLink.Enabled=!updateBusy;
         updateError.Visible=error!=null; updateError.Text=checkError?"アップデートを確認できません":"アップデートできません";
+        updateError.Left=updateLink.Visible?updateLink.Right+12:10;
         updateTip.SetToolTip(updateError,error ?? ""); updatePanel.Visible=text!=null || error!=null;
     }
     void CheckUpdate()
