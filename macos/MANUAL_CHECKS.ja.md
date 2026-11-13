@@ -1,10 +1,10 @@
-# Mac実機での確認（v0.5.1）
+# Mac実機での確認（v0.5.2）
 
 対象はmacOS 13以降です。この手順書は現行版に合わせて更新します。WindowsのClaude 2.1.266では残量取得を確認済みですが、**Mac実アカウントでの残量取得、Keychain、初回の起動許可、ログイン時起動、実際のAIレビューは未確認です。** 両CPUの架空データによるCI検証とは分けて、以下を手元のMacで確認してください。
 
 ## 準備
 
-1. Appleメニューの「このMacについて」でCPUを確認します。「チップ」がApple M1以降なら`macos-arm64`、「プロセッサ」がIntelなら`macos-x86_64`を、[v0.5.1の配布ページ](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.1)からダウンロードします。
+1. Appleメニューの「このMacについて」でCPUを確認します。「チップ」がApple M1以降なら`macos-arm64`、「プロセッサ」がIntelなら`macos-x86_64`を、[v0.5.2の配布ページ](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.2)からダウンロードします。
 2. ZIPを展開し、**Codex Usage Tray.appを「アプリケーション」フォルダーへ移動**して開きます。Pythonの追加導入は不要です。未公証のため起動が止められた場合は、[既存の導入説明](README.md#日本語での導入)にある個別許可の手順を使います。
 3. 確認するCodex／Claude Codeの公式CLIまたはVS Code拡張を普段どおり開き、ログイン済みであることを確認します。新しい会話やプロンプトの送信は不要です。複数のクライアントが見つかった場合は、ミニアプリの「クライアントを選ぶ…」で使っているものを選びます。
 

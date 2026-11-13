@@ -4,7 +4,7 @@
 
 CodexとClaude CodeのUsage残量を、Windowsの通知領域・Macのメニューバーに表示する非公式アプリです。数字とゲージで残量を確認でき、マウスを重ねると残量とリセット時刻を表示します。同じウィンドウから、各利用枠の詳細、Codexのバージョン、任意の追加対策を確認できます。
 
-**v0.5.1はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
+**v0.5.2はWindows x64・macOS 13以降（Apple Silicon／Intel）向けの初期ベータ版です。UIは日本語です。** OpenAI・Anthropicとは独立した非公式プロジェクトです。
 
 **v0.5.0でCredit表示を追加しました。** Usageを使い切ってもCreditで使い続けられるときは、トレイの数字を紫で表示します。CodexはCreditの残高、Claudeは追加利用がオンのとき「今月の上限までの残り」です（Claudeは残高ではありません）。[残量表示の読み方](#残量表示の読み方)もご覧ください。
 
@@ -122,7 +122,7 @@ powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.5.1の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集のAIレビューのファイルを添付しないでください。
+この手順はUIをビルドし、テスト用バックエンドで検証します。製品用バックエンドのパッケージ作成や実際のAI呼び出しは行いません。v0.5.2の範囲と制約は[リリースノート](docs/RELEASE_NOTES.md)をご覧ください。公開Issueには、残量記録、認証情報、個人の指示、未編集のAIレビューのファイルを添付しないでください。
 
 配布ZIPとインストーラを作る場合は、Windows x64、CPython 3.13.15、.NET Frameworkのコンパイラーを使用します。
 
@@ -131,4 +131,4 @@ python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.5.1-windows-x64.zip`と`SHA256SUMS.txt`を作成します。インストーラの作成にはInno Setup 6が必要で、無い場合はZIPだけを作ります。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。
+固定したビルド用依存物をインストールし、バックエンドのテスト後に`dist/CodexUsageTray-0.5.2-windows-x64.zip`と`SHA256SUMS.txt`を作成します。インストーラの作成にはInno Setup 6が必要で、無い場合はZIPだけを作ります。WindowsのワークフローではUIテストも実行します。AI起動はテスト用の代替処理で確認し、認証情報や実際のAI呼び出しは使いません。将来のAIの調査結果が正しいことを保証するテストではありません。
