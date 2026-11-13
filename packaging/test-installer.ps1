@@ -51,7 +51,6 @@ function Wait-App {
 function Set-Shortcut([string] $Target, [string] $Description) {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($link)
-    Write-Output "Shortcut target: $Target (length $($Target.Length), exists $(Test-Path -LiteralPath $Target))"
     $shortcut.TargetPath = $Target
     $shortcut.Description = $Description
     $shortcut.Save()
@@ -59,7 +58,7 @@ function Set-Shortcut([string] $Target, [string] $Description) {
 function Uninstall-App {
     $process = Start-Isolated (Join-Path $app 'unins000.exe') "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$fixture\uninstall.log`""
     if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Uninstaller timed out' }
-    if ($process.ExitCode -ne 0) { throw "Uninstaller failed: $($process.ExitCode)" }
+    if ($process.ExitCode -ne 0) { Get-Content -LiteralPath "$fixture\uninstall.log"; throw "Uninstaller failed: $($process.ExitCode)" }
     if (Test-Path -LiteralPath $key) { throw 'Uninstall registry key remains' }
     if (-not (Test-Path -LiteralPath (Join-Path $data 'sentinel.txt'))) { throw 'Data deleted' }
 }
