@@ -60,6 +60,34 @@
     if ([PublicUiTest]::Call($window, 'StartupEnabled', @())) { throw 'Startup must default off' }
     [void][PublicUiTest]::Call($window, 'SetStartupEnabled', @($true))
     if (-not [PublicUiTest]::Call($window, 'StartupEnabled', @())) { throw 'Startup choice was not saved' }
+    $shortcut = Join-Path $startup 'CodexUsageTray-managed.lnk'
+    $exe = [System.Windows.Forms.Application]::ExecutablePath
+    $arguments = [PublicUiTest]::Call($window, 'StartupArguments', @())
+    $otherDir = Join-Path $testRoot 'other copy'
+    [void][System.IO.Directory]::CreateDirectory($otherDir)
+    $otherExe = Join-Path $otherDir ([System.IO.Path]::GetFileName($exe))
+    [System.IO.File]::WriteAllText($otherExe, 'dummy')
+    [PublicUiTest]::ManagedShortcut([System.IO.Path]::GetFullPath($AssemblyPath), $shortcut, $otherExe, $arguments)
+    $before = [System.IO.File]::ReadAllBytes($shortcut)
+    [void][PublicUiTest]::Call($window, 'RefreshStartupState', @())
+    if ([PublicUiTest]::Call($window, 'StartupEnabled', @())) { throw 'Different executable must be off' }
+    if ([Convert]::ToBase64String($before) -ne [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($shortcut))) { throw 'Refresh rewrote the shortcut' }
+    $menu = [PublicUiTest]::Field($window, 'startupMenu')
+    if ($menu.Checked -or $menu.ToolTipText -ne '別の場所のCodex Usage Trayが登録されています') { throw 'Different executable menu state is wrong' }
+    [void][PublicUiTest]::Call($window, 'SetStartupEnabled', @($true))
+    if (-not [PublicUiTest]::Call($window, 'StartupEnabled', @())) { throw 'Managed shortcut was not replaced' }
+    $variants = @($exe.ToUpperInvariant(), (Join-Path ([System.IO.Path]::GetDirectoryName($exe)) ('..\' + [System.IO.Path]::GetFileName([System.IO.Path]::GetDirectoryName($exe)) + '\' + [System.IO.Path]::GetFileName($exe))))
+    $env:CODEX_STARTUP_TEST_EXE = $exe
+    $variants += '%CODEX_STARTUP_TEST_EXE%'
+    $short = New-Object System.Text.StringBuilder 32768
+    $shortLength = [PublicUiTest]::GetShortPathName($exe, $short, $short.Capacity)
+    if ($shortLength -gt 0 -and $short.ToString() -ne $exe) { $variants += $short.ToString(); Write-Output 'PASS: 8.3 startup path tested.' }
+    else { Write-Output 'SKIP: 8.3 startup path unavailable.' }
+    foreach ($variant in $variants) {
+        [PublicUiTest]::ManagedShortcut([System.IO.Path]::GetFullPath($AssemblyPath), $shortcut, $variant, $arguments)
+        if (-not [PublicUiTest]::Call($window, 'StartupEnabled', @())) { throw "Equivalent startup path rejected: $variant" }
+    }
+    Remove-Item Env:CODEX_STARTUP_TEST_EXE
     [void][PublicUiTest]::Call($window, 'SetStartupEnabled', @($false))
     if (Test-Path -LiteralPath (Join-Path $startup 'CodexUsageTray-managed.lnk')) { throw 'Owned startup shortcut was not removed' }
     [System.IO.File]::WriteAllText((Join-Path $startup 'unrelated.txt'), 'keep')

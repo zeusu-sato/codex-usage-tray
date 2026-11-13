@@ -128,14 +128,17 @@ internal sealed partial class UsageToggleForm
 
     private bool StartupEnabled()
     {
-        string path = StartupShortcutPath();
-        if (!File.Exists(path)) return false;
-        return StartupShortcuts.Matches(path, Application.ExecutablePath, StartupArguments(), StartupDescription);
+        return StartupState() == StartupShortcuts.State.Matching;
+    }
+
+    private StartupShortcuts.State StartupState()
+    {
+        return StartupShortcuts.Matches(StartupShortcutPath(), Application.ExecutablePath, StartupArguments(), StartupDescription);
     }
 
     private void RefreshStartupState()
     {
-        try { startupMenu.Checked = StartupEnabled(); startupMenu.ToolTipText = ""; }
+        try { var state = StartupState(); startupMenu.Checked = state == StartupShortcuts.State.Matching; startupMenu.ToolTipText = state == StartupShortcuts.State.Different ? "別の場所のCodex Usage Trayが登録されています" : ""; }
         catch { startupMenu.Checked = false; startupMenu.ToolTipText = "自動起動の設定を確認できません。"; }
     }
 
@@ -155,7 +158,7 @@ internal sealed partial class UsageToggleForm
     private void SetStartupEnabled(bool enable)
     {
         string path = StartupShortcutPath();
-        bool owned = StartupEnabled();
+        bool owned = StartupState() != StartupShortcuts.State.Unowned;
         if (File.Exists(path) && !owned)
             throw new InvalidOperationException("同じ名前の別のショートカットがあるため、変更しませんでした。");
         if (!enable)

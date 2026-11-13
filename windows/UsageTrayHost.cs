@@ -13,13 +13,27 @@ internal sealed class UsageTrayHost : Form
     RegisteredWaitHandle wakeWait;
     bool showRequested;
     bool exiting;
+    readonly UpdateCheck updateCheck;
+    readonly string currentVersion;
+    readonly System.Windows.Forms.Timer updateTimer = new System.Windows.Forms.Timer();
+    readonly Panel updatePanel = new Panel();
+    readonly LinkLabel updateLink = new LinkLabel();
+    readonly Label updateError = new Label();
+    readonly ToolTip updateTip = new ToolTip();
+    UpdateRelease availableUpdate;
+    bool updateBusy;
+    bool checkingUpdate;
 
     public UsageTrayHost(string python, string backend, string data, bool tray, EventWaitHandle show)
+        : this(python,backend,data,tray,show,new UpdateCheck()) {}
+    internal UsageTrayHost(string python, string backend, string data, bool tray, EventWaitHandle show, UpdateCheck checker)
     {
+        updateCheck=checker;
         wake = show;
         showRequested = !tray;
         var version = (System.Reflection.AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(
             System.Reflection.Assembly.GetExecutingAssembly(), typeof(System.Reflection.AssemblyInformationalVersionAttribute));
+        currentVersion=version==null?null:version.InformationalVersion;
         Text = "Codex + Claude Usage" + (version != null && !String.IsNullOrEmpty(version.InformationalVersion) ? " " + version.InformationalVersion : "");
         Name = "UsageTrayHost";
         Font = new Font("Yu Gothic UI", 10.5F);
@@ -32,6 +46,10 @@ internal sealed class UsageTrayHost : Form
         tabs.Dock = DockStyle.Fill;
         tabs.Name = "ProviderTabs";
         Controls.Add(tabs);
+        updatePanel.Dock=DockStyle.Bottom; updatePanel.Height=28; updatePanel.Visible=false;
+        updateLink.AutoSize=true; updateLink.Location=new Point(10,5); updateLink.LinkClicked+=delegate { StartUpdate(); };
+        updateError.AutoSize=true; updateError.Location=new Point(10,5); updateError.ForeColor=Color.Gray; updateError.Font=new Font(Font.FontFamily,8F);
+        updatePanel.Controls.Add(updateLink); updatePanel.Controls.Add(updateError); Controls.Add(updatePanel); updatePanel.BringToFront();
         for (int i=0;i<views.Length;i++)
         {
             int index=i;
@@ -46,7 +64,7 @@ internal sealed class UsageTrayHost : Form
             view.FormBorderStyle=FormBorderStyle.None;
             view.Dock=DockStyle.Fill;
             view.HostOpen=delegate { OpenProvider(index); };
-            view.HostExit=delegate { exiting=true; Close(); };
+            view.HostExit=ExitHost;
             page.Controls.Add(view);
             view.Show();
         }
@@ -55,15 +73,45 @@ internal sealed class UsageTrayHost : Form
         FormClosing+=delegate(object sender,FormClosingEventArgs e) {
             if(e.CloseReason==CloseReason.UserClosing&&!exiting){e.Cancel=true;showRequested=false;Hide();}
         };
+        updateTimer.Interval=15000; updateTimer.Tick+=delegate { updateTimer.Interval=86400000; CheckUpdate(); };
     }
     public void Prepare()
     {
         var handle=Handle;
         foreach(var view in views) view.Prepare();
+        if(!String.IsNullOrEmpty(currentVersion) && Environment.GetEnvironmentVariable("CODEX_USAGE_TRAY_UPDATE_CHECK")!="0") updateTimer.Start();
         wakeWait=ThreadPool.RegisterWaitForSingleObject(wake,delegate {
             try { BeginInvoke(new Action(delegate { OpenProvider(tabs.SelectedIndex); })); }
             catch(InvalidOperationException){}
         },null,Timeout.Infinite,false);
+    }
+    void ExitHost() { exiting=true; Close(); }
+    void ShowUpdate(string error, bool checkError)
+    {
+        string text=availableUpdate==null?null:(updateBusy?"ダウンロード中…":"v"+availableUpdate.Version+" にアップデート");
+        foreach(var view in views) view.SetUpdate(text,!updateBusy,StartUpdate);
+        updateLink.Text=text ?? ""; updateLink.Visible=text!=null; updateLink.Enabled=!updateBusy;
+        updateError.Visible=error!=null; updateError.Text=checkError?"アップデートを確認できません":"アップデートできません";
+        updateError.Left=updateLink.Visible?updateLink.Right+12:10;
+        updateTip.SetToolTip(updateError,error ?? ""); updatePanel.Visible=text!=null || error!=null;
+    }
+    void CheckUpdate()
+    {
+        if(updateBusy||checkingUpdate||exiting)return;
+        checkingUpdate=true;
+        ThreadPool.QueueUserWorkItem(delegate {
+            UpdateRelease result; string error; bool ok=updateCheck.Check(currentVersion,out result,out error);
+            try { BeginInvoke(new Action(delegate { checkingUpdate=false; if(exiting||IsDisposed)return; if(ok) availableUpdate=result; if(!updateBusy) ShowUpdate(ok?null:error,true); })); } catch(InvalidOperationException) {}
+        });
+    }
+    void StartUpdate()
+    {
+        if(updateBusy||availableUpdate==null||exiting)return;
+        updateBusy=true; ShowUpdate(null,false); UpdateRelease release=availableUpdate;
+        ThreadPool.QueueUserWorkItem(delegate {
+            string error; bool ok=updateCheck.Install(release,out error);
+            try { BeginInvoke(new Action(delegate { if(exiting||IsDisposed)return; updateBusy=false; if(ok)ExitHost(); else ShowUpdate(error,false); })); } catch(InvalidOperationException) {}
+        });
     }
     protected override void SetVisibleCore(bool value){base.SetVisibleCore(value&&showRequested);}
     void RefreshSelectedPolicy()
@@ -86,7 +134,7 @@ internal sealed class UsageTrayHost : Form
     }
     protected override void Dispose(bool disposing)
     {
-        if(disposing){exiting=true;if(wakeWait!=null)wakeWait.Unregister(null);
+        if(disposing){exiting=true;updateTimer.Dispose();updateTip.Dispose();if(wakeWait!=null)wakeWait.Unregister(null);
             foreach(var view in views)if(view!=null)view.Dispose();
             foreach(var item in childEvents)if(item!=null)item.Dispose();}
         base.Dispose(disposing);
