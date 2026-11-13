@@ -78,7 +78,7 @@ def main(argv=None):
             if code:
                 print("Codexが正常に終了しませんでした。モデルの変更や自動再試行は行っていません。")
         except (OSError, ValueError, TypeError, KeyError, AttributeError, subprocess.SubprocessError):
-            print("見直しを完了できませんでした。アプリで再確認してください。未完成の結果を自動適用することはありません。")
+            print("AIレビューを完了できませんでした。アプリで再確認してください。未完成の結果を自動適用することはありません。")
         try:
             input("Enterキーで閉じます。")
         except (EOFError, KeyboardInterrupt):

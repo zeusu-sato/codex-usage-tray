@@ -49,11 +49,10 @@ internal sealed partial class UsageToggleForm
             usageDetail.Text = reply.Detail;
             usageForecast.ForeColor = forecastColor;
             usageForecast.Text = reply.Credit != null ? reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail) : !current
-                ? (reply.Blocked ? "見通し: 利用制限があるため判定できません" : "見通し: 現在の残量は未確認です")
+                ? (reply.Blocked ? "予測: 利用制限があるため判定できません" : "予測: 現在の残量は未確認です")
                 : reply.RemainingPercent.Value == 0 ? "残量なし: 対象の利用枠の残量は0%です。"
-                : "見通し: " + reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail);
-            usageChecked.Text = reply.CheckedLabel + (String.IsNullOrEmpty(reply.CheckedLabel) ? "" : "\n")
-                + (reply.Stale ? "現在の残量は未確認 · 5分ごとに再確認" : "5分ごとに更新 · AIは使用しません");
+                : "予測: " + reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail);
+            usageChecked.Text = reply.CheckedLabel + (reply.Stale ? "\n現在の残量は未確認" : "");
             usageTooltip = reply.Tooltip;
             if (current)
             {
@@ -70,11 +69,11 @@ internal sealed partial class UsageToggleForm
             usageValue.Text = "?";
             usageValue.ForeColor = UsageColor(null);
             usageTitle.Text = "現在の残量を確認できません";
-            usageForecast.Text = "見通し: 現在の残量は未確認です";
+            usageForecast.Text = "予測: 現在の残量は未確認です";
             usageForecast.ForeColor = UsageColor(null);
             usageDetail.Text = error.Message;
             if (!String.IsNullOrEmpty(lastUsageValue))
-                usageDetail.Text += "\n前回の表示（現在の残量は未確認）: " + lastUsageValue + "\n" + lastUsageDetail;
+                usageDetail.Text += "\n前回の表示 · 現在の残量は未確認: " + lastUsageValue + "\n" + lastUsageDetail;
             usageChecked.Text = "5分後に再確認します。";
             usageTooltip = "Codex Usage: 現在の残量は未確認";
             UpdateUsageIcon(null);
@@ -177,15 +176,13 @@ internal sealed partial class UsageToggleForm
         summary.Top = mitigationHeading.Bottom + (int)(6 * scale);
         toggle.Top = summary.Top;
         detail.Top = Math.Max(summary.Bottom, toggle.Bottom) + (int)(10 * scale);
-        expiry.Top = detail.Bottom + (int)(10 * scale);
-        reviewButton.Top = expiry.Bottom + (int)(10 * scale);
+        reviewButton.Top = detail.Bottom + (int)(10 * scale);
         reportButton.Top = reviewButton.Top;
-        reviewFeedback.Top = (clientAvailable ? reviewButton.Bottom : expiry.Bottom) + (int)(8 * scale);
+        reviewFeedback.Top = (clientAvailable ? reviewButton.Bottom : detail.Bottom) + (int)(8 * scale);
         int reviewBottom = String.IsNullOrEmpty(reviewFeedback.Text)
-            ? (clientAvailable ? reviewButton.Bottom : expiry.Bottom) : reviewFeedback.Bottom;
+            ? (clientAvailable ? reviewButton.Bottom : detail.Bottom) : reviewFeedback.Bottom;
         monitorStatus.Top = reviewBottom + (int)(18 * scale);
-        trayHint.Top = monitorStatus.Bottom + (int)(18 * scale);
-        int wantedHeight = trayHint.Bottom - scrollOffset + (int)(20 * scale);
+        int wantedHeight = monitorStatus.Bottom - scrollOffset + (int)(20 * scale);
         int availableHeight = Math.Max((int)(240 * scale), Screen.FromControl(this).WorkingArea.Height - (int)(80 * scale));
         AutoScrollMinSize = new Size(0, wantedHeight);
         if(!TopLevel)return;

@@ -51,7 +51,7 @@ internal static class FixtureBackend
                 result = new { ok = !ambiguous, mismatch = mismatch && !ambiguous,
                     alert = mismatch && !ambiguous && Value(state, "notified", "") != signature,
                     title = ambiguous ? "監視するCodexを選んでください" : (mismatch ? "Codexの変更を検知しました" : "記録したバージョンと一致しています"),
-                    detail = "テスト環境（実際のCodexには接続しません）", checked_label = "最終確認: テスト時刻",
+                    detail = "テスト環境 · 実際のCodexには接続しません", checked_label = "最終確認: テスト時刻",
                     baseline_label = "初回記録: Codex fixture-1", current_label = "現在: Codex fixture-1",
                     signature = ambiguous ? "" : signature, needs_client_selection = ambiguous };
                 break;
@@ -78,7 +78,7 @@ internal static class FixtureBackend
                 var creditData = credit as Dictionary<string, object>;
                 string creditTitle = creditData == null ? "" : Value(creditData, "title", "");
                 string creditSummary = creditData == null ? "" : Value(creditData, "summary", "");
-                if (credit != null) forecast = new { status = "unavailable", title = "Credit 利用中は見通しを表示しません。",
+                if (credit != null) forecast = new { status = "unavailable", title = "Credit 利用中は予測を表示しません。",
                     detail = "", window_label = (string)null, observed_hours = (double?)null, projected_remaining_percent = (double?)null };
                 result = new { ok = credit != null || (!stale && percent != null), stale = credit != null ? false : stale, remaining_percent = percent,
                     credit = credit,
@@ -104,8 +104,8 @@ internal static class FixtureBackend
                     }
                 }
                 result = new { ok = true, should_prompt = Flag(config, "prompt") && reviewStatus == "unanswered",
-                    can_review = true, status = reviewStatus, title = "AIで対策を見直しますか",
-                    detail = "その時点で利用可能な最上位モデル・最大推論強度で見直します。はいではUsageを使用します。",
+                    can_review = true, status = reviewStatus, title = "AIレビューを開始しますか",
+                    detail = "その時点で利用可能な最上位モデル・最大推論強度でAIレビューを実行します。はいではUsageを使用します。",
                     signature = options["--signature"], request_path = requestPath };
                 break;
             case "client-list":
@@ -123,7 +123,7 @@ internal static class FixtureBackend
                 Directory.CreateDirectory(reportFolder);
                 string report = Path.Combine(reportFolder, "result.md");
                 File.WriteAllText(report, "Fixture review result. No AI was run.");
-                result = new { ok = true, report_path = report, detail = "テスト用の見直し結果です。" };
+                result = new { ok = true, report_path = report, detail = "テスト用のAIレビューの結果です。" };
                 break;
             default:
                 result = new { ok = false, error = "unsupported fixture command" };

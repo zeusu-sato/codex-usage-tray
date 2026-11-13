@@ -47,10 +47,10 @@ def reply(signature, record=None):
         status = "interrupted"
     return {"ok": True, "should_prompt": status == "unanswered", "can_review": not active,
             "status": status, "signature": signature, "request_path": record.get("request_path", ""),
-            "title": "AIで対策を見直しますか？",
-            "detail": ("見直し用のCodex画面が起動しています。" if active else
-                       "はい (Yes) を押すと、その時点で利用可能な最上位モデル・最大推論強度で調査し、Usageを使用します。\n"
-                       "いいえ (No) ならAIを起動しません。通常の監視は続きます。")}
+            "title": "AIレビューを開始しますか？",
+            "detail": ("AIレビュー用のCodex画面が起動しています。" if active else
+                       "「はい」を押すと、その時点で利用可能な最上位モデル・最大推論強度で調査し、Usageを使用します。\n"
+                       "「いいえ」ならAIを起動しません。通常の監視は続きます。")}
 
 
 def review_command(folder, command, now, signature, decision=None):
@@ -65,8 +65,8 @@ def review_command(folder, command, now, signature, decision=None):
         if command == "review-status":
             result = reply(signature, record)
             if provider_for(folder) == "claude":
-                result["title"] = "Claude Codeの対策を見直しますか？"
-                result["detail"] = "調査対象はClaude Codeです。見直しにはCodexを使い、CodexのUsageを消費します。\n" + result["detail"]
+                result["title"] = "Claude CodeのAIレビューを開始しますか？"
+                result["detail"] = "調査対象はClaude Codeです。AIレビューにはCodexを使い、CodexのUsageを消費します。\n" + result["detail"]
             return result
         if command != "review-decide" or decision not in ("yes", "no"):
             raise ReviewError("Explicit yes/no decision required")
@@ -104,7 +104,7 @@ def accept_result(folder, workspace, identity, selected, now):
     if (not isinstance(result, dict) or result.get("schema_version") != 1
             or result.get("review_complete") is not True or result.get("quality_preserved") is not True
             or result.get("fingerprint") != fingerprint(identity)):
-        raise ReviewError("完了した見直し結果を確認できません。")
+        raise ReviewError("完了したAIレビューの結果を確認できません。")
     if (not isinstance(result.get("instructions"), str) or len(result["instructions"]) > 8000
             or "\0" in result["instructions"] or "CODEX-USAGE-TRAY-POLICY" in result["instructions"]
             or not isinstance(result.get("summary"), str) or not 1 <= len(result["summary"]) <= 2000):
@@ -112,7 +112,7 @@ def accept_result(folder, workspace, identity, selected, now):
     for key in ("sources", "validation"):
         values = result.get(key)
         if not isinstance(values, list) or not values or len(values) > 100 or any(not isinstance(v, str) or not v.strip() or len(v) > 4000 for v in values):
-            raise ReviewError("見直しの根拠と検証記録が必要です。")
+            raise ReviewError("AIレビューの根拠と検証記録が必要です。")
     if any(not re.match(r"https://[^\s/]+/", url) for url in result["sources"]):
         raise ReviewError("確認した一次情報のURLが必要です。")
     candidate = {"schema_version": 1, "identity": identity, "fingerprint": fingerprint(identity),
@@ -158,7 +158,7 @@ def run_console(folder, request_path, now=None, selector=None, launch=None):
         record = state["decisions"].get(signature, {})
         if (record.get("status") != "prepared" or record.get("request_path") != str(request_path)
                 or any(running(r) for r in state["decisions"].values())):
-            raise ReviewError("このYesは使用済みか、別の見直しが実行中です。")
+            raise ReviewError("このYesは使用済みか、別のAIレビューが実行中です。")
         created = process_identity(os.getpid())
         if created is None:
             raise ReviewError("Cannot track review process")
@@ -177,7 +177,7 @@ def run_console(folder, request_path, now=None, selector=None, launch=None):
                    "-c", "model_reasoning_effort=" + selected["effort"], "-c", "service_tier=default",
                    "--sandbox", "workspace-write", "-C", str(request_path.parent),
                    "Read prompt.md in this workspace and perform the user-authorized review. Write report.md and review-result.json as specified. Respond in Japanese."]
-        print(selected["display_name"] + " / " + selected["effort"] + " で見直します。この操作はUsageを使用します。", flush=True)
+        print(selected["display_name"] + " / " + selected["effort"] + " でAIレビューを実行します。この操作はUsageを使用します。", flush=True)
         with dll_search_context():
             process = (launch or subprocess.Popen)(command, cwd=request_path.parent, env=environment())
         try:
@@ -197,7 +197,7 @@ def run_console(folder, request_path, now=None, selector=None, launch=None):
         if exit_code == 0:
             accept_result(folder, request_path.parent, current, selected, datetime.now(timezone.utc))
             accepted = True
-            print("見直し結果を保存しました。アプリで結果を読み、必要な対策をONにしてください。", flush=True)
+            print("AIレビューの結果を保存しました。アプリで結果を読み、必要な対策をONにしてください。", flush=True)
         return exit_code
     finally:
         with locked(folder, "review-write"):
@@ -212,6 +212,6 @@ def run_console(folder, request_path, now=None, selector=None, launch=None):
 def latest_report(folder):
     candidate = proposal(folder)
     if candidate is None:
-        return {"ok": False, "report_path": "", "detail": "完了した見直し結果はありません。"}
+        return {"ok": False, "report_path": "", "detail": "完了したAIレビューの結果はありません。"}
     return {"ok": True, "report_path": str((Path(folder) / "reviews" / candidate["review_id"] / "report.md").resolve()),
             "detail": candidate["summary"]}
