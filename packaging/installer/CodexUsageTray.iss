@@ -88,15 +88,20 @@ begin
       Found := False;
       Processes := WMI.ExecQuery('SELECT * FROM Win32_Process WHERE Name = ''CodexUsageTray.exe'' OR Name = ''CodexUsageBackend.exe''');
       for I := 0 to Processes.Count - 1 do begin
-        P := Processes.ItemIndex(I);
-        if not VarIsNull(P.ExecutablePath) then begin
-          Path := ExpandFileName(P.ExecutablePath);
-          Name := ExtractFileName(Path);
-          if (CompareText(Copy(Path, 1, Length(Base)), Base) = 0) and
-             ((CompareText(Name, 'CodexUsageTray.exe') = 0) or (CompareText(Name, 'CodexUsageBackend.exe') = 0)) then begin
-            Found := True;
-            if P.Terminate <> 0 then begin Log('Could not stop ' + Path); exit; end;
+        try
+          P := Processes.ItemIndex(I);
+          if not VarIsNull(P.ExecutablePath) then begin
+            Path := ExpandFileName(P.ExecutablePath);
+            Name := ExtractFileName(Path);
+            if (CompareText(Copy(Path, 1, Length(Base)), Base) = 0) and
+               ((CompareText(Name, 'CodexUsageTray.exe') = 0) or (CompareText(Name, 'CodexUsageBackend.exe') = 0)) then begin
+              Found := True;
+              if P.Terminate <> 0 then Log('Could not stop ' + Path);
+            end;
           end;
+        except
+          Found := True;
+          Log('Could not inspect or stop process; retrying: ' + GetExceptionMessage);
         end;
       end;
       if not Found then begin Result := True; exit; end;

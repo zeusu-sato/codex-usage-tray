@@ -59,6 +59,7 @@ function Uninstall-App {
     $process = Start-Isolated (Join-Path $app 'unins000.exe') "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$fixture\uninstall.log`""
     if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Uninstaller timed out' }
     if ($process.ExitCode -ne 0) { Get-Content -LiteralPath "$fixture\uninstall.log"; throw "Uninstaller failed: $($process.ExitCode)" }
+    if (@(Get-AppProcesses $app).Count) { throw 'Installed app process survived uninstall' }
     if (Test-Path -LiteralPath $key) { throw 'Uninstall registry key remains' }
     if (-not (Test-Path -LiteralPath (Join-Path $data 'sentinel.txt'))) { throw 'Data deleted' }
 }
