@@ -77,12 +77,13 @@ begin
 end;
 
 function StopAppProcesses: Boolean;
-var WMI, Processes, P: Variant; I, Attempt: Integer; Path, Base, Name: String; Found: Boolean;
+var Locator, WMI, Processes, P: Variant; I, Attempt: Integer; Path, Base, Name: String; Found: Boolean;
 begin
   Result := False;
   Base := AddBackslash(ExpandFileName(ExpandConstant('{app}')));
   try
-    WMI := CreateOleObject('WbemScripting.SWbemLocator').ConnectServer('.', 'root\cimv2');
+    Locator := CreateOleObject('WbemScripting.SWbemLocator');
+    WMI := Locator.ConnectServer('.', 'root\cimv2');
     for Attempt := 1 to 100 do begin
       Found := False;
       Processes := WMI.ExecQuery('SELECT * FROM Win32_Process WHERE Name = ''CodexUsageTray.exe'' OR Name = ''CodexUsageBackend.exe''');
@@ -94,7 +95,7 @@ begin
           if (CompareText(Copy(Path, 1, Length(Base)), Base) = 0) and
              ((CompareText(Name, 'CodexUsageTray.exe') = 0) or (CompareText(Name, 'CodexUsageBackend.exe') = 0)) then begin
             Found := True;
-            if P.Terminate() <> 0 then begin Log('Could not stop ' + Path); exit; end;
+            if P.Terminate <> 0 then begin Log('Could not stop ' + Path); exit; end;
           end;
         end;
       end;
