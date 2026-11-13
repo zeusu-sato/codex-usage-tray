@@ -51,6 +51,7 @@ function Wait-App {
 function Set-Shortcut([string] $Target, [string] $Description) {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($link)
+    Write-Output "Shortcut target: $Target (length $($Target.Length)); link: $link"
     $shortcut.TargetPath = $Target
     $shortcut.Description = $Description
     $shortcut.Save()
