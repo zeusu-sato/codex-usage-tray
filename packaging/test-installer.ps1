@@ -5,9 +5,9 @@ $installer = (Resolve-Path -LiteralPath $InstallerPath).Path
 if ($ZipPath) { $ZipPath = (Resolve-Path -LiteralPath $ZipPath).Path }
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{76F70EFD-4C9D-472F-A3B9-577C640E8424}_is1'
 if (Test-Path -LiteralPath $key) { throw 'Existing installation detected; refusing to run.' }
-$fixture = Join-Path $root ('build\installer smoke 日本語 ' + [guid]::NewGuid().ToString('N'))
+$fixture = Join-Path $root ('build\installer smoke ' + [guid]::NewGuid().ToString('N'))
 $app = Join-Path $fixture 'installed app'
-$data = Join-Path $fixture 'test data'
+$data = Join-Path $fixture 'test data 日本語'
 $profile = Join-Path $fixture 'profile'
 $outside = Join-Path $fixture 'outside app'
 $link = Join-Path ([Environment]::GetFolderPath('Startup')) 'CodexUsageTray-managed.lnk'
@@ -51,7 +51,7 @@ function Wait-App {
 function Set-Shortcut([string] $Target, [string] $Description) {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($link)
-    $shortcut.TargetPath = (New-Object -ComObject Scripting.FileSystemObject).GetFile($Target).ShortPath
+    $shortcut.TargetPath = $Target
     $shortcut.Description = $Description
     $shortcut.Save()
 }
