@@ -122,6 +122,8 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         forecastTitle.textColor = remaining.textColor; forecastDetail.stringValue = state.forecast.text("detail")
         policyTitle.stringValue = state.policy.text("title").isEmpty ? "追加対策" : state.policy.text("title")
         policyDetail.stringValue = state.policy.text("detail")
+        let policyTooltip = state.policy.text("tooltip")
+        policyDetail.toolTip = policyTooltip.isEmpty ? nil : policyTooltip
         policySwitch.state = state.policy.flag("enabled") ? .on : .off
         policyState.stringValue = policySwitch.state == .on ? "ON" : "OFF"
         policySwitch.isEnabled = !state.busy && (state.policy.flag("enabled") || state.policy.flag("can_enable"))
