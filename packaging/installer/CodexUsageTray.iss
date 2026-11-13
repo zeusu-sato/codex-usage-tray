@@ -14,6 +14,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#OutputDir}
 OutputBaseFilename=CodexUsageTray-Setup-{#AppVersion}
 UninstallDisplayIcon={app}\CodexUsageTray.exe
+ShowLanguageDialog=auto
 CloseApplications=force
 RestartApplications=no
 
