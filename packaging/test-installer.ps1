@@ -108,6 +108,9 @@ try {
         Write-Output 'PASS: startup shortcut upgrade and uninstall cases.'
     } else { Write-Output 'SKIP: existing startup shortcut belongs to the user.' }
     Write-Output 'PASS: uninstall and data preservation.'
+} catch {
+    Write-Output $_.ScriptStackTrace
+    throw
 } finally {
     foreach ($folder in @($app, $outside)) { Get-AppProcesses $folder | Stop-Process -Force -ErrorAction SilentlyContinue }
     if (Test-Path -LiteralPath $key) {
