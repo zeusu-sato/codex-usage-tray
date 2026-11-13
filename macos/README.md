@@ -42,4 +42,4 @@ Developer ID署名・Apple公証は未実施です。起動がブロックされ
 
 「ログイン時に起動」は任意です。削除する場合は、先に追加対策とログイン時起動をOFFにし、「終了」で常駐を停止します。保存データは`~/Library/Application Support/CodexUsageTray`に残るため、不要な場合だけ別途削除してください。
 
-Mac CIでは架空データによる両CPUの画面・同梱バックエンドを検証します。実アカウント／Keychainでの取得、Terminalでの実際のAI見直し、ログイン後の起動、ダウンロード後のGatekeeper許可は、Mac実機での確認が残っています。
+Mac CIでは架空データによる両CPUの画面・同梱バックエンドを検証します。実アカウント／Keychainでの取得、Terminalでの実際のAIレビュー、ログイン後の起動、ダウンロード後のGatekeeper許可は、Mac実機での確認が残っています。

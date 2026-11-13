@@ -1,6 +1,6 @@
 # Codex Usage Tray
 
-[日本語](README.ja.md) · [Windows + Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.1) · [Privacy](docs/PRIVACY.md)
+[日本語](README.ja.md) · [Windows + Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.2) · [Privacy](docs/PRIVACY.md)
 
 An unofficial Windows system-tray and macOS menu-bar app that keeps your reported Codex and Claude Code allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
 
@@ -65,11 +65,11 @@ Each provider shows the smallest remaining percentage among its included windows
 
 An older successful reading may remain in the details, explicitly marked as previous data. The app never assumes a reset means 100% is available. The server may update later than your activity, and the polling interval adds delay. This is a quota snapshot, not a token counter or a prediction of how much work you can finish. Dates and reset times in this release are displayed in **JST (UTC+9)**.
 
-Color estimates **whether the observed pace fits the time until reset**; the number always remains the reported allowance. For example, 90% can be red at a fast pace, while 10% can be green shortly before a reset. The **見通し** label identifies the relevant window and explains the estimate.
+Color estimates **whether the observed pace fits the time until reset**; the number always remains the reported allowance. For example, 90% can be red at a fast pace, while 10% can be green shortly before a reset. The **予測** label identifies the relevant window and explains the estimate.
 
 The calculation uses only the existing five-minute readings: at most 24 hours and 289 timestamp/percentage pairs per window, in the existing local quota cache. It averages the observed decline over elapsed time, projects that rate to reset, and allows one percentage point for reporting precision in both the decline and available allowance. Green requires a 20% margin against the conservative available-allowance estimate; red requires a deficit even under the lower consumption and higher available-allowance estimates; intermediate results are yellow. With multiple windows, the least favorable outlook sets the color; green requires all windows to have a favorable estimate.
 
-At least three readings spanning about one hour are needed for weekly quotas (about 30 minutes for a five-hour quota; the minimum is 15 minutes). The first readings show a gray number and **判定待ち**. Reset changes, allowance increases, clock reversals, and client-source changes restart the relevant history. For Claude only, reset-time jitter of at most 120 seconds can retain history for the same account and window while both reset times remain more than two minutes away. The displayed server reset time is unchanged. Missing reset times or stale data cannot produce a positive forecast. This is a rough average, including idle time between observations; changes in your work pattern can change the outcome. It adds no AI, polling, network requests, or continuous analysis process.
+At least three readings spanning about one hour are needed for weekly quotas (about 30 minutes for a five-hour quota; the minimum is 15 minutes). The first readings show a gray number and **予測準備中**. Reset changes, allowance increases, clock reversals, and client-source changes restart the relevant history. For Claude only, reset-time jitter of at most 120 seconds can retain history for the same account and window while both reset times remain more than two minutes away. The displayed server reset time is unchanged. Missing reset times or stale data cannot produce a positive forecast. This is a rough average, including idle time between observations; changes in your work pattern can change the outcome. It adds no AI, polling, network requests, or continuous analysis process.
 
 ## Version checks and optional AI review
 
@@ -77,14 +77,14 @@ Every **15 minutes**, a local check compares each selected client installation w
 
 This detects installed client changes. A server-side model, billing, or behavior change without a local update is not detected by this version check; use the manual review action if you notice an unexplained change.
 
-When the client changes, the app alerts you and offers **AIで対策を見直しますか** (“Review the approach with AI?”). You can also choose **AIで見直す…** manually, including before any version change.
+When the client changes, the app alerts you and offers **AIレビューを開始しますか** (“Start an AI review?”). You can also choose **AIレビュー…** manually, including before any version change.
 
-- **はい / Yes** is the only action that starts an AI review. It opens a visible Codex console and uses your Codex allowance. The review uses a `workspace-write` sandbox scoped to its review folder and retains the existing approval controls.
-- **いいえ / No**, Escape, or closing the confirmation does not start AI. The decline is remembered for that change. You can explicitly request a review again later.
+- **はい** (“Yes”) is the only action that starts an AI review. It opens a visible Codex console and uses your Codex allowance. The review uses a `workspace-write` sandbox scoped to its review folder and retains the existing approval controls.
+- **いいえ** (“No”), Escape, or closing the confirmation does not start AI. The decline is remembered for that change. You can explicitly request a review again later.
 - Before inference, the runner fetches the current `model/list` metadata and aims to use the most capable available model with its maximum supported reasoning effort, at **Standard speed**. The official API provides available models and supported efforts. [Model-list documentation](https://learn.chatgpt.com/docs/app-server#list-models-modellist)
 - There is no universal model-quality rank field. Automatic selection requires an unambiguous highest-capability description in the official catalog. Ambiguous descriptions or unknown effort ordering lead to a choice in the console **before inference**. The app does not rank names alphabetically, assume the default is strongest, or silently fall back to a weaker model.
 
-The review produces a report and may propose additional instructions. Choose **見直し結果を開く** to read it. A reference becomes “reviewed” only after a completed result passes the app's checks for its report, evidence records, schema, and matching client identity; starting or merely exiting Codex is insufficient. Those consistency checks do not independently prove the AI's conclusions. AI output still needs your judgment.
+The review produces a report and may propose additional instructions. Choose **AIレビューの結果** to read it. A reference becomes “reviewed” only after a completed result passes the app's checks for its report, evidence records, schema, and matching client identity; starting or merely exiting Codex is insufficient. Those consistency checks do not independently prove the AI's conclusions. AI output still needs your judgment.
 
 ## Optional instructions are off by default
 
