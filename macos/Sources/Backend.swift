@@ -74,12 +74,12 @@ final class Backend: BackendCalling {
             .appendingPathComponent("reviews").resolvingSymlinksInPath()
         let url = URL(fileURLWithPath: request).resolvingSymlinksInPath()
         guard url.lastPathComponent == "request.json", url.deletingLastPathComponent().deletingLastPathComponent() == root else {
-            throw TrayError.message("見直し依頼の保存先を確認できません。")
+            throw TrayError.message("AIレビュー依頼の保存先を確認できません。")
         }
         let command = ([executable.path] + arguments("review-run", provider, ["--request", url.path])).map(Self.shellQuote).joined(separator: " ")
         let launcher = url.deletingLastPathComponent().appendingPathComponent("review-" + UUID().uuidString + ".command")
         let descriptor = open(launcher.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o700)
-        guard descriptor >= 0 else { throw TrayError.message("見直し用の起動ファイルを作れません。") }
+        guard descriptor >= 0 else { throw TrayError.message("AIレビュー用の起動ファイルを作れません。") }
         let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
         try handle.write(contentsOf: Data(("#!/bin/zsh\nexec " + command + "\n").utf8))
         try handle.close()

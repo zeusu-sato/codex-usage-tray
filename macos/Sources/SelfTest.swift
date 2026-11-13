@@ -102,12 +102,12 @@ func runSelfTests(output: URL) throws {
                          "title": "Credit 利用中", "summary": "残り61,794クレジット"]
     let savedQuota = state.quota
     state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "tooltip": "Credit 利用中",
-                   "forecast": ["status": "unavailable", "title": "見通しなし", "detail": "pending"]]
+                   "forecast": ["status": "unavailable", "title": "予測なし", "detail": "pending"]]
     controller.render(); controller.renderIcon(state)
     try require(state.credit != nil && state.remaining == 0, "Credit parsed without changing remaining")
     try require(controller.remaining.stringValue == credit.text("title"), "Credit title displayed")
     try require(controller.quotaDetail.stringValue == credit.text("summary"), "Credit summary displayed")
-    try require(controller.forecastTitle.stringValue == "見通しなし", "Backend credit forecast preserved")
+    try require(controller.forecastTitle.stringValue == "予測なし", "Backend credit forecast preserved")
     try require(state.statusItem?.button?.toolTip?.contains("Credit 利用中") == true, "Credit tooltip displayed")
     try require(controller.remaining.textColor == TrayImage.creditColor, "Credit window color")
     for status in ["comfortable", "tight", "at_risk", "unavailable"] {
