@@ -124,16 +124,23 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-var Shell, Shortcut: Variant; Link: String;
+var Shell, Shortcut: Variant; Link, Description, Target, Expected: String;
 begin
   if CurUninstallStep = usUninstall then begin
     Link := ExpandConstant('{userstartup}\CodexUsageTray-managed.lnk');
+    Log('Startup shortcut path: [' + Link + ']');
     if FileExists(Link) then begin
       try
         Shell := CreateOleObject('WScript.Shell');
         Shortcut := Shell.CreateShortcut(Link);
-        if (Shortcut.Description = 'Codex Usage Tray managed startup') and
-           (CompareText(ExpandFileName(Shortcut.TargetPath), ExpandFileName(ExpandConstant('{app}\CodexUsageTray.exe'))) = 0) then
+        Description := Shortcut.Description;
+        Target := Shortcut.TargetPath;
+        Expected := ExpandFileName(ExpandConstant('{app}\CodexUsageTray.exe'));
+        Log('Startup shortcut description: [' + Description + ']');
+        Log('Startup shortcut target: [' + Target + ']');
+        Log('Startup shortcut expected target: [' + Expected + ']');
+        if (Description = 'Codex Usage Tray managed startup') and
+           (CompareText(ExpandFileName(Target), Expected) = 0) then
           DeleteFile(Link);
       except
         Log('Could not inspect startup shortcut: ' + GetExceptionMessage);

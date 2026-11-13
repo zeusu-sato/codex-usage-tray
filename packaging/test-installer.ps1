@@ -110,6 +110,8 @@ try {
     } else { Write-Output 'SKIP: existing startup shortcut belongs to the user.' }
     Write-Output 'PASS: uninstall and data preservation.'
 } catch {
+    Write-Output "Startup shortcut path: [$link]"
+    if (Test-Path -LiteralPath "$fixture\uninstall.log") { Get-Content -LiteralPath "$fixture\uninstall.log" }
     Write-Output $_.ScriptStackTrace
     throw
 } finally {
