@@ -49,7 +49,7 @@ if ($Version) {
     [System.IO.File]::WriteAllText($versionPath, ("[assembly: System.Reflection.AssemblyInformationalVersion(`"$Version`")]"), [System.Text.UTF8Encoding]::new($false))
     $versionSource = @($versionPath)
 }
-& $compiler /nologo /target:winexe /optimize+ /codepage:65001 "/out:$exePath" "/win32icon:$iconPath" "/win32manifest:$(Join-Path $PSScriptRoot 'app.manifest')" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll @versionSource (Join-Path $PSScriptRoot 'UsageToggle.cs') (Join-Path $PSScriptRoot 'UsageTrayHost.cs') (Join-Path $PSScriptRoot 'TraySymbols.cs') @((Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'form') -Filter '*.cs' | Sort-Object Name).FullName) @((Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'controls') -Filter '*.cs' | Sort-Object Name).FullName)
+& $compiler /nologo /target:winexe /optimize+ /codepage:65001 "/out:$exePath" "/win32icon:$iconPath" "/win32manifest:$(Join-Path $PSScriptRoot 'app.manifest')" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Web.Extensions.dll @versionSource (Join-Path $PSScriptRoot 'UsageToggle.cs') (Join-Path $PSScriptRoot 'UsageTrayHost.cs') (Join-Path $PSScriptRoot 'UpdateCheck.cs') (Join-Path $PSScriptRoot 'TraySymbols.cs') @((Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'form') -Filter '*.cs' | Sort-Object Name).FullName) @((Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'controls') -Filter '*.cs' | Sort-Object Name).FullName)
 if ($versionSource.Count) { [System.IO.File]::Delete($versionPath) }
 if ($LASTEXITCODE -ne 0) { throw "C# build failed with exit code $LASTEXITCODE" }
 Get-Item -LiteralPath $exePath, $iconPath | Select-Object FullName, Length

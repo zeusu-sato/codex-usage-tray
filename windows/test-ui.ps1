@@ -1,5 +1,6 @@
 ﻿param([string] $AssemblyPath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'build\windows\CodexUsageTray.exe'), [string] $Version = '')
 $ErrorActionPreference = 'Stop'
+$env:CODEX_USAGE_TRAY_UPDATE_CHECK = '0'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 . (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
