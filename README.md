@@ -1,10 +1,10 @@
 # Codex Usage Tray
 
-[日本語](README.ja.md) · [Windows + Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.2) · [Privacy](docs/PRIVACY.md)
+[日本語](README.ja.md) · [Windows + Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.3) · [Privacy](docs/PRIVACY.md)
 
 An unofficial Windows system-tray and macOS menu-bar app that keeps your reported Codex and Claude Code allowance in view. Hover over its number and gauge for the remaining percentage and reset time; open the window for quota details, client versions, and optional instructions you can review and switch on yourself.
 
-**v0.5.2 is an early beta for Windows x64 and macOS 13+ (Apple Silicon / Intel). The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
+**v0.5.3 is an early beta for Windows x64 and macOS 13+ (Apple Silicon / Intel). The interface is currently Japanese.** This project is independent of OpenAI and Anthropic.
 
 **v0.5.0 adds Credit mode.** When Usage is exhausted but credits let you continue, the tray switches to a purple number: the Codex credit balance, or for Claude with extra usage on, the amount left up to this month's spending limit (not an account balance). See [Read the gauge](#read-the-gauge).
 
@@ -118,7 +118,7 @@ powershell.exe -NoProfile -STA -File .\windows\test-ui.ps1
 powershell.exe -NoProfile -STA -File .\windows\test-dual-ui.ps1
 ```
 
-These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.5.2. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
+These commands build the UI and exercise a fixture backend. They do not package the production backend or call live AI. See [release notes](docs/RELEASE_NOTES.md) for the scope and limitations of v0.5.3. Please omit quota snapshots, credentials, private instructions, and unredacted review files from public issues.
 
 For the complete ZIP and installer, use Windows x64 with CPython 3.13.15 and the .NET Framework compiler:
 
@@ -127,4 +127,4 @@ python -m venv .venv
 .\packaging\build.ps1 -Python .\.venv\Scripts\python.exe
 ```
 
-The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.5.2-windows-x64.zip` with `SHA256SUMS.txt`. Building the installer requires Inno Setup 6; without it, only the ZIP is built. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.
+The build installs the pinned tools in `packaging/requirements-build.txt`, runs backend tests, and creates `dist/CodexUsageTray-0.5.3-windows-x64.zip` with `SHA256SUMS.txt`. Building the installer requires Inno Setup 6; without it, only the ZIP is built. The Windows workflow also runs UI tests. Both use synthetic review launches; they do not require Codex credentials or run live AI. These tests verify the app's consent and transport behavior, not the accuracy of a future AI review.

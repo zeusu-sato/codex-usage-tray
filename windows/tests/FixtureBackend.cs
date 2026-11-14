@@ -51,6 +51,7 @@ internal static class FixtureBackend
             case "monitor-check":
                 result = new { ok = !ambiguous, mismatch = mismatch && !ambiguous,
                     alert = mismatch && !ambiguous && Value(state, "notified", "") != signature,
+                    policy_stopped = mismatch && !ambiguous && Flag(config, "policy_stopped"),
                     title = ambiguous ? "監視するCodexを選んでください" : (mismatch ? "Codexの変更を検知しました" : "記録したバージョンと一致しています"),
                     detail = "テスト環境 · 実際のCodexには接続しません", checked_label = "最終確認: テスト時刻",
                     baseline_label = "初回記録: Codex fixture-1", current_label = "現在: Codex fixture-1",
@@ -87,7 +88,7 @@ internal static class FixtureBackend
                     title = credit != null ? creditTitle : percent == null ? "テスト状態: 残量は未確認" : "Codexの残り使用枠",
                     detail = (credit != null ? creditSummary + "\n" : "") + (stale ? "前回の記録です。" : "") + "週間枠のリセット: 09/15 15:29 JST",
                     checked_label = "最終取得: テスト時刻", tooltip = credit != null ? "Codex " + creditTitle + " / " + creditSummary + " / 12:34取得" : stale ? "Codex Usage 未確認" : "Codex 残り" + percent + "% / 09/15 15:29 JST",
-                    windows = new object[0] };
+                    scope = Value(config, "scope", ""), windows = new object[0] };
                 break;
             case "review-status":
             case "review-decide":

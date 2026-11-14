@@ -51,6 +51,8 @@ internal sealed partial class UsageToggleForm
             reply.Signature = RequireString(data, "signature");
             object selection;
             reply.NeedsClientSelection = data.TryGetValue("needs_client_selection", out selection) && selection is bool && (bool)selection;
+            object stopped;
+            reply.PolicyStopped = data.TryGetValue("policy_stopped", out stopped) && stopped is bool && (bool)stopped;
             return reply;
         }
         catch (FormatException) { throw new InvalidOperationException("バージョンの応答を読み取れませんでした。"); }
@@ -67,6 +69,8 @@ internal sealed partial class UsageToggleForm
             reply.Detail = RequireString(data, "detail");
             reply.CheckedLabel = RequireString(data, "checked_label");
             reply.Tooltip = RequireString(data, "tooltip");
+            object scope;
+            reply.Scope = data.TryGetValue("scope", out scope) && scope is string ? (string)scope : "";
             object blocked;
             if (data.TryGetValue("blocked", out blocked))
             {
@@ -197,6 +201,7 @@ internal sealed partial class UsageToggleForm
         public string CurrentLabel;
         public string Signature;
         public bool NeedsClientSelection;
+        public bool PolicyStopped;
     }
 
     private sealed class UsageReply
@@ -210,6 +215,7 @@ internal sealed partial class UsageToggleForm
         public string Detail;
         public string CheckedLabel;
         public string Tooltip;
+        public string Scope;
         public double? RemainingPercent;
     }
 

@@ -1,3 +1,17 @@
+# v0.5.3 — Shorter window text
+
+UI release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.3). Early beta with a Japanese UI.
+
+- The quota scope note ("対象: …") moved from the window to a tooltip on the quota line.
+- The forecast shows one short line; the basis of the estimate is a tooltip on that line.
+- The version-change notice appears in the window only when a stopped add-on policy needs attention, as a heading and the current version. Otherwise it stays in the tooltip of the 追加対策 heading. A failed check still shows its message.
+
+**ウィンドウの文言を短くしました。** 「対象: …」の説明は、残量の行のツールチップに移しました。予測は短い1行だけを表示し、概算の根拠は、その行のツールチップに移しました。
+
+クライアントの版が変わったときの表示は、停止した追加対策があるときだけ、見出しと現在の版の2行を画面に出します。追加対策がないときは、「追加対策」の見出しのツールチップに留めます。確認に失敗したときは、従来どおり画面に表示します。
+
+---
+
 # v0.5.2 — Windows installer and update check
 
 Feature release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.2). Early beta with a Japanese UI.
