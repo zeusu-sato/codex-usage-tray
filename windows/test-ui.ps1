@@ -54,7 +54,7 @@ try {
         Write-Fixture $data @{ remaining = 98; forecast = (Forecast-Fixture $status) }
         Refresh-Quota $window
         if ($window.Controls['UsageRemaining'].Text -ne '98%' -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $forecastColors[$status]) { throw "Forecast $status changed the actual value or used the wrong color" }
-        if (-not $window.Controls['UsageForecast'].Text.Contains($status) -or -not $window.Controls['UsageForecast'].Text.Contains('Weekly') -or $window.Controls['UsageForecast'].ForeColor.ToArgb() -ne $forecastColors[$status]) { throw "Forecast $status lacks an accessible textual/window explanation" }
+        if ($window.Controls['UsageForecast'].Text -ne ("予測: Fixture $status") -or ([PublicUiTest]::Field($window, 'helpTooltip').GetToolTip($window.Controls['UsageForecast'])) -notlike '*Weekly*' -or $window.Controls['UsageForecast'].ForeColor.ToArgb() -ne $forecastColors[$status]) { throw "Forecast $status must show one short line and keep the explanation as a tooltip" }
         if ([PublicUiTest]::IconBackground($window) -ne $forecastColors[$status]) { throw "Forecast $status did not color the tray icon" }
         [PublicUiTest]::SaveIcon($window, (Join-Path $testRoot "forecast-$status.png"))
     }
@@ -81,6 +81,19 @@ try {
     if ($window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $forecastColors.comfortable) { throw 'Old remaining-percentage thresholds overrode the trend status' }
     Write-Fixture $data @{ remaining = 98 }
     Refresh-Quota $window
+    $tip = [PublicUiTest]::Field($window, 'helpTooltip')
+    Write-Fixture $data @{ remaining = 98; scope = '対象: テスト用の範囲' }
+    Refresh-Quota $window
+    if ($window.Controls['UsageDetail'].Text -like '*対象*' -or $tip.GetToolTip($window.Controls['UsageDetail']) -ne '対象: テスト用の範囲') { throw 'Scope note must be a tooltip only' }
+    Write-Fixture $data @{ remaining = 98; mismatch = $true }
+    Wait-Task ([PublicUiTest]::Call($window, 'CheckMonitorAsync', @()))
+    if ($window.Controls['MonitorStatus'].Text -ne '' -or $tip.GetToolTip($window.Controls['MitigationHeading']) -notlike '*Codexの変更を検知しました*' -or $tip.GetToolTip($window.Controls['MitigationHeading']) -notlike '*現在: Codex fixture-1*') { throw "Version change without a policy must stay a tooltip: [$($window.Controls['MonitorStatus'].Text)]" }
+    Write-Fixture $data @{ remaining = 98; mismatch = $true; policy_stopped = $true }
+    Wait-Task ([PublicUiTest]::Call($window, 'CheckMonitorAsync', @()))
+    if ($window.Controls['MonitorStatus'].Text -ne "Codexの変更を検知しました`n現在: Codex fixture-1") { throw "Stopped policy must show a short notice: [$($window.Controls['MonitorStatus'].Text)]" }
+    Write-Fixture $data @{ remaining = 98 }
+    Wait-Task ([PublicUiTest]::Call($window, 'CheckMonitorAsync', @()))
+    if ($window.Controls['MonitorStatus'].Text -ne '') { throw 'Notice must clear after the versions match' }
     Write-Output 'PASS: forecast colors preserve actual quota, name the window, handle missing/invalid history, and respect stale/blocked/zero overrides.'
 
     $purple = [Drawing.Color]::FromArgb(106, 76, 196).ToArgb()

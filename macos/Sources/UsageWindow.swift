@@ -30,7 +30,6 @@ extension UsageController {
         usageTitle.font = .systemFont(ofSize: 15, weight: .semibold)
         quotaDetail.font = .systemFont(ofSize: 12); checked.font = .systemFont(ofSize: 11); checked.textColor = .secondaryLabelColor
         forecastTitle.font = .systemFont(ofSize: 14, weight: .semibold)
-        forecastDetail.font = .systemFont(ofSize: 12); forecastDetail.textColor = .secondaryLabelColor
         policyTitle.font = .systemFont(ofSize: 14, weight: .semibold)
         policySwitch.target = self; policySwitch.action = #selector(togglePolicy)
         policySwitch.toolTip = "環境が変わると旧対策は適用しません。固定期限はありません。"
@@ -49,7 +48,7 @@ extension UsageController {
         let line = NSBox(); line.boxType = .separator
         let line2 = NSBox(); line2.boxType = .separator
         let stack = NSStackView(views: [row([selector, spacer(), refreshButton]), remaining, usageTitle, quotaDetail, checked,
-            forecastTitle, forecastDetail, line, row([policyTitle, spacer(), policyState, policySwitch]), policyDetail,
+            forecastTitle, line, row([policyTitle, spacer(), policyState, policySwitch]), policyDetail,
             row([reviewButton, reportButton, spacer()]), feedback, monitorTitle, monitorDetail,
             row([clientButton, spacer()]), line2, row([loginButton, spacer(), quitButton])])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = false

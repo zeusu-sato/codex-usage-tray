@@ -48,10 +48,11 @@ def monitor_command(folder, command, now, signature=None):
                 "detail": "旧対策は停止します。" if mismatch else "対象: " + current["label"],
                 "checked_label": "最終確認: " + now.astimezone(JST).strftime("%m/%d %H:%M JST"),
                 "baseline_label": version(prefix, reference), "current_label": version("現在:", current),
+                "policy_stopped": mismatch and read_json(folder / "active-policy.json", {}).get("enabled") is True,
                 "needs_client_selection": False}
 
 
 def unavailable_reply(detail):
     return {"ok": False, "mismatch": False, "alert": False, "signature": "", "title": "Codexを確認できません",
             "detail": detail, "checked_label": "", "baseline_label": "", "current_label": "",
-            "needs_client_selection": needs_selection(discover())}
+            "policy_stopped": False, "needs_client_selection": needs_selection(discover())}

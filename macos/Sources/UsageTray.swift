@@ -52,7 +52,6 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let quotaDetail = NSTextField(wrappingLabelWithString: "")
     let checked = NSTextField(wrappingLabelWithString: "")
     let forecastTitle = NSTextField(wrappingLabelWithString: "予測を確認しています")
-    let forecastDetail = NSTextField(wrappingLabelWithString: "")
     let policyTitle = NSTextField(wrappingLabelWithString: "追加対策")
     let policyDetail = NSTextField(wrappingLabelWithString: "")
     let policySwitch = NSSwitch()
@@ -119,7 +118,11 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         quotaDetail.stringValue = credit?.text("summary") ?? state.quota.text("detail")
         checked.stringValue = state.quota.text("checked_label")
         forecastTitle.stringValue = state.forecast.text("title")
-        forecastTitle.textColor = remaining.textColor; forecastDetail.stringValue = state.forecast.text("detail")
+        forecastTitle.textColor = remaining.textColor
+        let scope = state.quota.text("scope")
+        quotaDetail.toolTip = scope.isEmpty ? nil : scope
+        let forecastNote = state.forecast.text("detail")
+        forecastTitle.toolTip = forecastNote.isEmpty ? nil : forecastNote
         policyTitle.stringValue = state.policy.text("title").isEmpty ? "追加対策" : state.policy.text("title")
         policyDetail.stringValue = state.policy.text("detail")
         policyDetail.isHidden = policyDetail.stringValue.isEmpty
@@ -130,11 +133,12 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         policyState.stringValue = policySwitch.state == .on ? "ON" : "OFF"
         policySwitch.isEnabled = !state.busy && (state.policy.flag("enabled") || state.policy.flag("can_enable"))
         // Normal state is shown only as a tooltip; the text appears when the user has to act.
-        let needsAction = !state.monitor.flag("ok") || state.monitor.flag("mismatch")
+        let monitorOk = state.monitor.flag("ok")
+        let needsAction = !monitorOk || (state.monitor.flag("mismatch") && state.monitor.flag("policy_stopped"))
         monitorTitle.stringValue = needsAction ? state.monitor.text("title") : ""
-        monitorDetail.stringValue = needsAction ? [state.monitor.text("detail"), state.monitor.text("baseline_label"), state.monitor.text("current_label"), state.monitor.text("checked_label")].filter { !$0.isEmpty }.joined(separator: "\n") : ""
+        monitorDetail.stringValue = !needsAction ? "" : monitorOk ? state.monitor.text("current_label") : state.monitor.text("detail")
         monitorTitle.isHidden = !needsAction; monitorDetail.isHidden = !needsAction
-        clientButton.toolTip = ([state.monitor.text("title"), state.monitor.text("baseline_label"), state.monitor.text("current_label"), state.monitor.text("checked_label")] + ["残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。"]).filter { !$0.isEmpty }.joined(separator: "\n")
+        clientButton.toolTip = ([state.monitor.text("title"), state.monitor.flag("mismatch") ? state.monitor.text("detail") : "", state.monitor.text("baseline_label"), state.monitor.text("current_label"), state.monitor.text("checked_label")] + ["残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。"]).filter { !$0.isEmpty }.joined(separator: "\n")
         refreshButton.isEnabled = !state.busy; clientButton.isEnabled = !state.busy && !promptVisible
         reviewButton.isEnabled = !state.busy && !promptVisible && state.monitor.flag("ok") && !state.monitor.text("signature").isEmpty
         reportButton.isEnabled = !state.busy

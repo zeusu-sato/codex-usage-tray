@@ -147,16 +147,14 @@ internal sealed partial class UsageToggleForm
             await AcknowledgeNotificationAsync();
             MonitorReply reply = await Task.Run(() => ReadMonitorReply(CallBackend("monitor-check")));
             if (IsDisposed || exiting) return;
-            // Normal state is shown only as a tooltip; the label appears when the user has to act.
-            bool needsAction = !reply.Ok || reply.Mismatch;
-            monitorStatus.Text = needsAction ? String.Join("\n", new string[] {
-                reply.Title, reply.Detail, reply.BaselineLabel, reply.CurrentLabel,
-                reply.CheckedLabel
-            }) : "";
+            // The label appears only when a stopped policy needs action or the check fails; otherwise it is a tooltip.
+            bool needsAction = !reply.Ok || (reply.Mismatch && reply.PolicyStopped);
+            monitorStatus.Text = !reply.Ok ? reply.Title + "\n" + reply.Detail
+                : needsAction ? reply.Title + "\n" + reply.CurrentLabel : "";
             helpTooltip.SetToolTip(mitigationHeading, String.Join("\n", new string[] {
-                reply.Title, reply.BaselineLabel, reply.CurrentLabel, reply.CheckedLabel,
+                reply.Title, reply.Mismatch ? reply.Detail : "", reply.BaselineLabel, reply.CurrentLabel, reply.CheckedLabel,
                 "残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。"
-            }));
+            }).Replace("\n\n", "\n"));
             monitorStatus.ForeColor = reply.Ok ? Color.FromArgb(94, 106, 115) : Color.FromArgb(148, 47, 43);
             monitorTooltipSuffix = !reply.Ok ? " / 版不明" : (reply.Mismatch ? " / 版変更" : "");
             clientAvailable = reply.Ok && !String.IsNullOrEmpty(reply.Signature);
@@ -192,7 +190,7 @@ internal sealed partial class UsageToggleForm
         catch (Exception error)
         {
             if (IsDisposed || exiting) return;
-            monitorStatus.Text = "バージョンを確認できません\n" + error.Message + "\n15分後に再確認します。";
+            monitorStatus.Text = "バージョンを確認できません\n" + error.Message;
             monitorStatus.ForeColor = Color.FromArgb(148, 47, 43);
             monitorTooltipSuffix = " / 版不明";
             clientMismatch = false;
