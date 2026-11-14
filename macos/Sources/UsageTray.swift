@@ -122,13 +122,19 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         forecastTitle.textColor = remaining.textColor; forecastDetail.stringValue = state.forecast.text("detail")
         policyTitle.stringValue = state.policy.text("title").isEmpty ? "追加対策" : state.policy.text("title")
         policyDetail.stringValue = state.policy.text("detail")
+        policyDetail.isHidden = policyDetail.stringValue.isEmpty
         let policyTooltip = state.policy.text("tooltip")
-        policyDetail.toolTip = policyTooltip.isEmpty ? nil : policyTooltip
+        policyTitle.toolTip = policyTooltip.isEmpty ? nil : policyTooltip
+        policyDetail.toolTip = policyTitle.toolTip
         policySwitch.state = state.policy.flag("enabled") ? .on : .off
         policyState.stringValue = policySwitch.state == .on ? "ON" : "OFF"
         policySwitch.isEnabled = !state.busy && (state.policy.flag("enabled") || state.policy.flag("can_enable"))
-        monitorTitle.stringValue = state.monitor.text("title")
-        monitorDetail.stringValue = [state.monitor.text("detail"), state.monitor.text("baseline_label"), state.monitor.text("current_label"), state.monitor.text("checked_label")].filter { !$0.isEmpty }.joined(separator: "\n")
+        // Normal state is shown only as a tooltip; the text appears when the user has to act.
+        let needsAction = !state.monitor.flag("ok") || state.monitor.flag("mismatch")
+        monitorTitle.stringValue = needsAction ? state.monitor.text("title") : ""
+        monitorDetail.stringValue = needsAction ? [state.monitor.text("detail"), state.monitor.text("baseline_label"), state.monitor.text("current_label"), state.monitor.text("checked_label")].filter { !$0.isEmpty }.joined(separator: "\n") : ""
+        monitorTitle.isHidden = !needsAction; monitorDetail.isHidden = !needsAction
+        clientButton.toolTip = ([state.monitor.text("title"), state.monitor.text("baseline_label"), state.monitor.text("current_label"), state.monitor.text("checked_label")] + ["残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。"]).filter { !$0.isEmpty }.joined(separator: "\n")
         refreshButton.isEnabled = !state.busy; clientButton.isEnabled = !state.busy && !promptVisible
         reviewButton.isEnabled = !state.busy && !promptVisible && state.monitor.flag("ok") && !state.monitor.text("signature").isEmpty
         reportButton.isEnabled = !state.busy

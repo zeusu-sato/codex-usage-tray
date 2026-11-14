@@ -64,6 +64,8 @@ func runSelfTests(output: URL) throws {
     controller.refreshAll(usage: true, monitor: true)
     try spinUntil { controller.states.allSatisfy { !$0.busy && !$0.quota.isEmpty } }
     try require(controller.remaining.stringValue == "68%", "Codex remaining")
+    try require(controller.monitorDetail.stringValue.isEmpty && controller.monitorDetail.isHidden, "Normal monitor text hidden")
+    try require(controller.clientButton.toolTip?.contains("監視の基準と一致しています") == true, "Monitor tooltip displayed")
     try require(controller.policyDetail.toolTip == "Policy tooltip", "Policy tooltip displayed")
     controller.selector.selectedSegment = 1; controller.providerChanged(controller.selector)
     try require(controller.remaining.stringValue == "24%", "Claude selection")

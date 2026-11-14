@@ -73,7 +73,7 @@ At least three readings spanning about one hour are needed for weekly quotas (ab
 
 ## Version checks and optional AI review
 
-Every **15 minutes**, a local check compares each selected client installation with its saved reference. It does not call AI or search the web. The first reference is labeled **監視開始時** (“when monitoring began”): recording a version does **not** establish that it has been reviewed or needs a workaround.
+Every **15 minutes**, a local check compares each selected client installation with its saved reference. It does not call AI or search the web. The first reference is labeled **監視開始時** (“when monitoring began”). While nothing has changed, the window shows no version lines and keeps them in a tooltip; they appear only when a change or a failed check needs attention. Recording a version does **not** establish that it has been reviewed or needs a workaround.
 
 This detects installed client changes. A server-side model, billing, or behavior change without a local update is not detected by this version check; use the manual review action if you notice an unexplained change.
 

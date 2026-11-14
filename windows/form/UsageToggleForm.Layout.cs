@@ -195,7 +195,6 @@ internal sealed partial class UsageToggleForm
         monitorStatus.Text = "バージョンを確認しています…";
 
         helpTooltip.SetToolTip(header, "常に表示するには、^ 内のアイコンをタスクバーへドラッグします");
-        helpTooltip.SetToolTip(monitorStatus, "残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。");
 
         trayMenu = new ContextMenuStrip();
         trayMenu.Items.Add("開く", null, delegate { OpenWindow(); });

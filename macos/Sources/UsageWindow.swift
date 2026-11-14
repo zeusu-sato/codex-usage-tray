@@ -43,7 +43,6 @@ extension UsageController {
         reviewButton.target = self; reviewButton.action = #selector(reviewClicked)
         reportButton.target = self; reportButton.action = #selector(reportClicked)
         clientButton.target = self; clientButton.action = #selector(clientClicked)
-        monitorDetail.toolTip = "残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。"
         loginButton.target = self; loginButton.action = #selector(loginChanged)
         loginButton.state = SMAppService.mainApp.status == .enabled ? .on : .off
         quitButton.target = self; quitButton.action = #selector(quit)

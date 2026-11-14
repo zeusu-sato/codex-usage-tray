@@ -104,6 +104,7 @@ internal sealed partial class UsageToggleForm
             summary.Text = reply.Title;
             detail.Text = reply.Detail;
             helpTooltip.SetToolTip(detail, reply.Tooltip);
+            helpTooltip.SetToolTip(summary, reply.Tooltip);
             helpTooltip.SetToolTip(toggle, reply.ExpiresLabel);
             toggle.Enabled = enabled || reply.CanEnable;
             if (!reply.Ok)
@@ -125,6 +126,7 @@ internal sealed partial class UsageToggleForm
             detail.Text = error.Message + "\nこのウィンドウを開き直すと再確認できます。";
             detail.ForeColor = Color.FromArgb(148, 47, 43);
             helpTooltip.SetToolTip(detail, "");
+            helpTooltip.SetToolTip(summary, "");
             helpTooltip.SetToolTip(toggle, "");
             ResizeForText();
         }
@@ -145,10 +147,16 @@ internal sealed partial class UsageToggleForm
             await AcknowledgeNotificationAsync();
             MonitorReply reply = await Task.Run(() => ReadMonitorReply(CallBackend("monitor-check")));
             if (IsDisposed || exiting) return;
-            monitorStatus.Text = String.Join("\n", new string[] {
+            // Normal state is shown only as a tooltip; the label appears when the user has to act.
+            bool needsAction = !reply.Ok || reply.Mismatch;
+            monitorStatus.Text = needsAction ? String.Join("\n", new string[] {
                 reply.Title, reply.Detail, reply.BaselineLabel, reply.CurrentLabel,
                 reply.CheckedLabel
-            });
+            }) : "";
+            helpTooltip.SetToolTip(mitigationHeading, String.Join("\n", new string[] {
+                reply.Title, reply.BaselineLabel, reply.CurrentLabel, reply.CheckedLabel,
+                "残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。"
+            }));
             monitorStatus.ForeColor = reply.Ok ? Color.FromArgb(94, 106, 115) : Color.FromArgb(148, 47, 43);
             monitorTooltipSuffix = !reply.Ok ? " / 版不明" : (reply.Mismatch ? " / 版変更" : "");
             clientAvailable = reply.Ok && !String.IsNullOrEmpty(reply.Signature);
@@ -217,7 +225,7 @@ internal sealed partial class UsageToggleForm
             // Retry recording at the next check without repeating the same visible notification.
             if (!IsDisposed && !exiting)
             {
-                monitorStatus.Text += "\n通知の記録は次回の確認時に再試行します。";
+                monitorStatus.Text = (monitorStatus.Text + "\n通知の記録は次回の確認時に再試行します。").TrimStart();
                 ResizeForText();
             }
         }

@@ -44,8 +44,9 @@ internal static class FixtureBackend
                 bool enabled = configured && !mismatch && Flag(state, "enabled");
                 result = new { ok = true, enabled = enabled, can_enable = configured && !mismatch,
                     title = configured ? (enabled ? "追加対策は有効です" : "追加対策は無効です") : "追加対策は未設定です",
-                    detail = configured ? "これはテスト専用の対策です。" : "Codexの標準動作を使用します。",
-                    expires_label = "追加対策を自動でインストールしません。" };
+                    detail = configured ? "これはテスト専用の対策です。" : "",
+                    expires_label = "追加対策を自動でインストールしません。",
+                    tooltip = configured ? "" : "Codexの通常動作です。" };
                 break;
             case "monitor-check":
                 result = new { ok = !ambiguous, mismatch = mismatch && !ambiguous,

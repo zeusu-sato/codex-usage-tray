@@ -25,6 +25,7 @@ try {
     $window = [PublicUiTest]::Start([System.IO.Path]::GetFullPath($AssemblyPath), $fixtureBackend, $data, 150)
     Wait-Idle $window
     if ($window.Text -ne 'Codex Usage Tray' -or $window.Controls['StatusTitle'].Text -ne '追加対策は未設定です' -or $window.Controls['UsageToggle'].Enabled) { throw "Public first-run state: $($window.Text); $($window.Controls['StatusTitle'].Text); $($window.Controls['StatusDetail'].Text)" }
+    if ($window.Controls['StatusDetail'].Text -ne '' -or $window.Controls['MonitorStatus'].Text -ne '') { throw "Normal state must not show hint lines: [$($window.Controls['StatusDetail'].Text)] [$($window.Controls['MonitorStatus'].Text)]" }
     if (-not $window.Controls['ReviewWithAi'].Visible -or -not $window.Controls['ReviewWithAi'].Enabled) { throw 'Manual review must be available for a detected matching client' }
     if ([PublicUiTest]::Field($window, 'reviewPrompt')) { throw 'Matching baseline automatically asked for AI' }
     foreach ($percent in @(98, 21, 4, 0, 100)) {
