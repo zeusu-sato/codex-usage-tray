@@ -28,6 +28,9 @@ class ClientChangeWorkflowTests(WorkflowTestCase):
         self.identity["cli_version"] = "1.2.4"
         result = self.observe()
         self.assertTrue(result["mismatch"])
+        self.assertFalse(result["policy_stopped"])
+        (self.folder / "active-policy.json").write_text('{"enabled": true}', encoding="utf-8")
+        self.assertTrue(self.observe()["policy_stopped"])
         self.assertEqual(client_registry.settings(self.folder)["reference"], reference)
         self.assertEqual(client_registry.settings(self.folder)["reference_kind"], "observed")
 

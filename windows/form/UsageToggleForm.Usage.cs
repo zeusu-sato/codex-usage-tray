@@ -48,10 +48,12 @@ internal sealed partial class UsageToggleForm
             usageTitle.Text = reply.Title;
             usageDetail.Text = reply.Detail;
             usageForecast.ForeColor = forecastColor;
-            usageForecast.Text = reply.Credit != null ? reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail) : !current
+            helpTooltip.SetToolTip(usageDetail, reply.Scope);
+            helpTooltip.SetToolTip(usageForecast, reply.Forecast.Detail);
+            usageForecast.Text = reply.Credit != null ? reply.Forecast.Title : !current
                 ? (reply.Blocked ? "予測: 利用制限があるため判定できません" : "予測: 現在の残量は未確認です")
                 : reply.RemainingPercent.Value == 0 ? "残量なし: 対象の利用枠の残量は0%です。"
-                : "予測: " + reply.Forecast.Title + (String.IsNullOrEmpty(reply.Forecast.Detail) ? "" : "\n" + reply.Forecast.Detail);
+                : "予測: " + reply.Forecast.Title;
             usageChecked.Text = reply.CheckedLabel + (reply.Stale ? "\n現在の残量は未確認" : "");
             usageTooltip = reply.Tooltip;
             if (current)
@@ -72,6 +74,8 @@ internal sealed partial class UsageToggleForm
             usageForecast.Text = "予測: 現在の残量は未確認です";
             usageForecast.ForeColor = UsageColor(null);
             usageDetail.Text = error.Message;
+            helpTooltip.SetToolTip(usageDetail, "");
+            helpTooltip.SetToolTip(usageForecast, "");
             if (!String.IsNullOrEmpty(lastUsageValue))
                 usageDetail.Text += "\n前回の表示 · 現在の残量は未確認: " + lastUsageValue + "\n" + lastUsageDetail;
             usageChecked.Text = "5分後に再確認します。";

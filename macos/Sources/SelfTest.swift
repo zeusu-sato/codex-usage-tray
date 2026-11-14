@@ -67,6 +67,19 @@ func runSelfTests(output: URL) throws {
     try require(controller.monitorDetail.stringValue.isEmpty && controller.monitorDetail.isHidden, "Normal monitor text hidden")
     try require(controller.clientButton.toolTip?.contains("監視の基準と一致しています") == true, "Monitor tooltip displayed")
     try require(controller.policyDetail.toolTip == "Policy tooltip", "Policy tooltip displayed")
+    try require(controller.forecastTitle.toolTip == "最近の利用ペースから計算した目安です。今後の利用量で変わります。", "Forecast explanation is a tooltip")
+    let changed = controller.states[0]
+    changed.monitor = ["ok": true, "mismatch": true, "policy_stopped": false, "title": "Codexの変更を検知しました", "detail": "旧対策は停止します。",
+                       "baseline_label": "監視開始時: A", "current_label": "現在: B", "checked_label": "最終確認: C"]
+    controller.render()
+    try require(controller.monitorTitle.isHidden && controller.monitorDetail.isHidden, "Version change without a policy stays a tooltip")
+    try require(controller.clientButton.toolTip?.contains("旧対策は停止します。") == true, "Version change tooltip displayed")
+    changed.monitor["policy_stopped"] = true
+    controller.render()
+    try require(controller.monitorTitle.stringValue == "Codexの変更を検知しました" && controller.monitorDetail.stringValue == "現在: B", "Stopped policy shows a short notice")
+    changed.monitor = ["ok": true, "alert": false, "mismatch": false, "signature": String(repeating: "a", count: 64),
+                       "title": "監視の基準と一致しています", "detail": "対象: VS Code", "baseline_label": "監視開始時: Demo", "current_label": "現在: Demo"]
+    controller.render()
     controller.selector.selectedSegment = 1; controller.providerChanged(controller.selector)
     try require(controller.remaining.stringValue == "24%", "Claude selection")
     controller.policySwitch.state = .on; controller.togglePolicy()
