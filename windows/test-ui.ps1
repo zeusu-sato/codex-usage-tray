@@ -1,5 +1,6 @@
 ﻿param([string] $AssemblyPath = (Join-Path (Split-Path $PSScriptRoot -Parent) 'build\windows\CodexUsageTray.exe'), [string] $Version = '')
 $ErrorActionPreference = 'Stop'
+$env:CODEX_USAGE_TRAY_UPDATE_CHECK = '0'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 . (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
@@ -24,6 +25,7 @@ try {
     $window = [PublicUiTest]::Start([System.IO.Path]::GetFullPath($AssemblyPath), $fixtureBackend, $data, 150)
     Wait-Idle $window
     if ($window.Text -ne 'Codex Usage Tray' -or $window.Controls['StatusTitle'].Text -ne '追加対策は未設定です' -or $window.Controls['UsageToggle'].Enabled) { throw "Public first-run state: $($window.Text); $($window.Controls['StatusTitle'].Text); $($window.Controls['StatusDetail'].Text)" }
+    if ($window.Controls['StatusDetail'].Text -ne '' -or $window.Controls['MonitorStatus'].Text -ne '') { throw "Normal state must not show hint lines: [$($window.Controls['StatusDetail'].Text)] [$($window.Controls['MonitorStatus'].Text)]" }
     if (-not $window.Controls['ReviewWithAi'].Visible -or -not $window.Controls['ReviewWithAi'].Enabled) { throw 'Manual review must be available for a detected matching client' }
     if ([PublicUiTest]::Field($window, 'reviewPrompt')) { throw 'Matching baseline automatically asked for AI' }
     foreach ($percent in @(98, 21, 4, 0, 100)) {
@@ -88,7 +90,7 @@ try {
         Write-Fixture $data @{remaining=0;credit=$credit}
         Refresh-Quota $window
         if ($window.Controls['UsageRemaining'].Text -ne $credit.title -or [PublicUiTest]::IconBackground($window) -ne $purple -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $purple) { throw 'Credit title/color missing' }
-        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne 'Credit 利用中は見通しを表示しません。') { throw 'Credit explanation missing' }
+        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne 'Credit 利用中は予測を表示しません。') { throw 'Credit explanation missing' }
     }
     Write-Output 'PASS: Credit title, summary, tooltip, forecast explanation, and distinct purple icon background.'
     $invalidCredits = @('bad', @{}, @{kind='unknown';tray_text='61k';amount_known=$true;title='Credit 利用中';summary='credit'})

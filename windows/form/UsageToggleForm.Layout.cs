@@ -94,12 +94,12 @@ internal sealed partial class UsageToggleForm
 
         usageForecast = new Label();
         usageForecast.Name = "UsageForecast";
-        usageForecast.AccessibleName = "リセットまでの見通し";
+        usageForecast.AccessibleName = "リセットまでの予測";
         usageForecast.AutoSize = true;
         usageForecast.MaximumSize = new Size(408, 0);
         usageForecast.Font = new Font(Font.FontFamily, 9F);
         usageForecast.ForeColor = UsageColor(null);
-        usageForecast.Text = "見通し: 残量を確認しています";
+        usageForecast.Text = "予測: 残量を確認しています";
 
         usageChecked = new Label();
         usageChecked.Name = "UsageChecked";
@@ -157,8 +157,8 @@ internal sealed partial class UsageToggleForm
 
         reviewButton = new Button();
         reviewButton.Name = "ReviewWithAi";
-        reviewButton.AccessibleName = "AIで対策を見直す";
-        reviewButton.Text = "AIで見直す…";
+        reviewButton.AccessibleName = "AIレビュー";
+        reviewButton.Text = "AIレビュー…";
         reviewButton.Size = new Size(156, 32);
         reviewButton.Location = new Point(24, 300);
         reviewButton.TabIndex = 2;
@@ -167,8 +167,8 @@ internal sealed partial class UsageToggleForm
 
         reportButton = new Button();
         reportButton.Name = "OpenReviewReport";
-        reportButton.AccessibleName = "見直し結果を開く";
-        reportButton.Text = "見直し結果を開く";
+        reportButton.AccessibleName = "AIレビューの結果";
+        reportButton.Text = "AIレビューの結果";
         reportButton.Size = new Size(184, 32);
         reportButton.Location = new Point(192, 300);
         reportButton.TabIndex = 3;
@@ -177,7 +177,7 @@ internal sealed partial class UsageToggleForm
 
         reviewFeedback = new Label();
         reviewFeedback.Name = "ReviewStatus";
-        reviewFeedback.AccessibleName = "AI見直しの状態";
+        reviewFeedback.AccessibleName = "AIレビューの状態";
         reviewFeedback.AutoSize = true;
         reviewFeedback.MaximumSize = new Size(408, 0);
         reviewFeedback.Location = new Point(24, 338);
@@ -194,25 +194,18 @@ internal sealed partial class UsageToggleForm
         monitorStatus.ForeColor = Color.FromArgb(94, 106, 115);
         monitorStatus.Text = "バージョンを確認しています…";
 
-        trayHint = new Label();
-        trayHint.Name = "TrayVisibilityHint";
-        trayHint.Text = "常に表示するには、^ 内のアイコンをタスクバーへドラッグ。";
-        trayHint.AutoSize = true;
-        trayHint.MaximumSize = new Size(408, 0);
-        trayHint.Location = new Point(24, 544);
-        trayHint.Font = new Font(Font.FontFamily, 8.5F);
-        trayHint.ForeColor = Color.FromArgb(94, 106, 115);
+        helpTooltip.SetToolTip(header, "常に表示するには、^ 内のアイコンをタスクバーへドラッグします");
 
         trayMenu = new ContextMenuStrip();
         trayMenu.Items.Add("開く", null, delegate { OpenWindow(); });
         checkNow = new ToolStripMenuItem("今すぐ確認");
         checkNow.Click += async delegate { await RefreshAllAsync(); };
         trayMenu.Items.Add(checkNow);
-        reviewMenu = new ToolStripMenuItem("AIで見直す…");
+        reviewMenu = new ToolStripMenuItem("AIレビュー…");
         reviewMenu.Enabled = false;
         reviewMenu.Click += async delegate { await CheckReviewAsync(true); };
         trayMenu.Items.Add(reviewMenu);
-        reportMenu = new ToolStripMenuItem("見直し結果を開く");
+        reportMenu = new ToolStripMenuItem("AIレビューの結果");
         reportMenu.Click += async delegate { await OpenLatestReviewAsync(); };
         trayMenu.Items.Add(reportMenu);
         clientMenu = new ToolStripMenuItem("Codexを選ぶ…");
@@ -252,7 +245,7 @@ internal sealed partial class UsageToggleForm
         usageTimer.Tick += async delegate { await CheckUsageAsync(); };
 
         Controls.AddRange(new Control[] { header, usageValue, refreshUsage, usageTitle, usageDetail, usageForecast,
-            usageChecked, mitigationHeading, summary, toggle, detail, expiry, reviewButton, reportButton, reviewFeedback, monitorStatus, trayHint });
+            usageChecked, mitigationHeading, summary, toggle, detail, expiry, reviewButton, reportButton, reviewFeedback, monitorStatus });
         Activated += delegate { RefreshPolicy(); };
         FormClosing += delegate(object sender, FormClosingEventArgs args)
         {

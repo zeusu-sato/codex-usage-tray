@@ -33,6 +33,7 @@ extension UsageController {
         forecastDetail.font = .systemFont(ofSize: 12); forecastDetail.textColor = .secondaryLabelColor
         policyTitle.font = .systemFont(ofSize: 14, weight: .semibold)
         policySwitch.target = self; policySwitch.action = #selector(togglePolicy)
+        policySwitch.toolTip = "環境が変わると旧対策は適用しません。固定期限はありません。"
         policySwitch.setAccessibilityLabel("追加対策の有効・無効")
         policyState.font = .systemFont(ofSize: 12, weight: .semibold)
         policyDetail.font = .systemFont(ofSize: 12)
@@ -49,10 +50,8 @@ extension UsageController {
         let line2 = NSBox(); line2.boxType = .separator
         let stack = NSStackView(views: [row([selector, spacer(), refreshButton]), remaining, usageTitle, quotaDetail, checked,
             forecastTitle, forecastDetail, line, row([policyTitle, spacer(), policyState, policySwitch]), policyDetail,
-            label("環境が変わると旧対策は適用しません · 固定期限なし", size: 11, secondary: true),
             row([reviewButton, reportButton, spacer()]), feedback, monitorTitle, monitorDetail,
-            row([clientButton, spacer()]), line2, row([loginButton, spacer(), quitButton]),
-            label("残量は5分ごと、バージョンは15分ごとに確認します。通常監視はAI推論を使いません。", size: 11, secondary: true)])
+            row([clientButton, spacer()]), line2, row([loginButton, spacer(), quitButton])])
         stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = false
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = false
         scroll.translatesAutoresizingMaskIntoConstraints = false

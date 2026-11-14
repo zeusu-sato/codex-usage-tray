@@ -1,4 +1,29 @@
-# v0.5.1 ? Claude plans without a five-hour limit
+# v0.5.2 — Windows installer and update check
+
+Feature release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.2). Early beta with a Japanese UI.
+
+- Adds a Windows installer, `CodexUsageTray-Setup-0.5.2.exe`. It is unsigned, needs no administrator rights, and installs to `%LOCALAPPDATA%\Programs\CodexUsageTray`. Uninstalling it also removes the login-startup shortcut the app manages; data in `%LOCALAPPDATA%\CodexUsageTray` remains. The ZIP is still available.
+- The Windows app checks for new versions about 15 seconds after start and every 24 hours, with an anonymous request to the public GitHub release list. When a newer version exists, the menu and window show **v… にアップデート**. Only when you click it does the app download the installer, verify its SHA256, and run it. The Mac and Linux apps do not check. See [Privacy](PRIVACY.md).
+- Windows login startup is now matched by the full executable path. If a `CodexUsageTray.exe` in another location is registered, the item shows as off; the app does not rewrite the entry automatically.
+- The window title shows the app version.
+- Tidies the UI wording: 見通し is now 予測, 判定待ち is now 予測準備中, the review actions are **AIレビュー…** and **AIレビューの結果**, and the confirmation buttons are **はい** and **いいえ**. Explanations that were always shown, such as the tray-icon hint and the check intervals, are now tooltips.
+- Fixes garbled Japanese text in the v0.5.1 release notes.
+
+Installing, installing over an existing version, and uninstalling were checked in CI. Updating from v0.5.1 or earlier requires running the installer once by hand, because those versions have no update check. Mac checks on real hardware remain those from November 1: v0.5.1 retrieved Codex and Claude weekly quota using real accounts on an M1 Mac; Codex matched `/status`, while Claude has not yet been compared with claude.ai. Keychain behavior remains unverified, and Mac packages are still ad-hoc signed only and not notarized.
+
+**Windows版にインストーラを追加し、新しい版を確認できるようにしました。** `CodexUsageTray-Setup-0.5.2.exe`は未署名で、管理者権限は不要です。`%LOCALAPPDATA%\Programs\CodexUsageTray`にインストールします。アンインストールすると、アプリが管理するログイン時起動のショートカットも削除しますが、`%LOCALAPPDATA%\CodexUsageTray`のデータは残ります。ZIP版も引き続き配布します。
+
+Windows版は、起動の約15秒後と、その後24時間ごとに、GitHubの公開リリース一覧へ匿名で問い合わせます。新しい版があれば、メニューとウィンドウに **v… にアップデート** を表示します。押したときだけインストーラをダウンロードし、SHA256を照合してから実行します。Mac版とLinux版はこの確認を行いません。
+
+ログイン時起動は、実行ファイルのフルパスで判定するようにしました。別の場所の`CodexUsageTray.exe`が登録されている場合はオフと表示し、登録は自動では書き換えません。ウィンドウのタイトルには版番号を表示します。
+
+UIの文言を整理しました。「見通し」は「予測」、「判定待ち」は「予測準備中」、「AIで見直す…」は「AIレビュー…」、「見直し結果を開く」は「AIレビューの結果」になり、確認のボタンは「はい」「いいえ」です。通知領域のアイコンの表示方法や確認の間隔など、常に表示していた説明はツールチップに移しました。v0.5.1のリリースノートの日本語の文字化けも修正しています。
+
+インストール、上書きインストール、アンインストールはCIで確認しました。v0.5.1以前には新しい版の確認がないため、v0.5.1以前から更新するときは、インストーラを一度手動で実行してください。Macの実機確認は11月1日の範囲のままです。M1 Macの実アカウントでv0.5.1がCodexとClaudeの週間枠の残量を取得し、Codexは`/status`の値と一致しました。Claudeの値とclaude.aiの一致、Keychainの動作は未確認です。Mac版はアドホック署名のみで、Apple公証は行いません。
+
+---
+
+# v0.5.1 — Claude plans without a five-hour limit
 
 Fix release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.1). Early beta with a Japanese UI.
 
@@ -6,13 +31,13 @@ Fix release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and 
 - When Claude temporarily returns no usage limits, the app now says the quota could not be retrieved for now and will be checked again in five minutes, instead of reporting an unsupported reply format. The failure reason is recorded separately so temporary failures and incompatible replies can be told apart.
 - No new API, method, or token read is added.
 
-Both changes were checked with synthetic replies in automated tests. Mac real-account/Keychain behavior remains unverified, and Mac packages are still ad-hoc signed only.
+Both changes were checked with synthetic replies in automated tests. On November 1, v0.5.1 retrieved Codex and Claude weekly quota using real accounts on an M1 Mac; Codex matched `/status`, while Claude has not yet been compared with claude.ai. Keychain behavior remains unverified, and Mac packages are still ad-hoc signed only and not notarized.
 
-**5??????Claude??????????????????????** Ultra??Max 20x????5?????????Claude???????????????????5???????????????????????????????????????????????
+**5時間枠がないClaudeのプランでも、週間枠だけで残量を表示します。** Ultra（旧Max 20x）などで5時間枠がなくなり、Claudeの表示が「?」になっていました。応答に5時間枠がない、または空のときは週間枠だけを使います。週間枠がない応答は引き続き未確認にします。
 
-Claude???????????????????????????????????????????????????????????5??????????????API??????????????????????
+Claudeが利用枠を一時的に返さなかったとき、「応答が対応形式と一致しません」ではなく「一時的に取得できませんでした」と案内し、5分ごとに再確認します。新しいAPI・メソッド・トークンの読み出しはありません。
 
-????????????????????Mac????????Keychain?????Apple?????????
+自動テストは架空データで確認しています。WindowsとMac両CPUの配布版に反映しています。MacはmacOS 13以降が対象です。11月1日にM1 Macの実アカウントでCodexとClaudeの週間枠の残量を取得し、Codexは`/status`の値と一致しました。Claudeの値とclaude.aiの一致は未確認です。Keychainの動作は未確認で、Mac版はアドホック署名のみ、Apple公証は行いません。
 
 ---
 

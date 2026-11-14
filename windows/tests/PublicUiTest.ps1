@@ -95,6 +95,12 @@ public static class PublicUiTest {
         Assembly.LoadFile(assembly).GetType("StartupShortcuts", true).GetMethod("Save")
             .Invoke(null, new object[] { path, target, "", Path.GetDirectoryName(target), "Unrelated shortcut" });
     }
+    public static void ManagedShortcut(string assembly, string path, string target, string arguments) {
+        Assembly.LoadFile(assembly).GetType("StartupShortcuts", true).GetMethod("Save")
+            .Invoke(null, new object[] { path, target, arguments, Path.GetDirectoryName(target), "Codex Usage Tray managed startup" });
+    }
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    public static extern uint GetShortPathName(string path, System.Text.StringBuilder result, uint length);
     public static void Dispose(Form form) { if (!form.IsDisposed) form.Invoke(new Action(form.Dispose)); }
     public static void Close(Form form) { form.Invoke(new Action(form.Close)); }
     public static void Escape(Form form) {

@@ -14,7 +14,7 @@ final class FixtureBackend: BackendCalling {
         switch command {
         case "usage-check": return ["ok": true, "stale": false, "blocked": false, "remaining_percent": provider == "codex" ? 68 : 24,
             "title": "Usage 残り " + (provider == "codex" ? "68%" : "24%"), "detail": "Weekly: 残り" + (provider == "codex" ? "68%" : "24%") + " · リセット 09/15 15:29 JST\nテスト用データです。",
-            "checked_label": "最終取得: Demo · 通常監視はAIを使いません", "tooltip": provider + " Demo quota",
+            "checked_label": "最終取得: Demo", "tooltip": provider + " Demo quota",
             "forecast": ["status": provider == "codex" ? "comfortable" : "tight", "title": provider == "codex" ? "このペースなら余裕があります" : "リセットまでのペースに注意",
                          "detail": "最近の利用ペースから計算した目安です。今後の利用量で変わります。"]]
         case "monitor-check": return ["ok": true, "alert": false, "mismatch": false, "signature": String(repeating: "a", count: 64),
@@ -26,7 +26,7 @@ final class FixtureBackend: BackendCalling {
         default: throw TrayError.message("Unexpected fixture command: " + command)
         }
         return ["ok": true, "enabled": enabled[provider] ?? false, "can_enable": true,
-                "title": "追加対策の候補があります", "detail": "これはテスト用データです。実際の設定は変更しません。"]
+                "title": "追加対策の候補があります", "detail": "これはテスト用データです。実際の設定は変更しません。", "tooltip": "Policy tooltip"]
     }
     func count(_ command: String) -> Int { lock.lock(); defer { lock.unlock() }; return calls.filter { $0.hasPrefix(command + ":") }.count }
 }
@@ -64,6 +64,9 @@ func runSelfTests(output: URL) throws {
     controller.refreshAll(usage: true, monitor: true)
     try spinUntil { controller.states.allSatisfy { !$0.busy && !$0.quota.isEmpty } }
     try require(controller.remaining.stringValue == "68%", "Codex remaining")
+    try require(controller.monitorDetail.stringValue.isEmpty && controller.monitorDetail.isHidden, "Normal monitor text hidden")
+    try require(controller.clientButton.toolTip?.contains("監視の基準と一致しています") == true, "Monitor tooltip displayed")
+    try require(controller.policyDetail.toolTip == "Policy tooltip", "Policy tooltip displayed")
     controller.selector.selectedSegment = 1; controller.providerChanged(controller.selector)
     try require(controller.remaining.stringValue == "24%", "Claude selection")
     controller.policySwitch.state = .on; controller.togglePolicy()
@@ -102,12 +105,12 @@ func runSelfTests(output: URL) throws {
                          "title": "Credit 利用中", "summary": "残り61,794クレジット"]
     let savedQuota = state.quota
     state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "tooltip": "Credit 利用中",
-                   "forecast": ["status": "unavailable", "title": "見通しなし", "detail": "pending"]]
+                   "forecast": ["status": "unavailable", "title": "予測なし", "detail": "pending"]]
     controller.render(); controller.renderIcon(state)
     try require(state.credit != nil && state.remaining == 0, "Credit parsed without changing remaining")
     try require(controller.remaining.stringValue == credit.text("title"), "Credit title displayed")
     try require(controller.quotaDetail.stringValue == credit.text("summary"), "Credit summary displayed")
-    try require(controller.forecastTitle.stringValue == "見通しなし", "Backend credit forecast preserved")
+    try require(controller.forecastTitle.stringValue == "予測なし", "Backend credit forecast preserved")
     try require(state.statusItem?.button?.toolTip?.contains("Credit 利用中") == true, "Credit tooltip displayed")
     try require(controller.remaining.textColor == TrayImage.creditColor, "Credit window color")
     for status in ["comfortable", "tight", "at_risk", "unavailable"] {

@@ -40,12 +40,12 @@ def monitor_command(folder, command, now, signature=None):
             cache.pop("last_notified_signature", None)
         cache.update(current=current, reference=reference, mismatch=mismatch, signature=current_signature, checked_at=now.isoformat())
         write_json(folder / "monitor-state.json", cache)
-        prefix = "見直し済み:" if data.get("reference_kind") == "reviewed" else "監視開始時:"
+        prefix = "AIレビュー済み:" if data.get("reference_kind") == "reviewed" else "監視開始時:"
         def version(label, value):
             return label + " Codex " + value["cli_version"] + " / " + value["label"] + " " + value["extension_version"]
         return {"ok": True, "mismatch": mismatch, "alert": alert, "signature": current_signature,
                 "title": "Codexの変更を検知しました" if mismatch else "監視の基準と一致しています",
-                "detail": "旧対策は停止します。必要ならAIで見直せます。" if mismatch else "対象: " + current["label"],
+                "detail": "旧対策は停止します。" if mismatch else "対象: " + current["label"],
                 "checked_label": "最終確認: " + now.astimezone(JST).strftime("%m/%d %H:%M JST"),
                 "baseline_label": version(prefix, reference), "current_label": version("現在:", current),
                 "needs_client_selection": False}

@@ -120,8 +120,11 @@ internal static class CanonicalPaths
 
 internal static class StartupShortcuts
 {
-    public static bool Matches(string path, string target, string arguments, string description)
+    public enum State { Unowned, Different, Matching }
+
+    public static State Matches(string path, string target, string arguments, string description)
     {
+        if (!File.Exists(path)) return State.Unowned;
         object instance = new ShellLink();
         try
         {
@@ -133,11 +136,28 @@ internal static class StartupShortcuts
             link.GetPath(actualTarget, actualTarget.Capacity, IntPtr.Zero, 4);
             link.GetArguments(actualArguments, actualArguments.Capacity);
             link.GetDescription(actualDescription, actualDescription.Capacity);
-            return String.Equals(actualDescription.ToString(), description, StringComparison.Ordinal)
-                && String.Equals(Path.GetFileName(actualTarget.ToString()), Path.GetFileName(target), StringComparison.OrdinalIgnoreCase)
-                && String.Equals(actualArguments.ToString(), arguments, StringComparison.OrdinalIgnoreCase);
+            if (!String.Equals(actualDescription.ToString(), description, StringComparison.Ordinal)) return State.Unowned;
+            return SameTarget(actualTarget.ToString(), target)
+                && String.Equals(actualArguments.ToString(), arguments, StringComparison.OrdinalIgnoreCase) ? State.Matching : State.Different;
         }
         finally { Marshal.FinalReleaseComObject(instance); }
+    }
+
+    private static bool SameTarget(string actual, string target)
+    {
+        try
+        {
+            actual = Path.GetFullPath(Environment.ExpandEnvironmentVariables(actual)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            target = Path.GetFullPath(Environment.ExpandEnvironmentVariables(target)).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (String.Equals(actual, target, StringComparison.OrdinalIgnoreCase)) return true;
+            if (File.Exists(actual) && File.Exists(target))
+            {
+                try { return String.Equals(CanonicalPaths.Existing(actual), CanonicalPaths.Existing(target), StringComparison.OrdinalIgnoreCase); }
+                catch { }
+            }
+        }
+        catch { }
+        return false;
     }
 
     public static void Save(string path, string target, string arguments, string workingDirectory, string description)
