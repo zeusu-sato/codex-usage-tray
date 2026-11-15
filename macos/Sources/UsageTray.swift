@@ -117,7 +117,9 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         usageTitle.stringValue = state.quota.text("title").isEmpty ? state.name + "の残量を確認しています" : state.quota.text("title")
         quotaDetail.stringValue = credit?.text("summary") ?? state.quota.text("detail")
         checked.stringValue = state.quota.text("checked_label")
-        forecastTitle.stringValue = state.forecast.text("title")
+        forecastTitle.stringValue = !state.quota.isEmpty && state.remaining == nil
+            ? (state.quota.flag("blocked") && !state.quota.flag("stale") ? "予測: 利用制限があるため判定できません" : "予測: 未確認")
+            : state.forecast.text("title")
         forecastTitle.textColor = remaining.textColor
         let quotaNote = [state.quota.text("note"), state.quota.text("scope")].filter { !$0.isEmpty }.joined(separator: "\n")
         quotaDetail.toolTip = quotaNote.isEmpty ? nil : quotaNote
