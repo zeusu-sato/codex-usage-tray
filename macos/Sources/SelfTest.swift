@@ -144,7 +144,7 @@ func runSelfTests(output: URL) throws {
     try require(state.credit != nil && state.remaining == 0, "Credit parsed without changing remaining")
     try require(controller.remaining.stringValue == credit.text("title"), "Credit title displayed")
     try require(controller.quotaDetail.stringValue == credit.text("summary"), "Credit summary displayed")
-    try require(controller.forecastTitle.stringValue == "予測: 未確認", "Backend credit forecast preserved")
+    try require(controller.forecastTitle.stringValue.isEmpty && controller.forecastTitle.isHidden, "Credit forecast hidden")
     try require(state.statusItem?.button?.toolTip?.contains("Credit 利用中") == true, "Credit tooltip displayed")
     try require(controller.remaining.textColor == TrayImage.creditColor, "Credit window color")
     for status in ["comfortable", "tight", "at_risk", "unavailable"] {
@@ -172,6 +172,7 @@ func runSelfTests(output: URL) throws {
     state.quota.removeValue(forKey: "credit")
     try require(state.credit == nil && state.remaining == 0, "Missing credit uses usage mode")
     state.quota = savedQuota; controller.render()
+    try require(!controller.forecastTitle.isHidden, "Forecast restored after Credit")
     for id in ["codex", "claude"] { for value in [0.0, 8, 11, 68, 88, 100] {
         try savePNG(TrayImage.make(provider: id, remaining: value, status: "comfortable", includeSymbol: false), output.appendingPathComponent("icon-\(id)-\(Int(value)).png"))
     } }
