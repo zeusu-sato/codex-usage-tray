@@ -85,20 +85,39 @@ internal sealed class UpdateCheck
     {
         release=null;error=null;
         if(ParseVersion(current)==null || Environment.GetEnvironmentVariable("CODEX_USAGE_TRAY_UPDATE_CHECK")=="0")return true;
-        try { release=SelectRelease(fetch(ApiUrl),current); return true; } catch(Exception ex) { error=ex.Message; return false; }
+        try { release=SelectRelease(fetch(ApiUrl),current); return true; } catch(Exception ex) { Trace.TraceError(ex.ToString()); error="????????10??????????????????????"; return false; }
     }
     internal bool Install(UpdateRelease release,out string error)
     {
         error=null; string folder=Path.Combine(Path.GetTempPath(),"CodexUsageTray-update-"+Guid.NewGuid().ToString("N"));
+        string reason="????????10?????????????????????????";
         try {
             if(release==null || ParseVersion(release.Version)==null || !ValidUrl(release.InstallerUrl) || !ValidUrl(release.SumsUrl)) throw new InvalidOperationException("Invalid update");
             Directory.CreateDirectory(folder); string name="CodexUsageTray-Setup-"+release.Version+".exe", installer=Path.Combine(folder,name), sums=Path.Combine(folder,"SHA256SUMS.txt");
+            reason="?????????????????????????";
             download(release.InstallerUrl,installer); download(release.SumsUrl,sums);
+            reason="?????????????????????????";
             if(new FileInfo(installer).Length>300L*1024*1024 || new FileInfo(sums).Length>4*1024*1024)throw new InvalidDataException("Download too large");
             byte[] hash; using(var sha=SHA256.Create()) using(var stream=File.OpenRead(installer)) hash=sha.ComputeHash(stream);
             if(!HashMatches(File.ReadAllText(sums),name,hash))throw new InvalidDataException("SHA256 mismatch");
+            reason="????????10?????????????????????????";
             launch(installer); return true;
-        } catch(Exception ex) { error=ex.Message; try { if(Directory.Exists(folder))Directory.Delete(folder,true); } catch {} return false; }
+        } catch(Exception ex) { Trace.TraceError(ex.ToString()); error=reason; try { if(Directory.Exists(folder))Directory.Delete(folder,true); } catch {} return false; }
+    }
+    internal static void CleanupDownloads()
+    {
+        try {
+            foreach(string folder in Directory.GetDirectories(Path.GetTempPath(), "CodexUsageTray-update-*")) {
+                if(!Regex.IsMatch(Path.GetFileName(folder), @"^CodexUsageTray-update-[0-9a-f]{32}$") || (File.GetAttributes(folder) & FileAttributes.ReparsePoint)!=0) continue;
+                try {
+                    foreach(string file in Directory.GetFiles(folder)) {
+                        string name=Path.GetFileName(file);
+                        if(name=="SHA256SUMS.txt" || (name.StartsWith("CodexUsageTray-Setup-",StringComparison.Ordinal) && name.EndsWith(".exe",StringComparison.Ordinal) && ParseVersion(name.Substring(21,name.Length-25))!=null)) File.Delete(file);
+                    }
+                    Directory.Delete(folder, false);
+                } catch(Exception ex) { Trace.TraceError(ex.ToString()); }
+            }
+        } catch(Exception ex) { Trace.TraceError(ex.ToString()); }
     }
     internal static HttpWebRequest CreateRequest(string url)
     {
