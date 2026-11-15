@@ -119,7 +119,7 @@ func runSelfTests(output: URL) throws {
     stale.quota = ["ok": true, "remaining_percent": true]
     try require(stale.remaining == nil, "Boolean is not a quota")
     let credit: Reply = ["kind": "codex_credits", "tray_text": "61k", "amount_known": true,
-                         "title": "Credit 利用中", "summary": "残り61,794クレジット"]
+                         "title": "Credit 利用中", "summary": "残り 47,466 クレジット"]
     let savedQuota = state.quota
     let unavailableQuotas: [Reply] = [
         ["ok": false, "forecast": ["title": "未確認"]],
@@ -138,12 +138,12 @@ func runSelfTests(output: URL) throws {
     try require(controller.forecastTitle.toolTip?.contains("0%") == true, "Zero forecast explanation is a tooltip")
     state.quota = ["ok": false, "blocked": true, "stale": true]; controller.render()
     try require(controller.forecastTitle.stringValue == "予測: 未確認", "Stale blocked forecast matches Windows")
-    state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "tooltip": "Credit 利用中",
+    state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "detail": credit.text("summary"), "tooltip": "Credit 利用中",
                    "forecast": ["status": "unavailable", "title": "未確認", "detail": "pending"]]
     controller.render(); controller.renderIcon(state)
     try require(state.credit != nil && state.remaining == 0, "Credit parsed without changing remaining")
     try require(controller.remaining.stringValue == credit.text("title"), "Credit title displayed")
-    try require(controller.quotaDetail.stringValue == credit.text("summary"), "Credit summary displayed")
+    try require(controller.quotaDetail.stringValue == credit.text("summary") && controller.usageTitle.isHidden, "Credit summary displayed without duplicate title")
     try require(controller.forecastTitle.stringValue.isEmpty && controller.forecastTitle.isHidden, "Credit forecast hidden")
     try require(state.statusItem?.button?.toolTip?.contains("Credit 利用中") == true, "Credit tooltip displayed")
     try require(controller.remaining.textColor == TrayImage.creditColor, "Credit window color")

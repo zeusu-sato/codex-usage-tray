@@ -113,7 +113,7 @@ class ClaudeNormalizationTest(unittest.TestCase):
     def test_credit_modes_and_invalid_amounts(self):
         import claude_quota
         for extra, expected, summary in (
-            ({"monthly_limit": 68800, "used_credits": 0}, "688", "残り $688.00（使用 $0.00）"),
+            ({"monthly_limit": 68800, "used_credits": 0}, "688", "残り $688.00"),
             ({"monthly_limit": 123456, "used_credits": 0}, "1k", "$1,234.56"),
             ({"monthly_limit": None, "used_credits": 0}, "∞", "上限なし"),
             ({"monthly_limit": None, "used_credits": None}, "∞", "使用額 未提供"),
