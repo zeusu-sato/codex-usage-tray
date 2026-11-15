@@ -1,5 +1,6 @@
 ﻿param([string]$AssemblyPath=(Join-Path (Split-Path $PSScriptRoot -Parent) 'build\windows\CodexUsageTray.exe'))
 $ErrorActionPreference='Stop'
+$env:CODEX_USAGE_TRAY_UPDATE_CHECK='0'
 $CaptureDemo=$env:CODEX_USAGE_CAPTURE_DEMO -eq '1'
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing
 . (Join-Path $PSScriptRoot 'tests\TrayRegistrations.ps1')
@@ -130,6 +131,23 @@ public static class DualUiTest {
             return null;
         });
     }
+    public static void VerifyUpdateOnOpen(DualUiSession session) {
+        Invoke(session, delegate {
+            var host=session.Host; var type=host.GetType();
+            var last=type.GetField("lastUpdateCheck", Fields);
+            var checking=type.GetField("checkingUpdate", Fields);
+            var open=type.GetMethod("OpenProvider", Fields);
+            DateTime recent=DateTime.UtcNow; last.SetValue(host,recent);
+            open.Invoke(host,new object[]{0});
+            Require((DateTime)last.GetValue(host)==recent, "Recent update check repeated");
+            DateTime old=DateTime.UtcNow.AddMinutes(-11); last.SetValue(host,old);
+            checking.SetValue(host,true); open.Invoke(host,new object[]{0});
+            Require((DateTime)last.GetValue(host)==old, "Concurrent update check started");
+            checking.SetValue(host,false); open.Invoke(host,new object[]{0});
+            Require((DateTime)last.GetValue(host)>old, "Opening did not start update check");
+            return null;
+        });
+    }
     static void RequireNumberPixels(Bitmap bitmap, int minimum, int brightness = 230) {
         int pixels = 0;
         // The symbol is only 18% opaque. Count bright foreground glyph pixels,
@@ -252,6 +270,7 @@ try{
  $session=[DualUiTest]::Start([IO.Path]::GetFullPath($AssemblyPath),$fixture,$root)
  Wait-DualIdle $session
  [DualUiTest]::VerifyInitial($session)
+ [DualUiTest]::VerifyUpdateOnOpen($session)
  if(-not $CaptureDemo){
  $task=[DualUiTest]::EnableClaude($session)
  if(-not $task.Wait(12000)){throw 'Toggle operation timed out'}

@@ -1,3 +1,9 @@
+# v0.5.5 — 更新確認
+
+- Windowsでウィンドウを開いたときにも新しい版を確認します。前回の確認から10分以内は問い合わせません。
+- 予測の表示を短い名詞に揃え、Credit利用中は予測を表示しません。
+- Macの取得失敗時の表示をWindowsに合わせました。
+
 # v0.5.4 — Shorter failure display
 
 UI release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.4). Early beta with a Japanese UI.

@@ -3,7 +3,7 @@
 The experimental Linux source UI uses the same shared metadata backend and provider data separation. State is stored under `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`; relative XDG paths use the default. The Linux UI exposes quota reads, client selection, and version monitoring only. See the [Linux guide](../linux/README.ja.md).
 Linux 試作版も共通の取得処理と製品別保存先を使います。保存先は `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`（相対 XDG パスは既定値に戻します）です。Linux UI は残量取得・クライアント選択・バージョン監視に対応します。[Linux の説明](../linux/README.ja.md)もご覧ください。
 
-This document describes **v0.5.4**, including experimental Claude Code support and Credit mode. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint. The only recurring connection the app itself makes is the anonymous release check described below.
+This document describes **v0.5.5**, including experimental Claude Code support and Credit mode. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint. The only recurring connection the app itself makes is the anonymous release check described below.
 
 ## Routine operation
 
@@ -45,7 +45,7 @@ The Claude switch instead targets global `CLAUDE.md` under `%USERPROFILE%\.claud
 
 ## Checking for new versions (Windows)
 
-The Windows app sends an anonymous GET to `https://api.github.com/repos/zeusu-sato/codex-usage-tray/releases` about 15 seconds after start and every 24 hours after that. The request carries no credentials, cookies, email address, quota, or identifier, and its User-Agent is just `CodexUsageTray`. As with any connection, GitHub receives your IP address and handles it under its own policies. When a newer version exists, the menu and window show **v… にアップデート**. Only clicking it downloads the installer and the release's `SHA256SUMS.txt` from GitHub; the installer runs only if its SHA256 matches. Nothing is updated automatically. The Mac and Linux editions do not perform this check.
+The Windows app sends an anonymous GET to `https://api.github.com/repos/zeusu-sato/codex-usage-tray/releases` about 15 seconds after start, every 24 hours after that, and when the window is opened if at least 10 minutes have passed since the last check. The request carries no credentials, cookies, email address, quota, or identifier, and its User-Agent is just `CodexUsageTray`. As with any connection, GitHub receives your IP address and handles it under its own policies. When a newer version exists, the menu and window show **v… にアップデート**. Only clicking it downloads the installer and the release's `SHA256SUMS.txt` from GitHub; the installer runs only if its SHA256 matches. Nothing is updated automatically. The Mac and Linux editions do not perform this check.
 
 ## Only an explicit Yes starts AI
 
@@ -71,7 +71,7 @@ For a public bug report, prefer the app version, operating-system version, selec
 
 ## 日本語
 
-Claude Codeの試験対応とCreditモードを含む**v0.5.4**について説明しています。
+Claude Codeの試験対応とCreditモードを含む**v0.5.5**について説明しています。
 
 このアプリ独自のアクセス解析やテレメトリー送信先はありません。定期的な残量取得は、インストール済みCodexを通して公式の`account/rateLimits/read`を呼びます。AIの会話・推論ターンは開始しませんが、残量を取得するCodex自身はサービスと通信する場合があります。バージョン確認はローカル処理です。アプリ自身の定期的な通信は、次に示す匿名のリリース確認だけです。
 
@@ -89,7 +89,7 @@ Claudeでは全体の5時間枠・週間枠と追加利用の4フィールドを
 
 Claudeの状態は、その下の`providers\claude`に分けて保存します。残量キャッシュにはsalt・HMAC識別値・上限付き履歴と、アプリ更新後に旧版の取得停止状態を再試行するための取得方式の版番号も保存し、アカウントの変更時には履歴を区切ります。これは仮名化であり、暗号化や完全な匿名性を保証するものではありません。通知領域のシンボルはインストール済み公式拡張機能から読み、不透明度18%で表示します。画像の送信・同梱はせず、見つからなければ数字とゲージだけを表示します。
 
-Windows版は、起動の約15秒後と、その後24時間ごとに、`https://api.github.com/repos/zeusu-sato/codex-usage-tray/releases`へ匿名のGETを送り、新しい版を確認します。認証情報・Cookie・メールアドレス・残量・識別子は送らず、User-Agentは`CodexUsageTray`だけです。通常の通信と同様に、GitHubにはIPアドレスが届き、GitHubの方針に従って扱われます。新しい版があれば、メニューとウィンドウに **v… にアップデート** を表示します。押したときだけ、インストーラとリリースの`SHA256SUMS.txt`をGitHubからダウンロードし、SHA256が一致した場合だけ実行します。自動では更新しません。Mac版とLinux版はこの確認を行いません。
+Windows版は、起動の約15秒後とその後24時間ごと、またウィンドウを開いたときに前回の確認から10分以上経過していれば、`https://api.github.com/repos/zeusu-sato/codex-usage-tray/releases`へ匿名のGETを送り、新しい版を確認します。認証情報・Cookie・メールアドレス・残量・識別子は送らず、User-Agentは`CodexUsageTray`だけです。通常の通信と同様に、GitHubにはIPアドレスが届き、GitHubの方針に従って扱われます。新しい版があれば、メニューとウィンドウに **v… にアップデート** を表示します。押したときだけ、インストーラとリリースの`SHA256SUMS.txt`をGitHubからダウンロードし、SHA256が一致した場合だけ実行します。自動では更新しません。Mac版とLinux版はこの確認を行いません。
 
 **はい** を明示的に押したときだけ、表示されるCodexコンソールでAIレビューを始めます。**いいえ・Escape・×では開始しません**。AIレビューのプロンプトや調査対象は既存のCodex設定に従って処理され、Usageを消費します。通常の監視とは異なり、AIレビューでは公式情報のオンライン調査を行う場合があります。報告書を開く操作や、作成済み候補の有効・無効切り替えだけで、新しいAIレビューは始まりません。
 

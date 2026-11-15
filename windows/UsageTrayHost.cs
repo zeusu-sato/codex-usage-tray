@@ -23,6 +23,7 @@ internal sealed class UsageTrayHost : Form
     UpdateRelease availableUpdate;
     bool updateBusy;
     bool checkingUpdate;
+    DateTime lastUpdateCheck = DateTime.MinValue;
 
     public UsageTrayHost(string python, string backend, string data, bool tray, EventWaitHandle show)
         : this(python,backend,data,tray,show,new UpdateCheck()) {}
@@ -99,6 +100,7 @@ internal sealed class UsageTrayHost : Form
     {
         if(updateBusy||checkingUpdate||exiting)return;
         checkingUpdate=true;
+        lastUpdateCheck=DateTime.UtcNow;
         ThreadPool.QueueUserWorkItem(delegate {
             UpdateRelease result; string error; bool ok=updateCheck.Check(currentVersion,out result,out error);
             try { BeginInvoke(new Action(delegate { checkingUpdate=false; if(exiting||IsDisposed)return; if(ok) availableUpdate=result; if(!updateBusy) ShowUpdate(ok?null:error,true); })); } catch(InvalidOperationException) {}
@@ -124,6 +126,7 @@ internal sealed class UsageTrayHost : Form
     {
         if(IsDisposed||exiting)return;
         showRequested=true;
+        if(DateTime.UtcNow-lastUpdateCheck >= TimeSpan.FromMinutes(10)) CheckUpdate();
         tabs.SelectedIndex=index;
         Show();
         WindowState=FormWindowState.Normal;
