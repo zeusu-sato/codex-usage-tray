@@ -5,7 +5,8 @@ $installer = (Resolve-Path -LiteralPath $InstallerPath).Path
 if ($ZipPath) { $ZipPath = (Resolve-Path -LiteralPath $ZipPath).Path }
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{76F70EFD-4C9D-472F-A3B9-577C640E8424}_is1'
 if (Test-Path -LiteralPath $key) { throw 'Existing installation detected; refusing to run.' }
-$fixture = Join-Path $root ('build\installer smoke ' + [guid]::NewGuid().ToString('N'))
+$fixtureRoot = if ($JapanesePath) { [IO.Path]::GetTempPath() } else { Join-Path $root 'build' }
+$fixture = Join-Path $fixtureRoot ('installer smoke ' + [guid]::NewGuid().ToString('N'))
 $app = Join-Path $fixture $(if ($JapanesePath) { '日本語 テスト\CodexUsageTray' } else { 'installed app' })
 $data = Join-Path $fixture 'test data 日本語'
 $profile = Join-Path $fixture 'profile'
