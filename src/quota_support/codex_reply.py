@@ -137,9 +137,9 @@ def credit_display(credit):
         if credit["unlimited"]:
             tray, summary = "∞", "Credit 無制限"
         elif credit["balance"] is not None:
-            integer, dot, fraction = credit["balance"].partition(".")
+            integer = credit["balance"].partition(".")[0]
             tray = compact_credit(int(integer))
-            summary = "残り" + format(int(integer), ",") + dot + fraction + "クレジット"
+            summary = "残り " + format(int(integer), ",") + " クレジット"
         else:
             tray, known, summary = "¤", False, "Credit 残高未提供"
         tooltip_summary = summary
@@ -160,7 +160,7 @@ def credit_display(credit):
             elif credit["limit_known"] and used is not None:
                 left = max(Decimal(0), limit - used)
                 tray = compact_credit(int(left / 100))
-                summary = "追加利用：今月の上限まで残り " + money(left) + "（使用 " + money(used) + "）"
+                summary = "上限まで残り " + money(left)
             else:
                 tray, known = "¤", False
                 summary = "追加利用：今月の上限 " + money(limit) + "（使用額 未提供）" if limit is not None else "追加利用中 · 金額未提供"
@@ -236,7 +236,7 @@ def reply(cache, now):
         tooltip = "Codex Usage 未確認" + (" / 前回 " + fetched.astimezone(JST).strftime("%m/%d %H:%M") if fetched else "")
     elif credit is not None:
         title = credit["title"]
-        details[0:0] = [credit["summary"], "Usage は使い切っています。"]
+        details[0:0] = [credit["summary"]]
         tooltip = "Codex " + title + " / " + credit_summary + " / " + fetched.astimezone(JST).strftime("%H:%M取得")
     elif blocked:
         title = "利用制限が通知されています"

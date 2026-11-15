@@ -152,9 +152,9 @@ class QuotaMonitorTest(unittest.TestCase):
                 self.assertFalse(result["blocked"])
                 self.assertTrue(result["ok"])
                 self.assertEqual(result["forecast"]["status"], "unavailable")
-                self.assertTrue(result["detail"].startswith(result["credit"]["summary"] + "\nUsage は使い切っています。"))
+                self.assertTrue(result["detail"].startswith(result["credit"]["summary"] + "\n"))
                 self.assertTrue(result["tooltip"].startswith("Codex Credit 利用中"))
-        self.assertEqual(self.credit_result("61794.5")["credit"]["summary"], "残り61,794.5クレジット")
+        self.assertEqual(self.credit_result("47466.4932967500")["credit"]["summary"], "残り 47,466 クレジット")
         self.assertEqual(self.credit_result(unlimited=True)["credit"]["tray_text"], "∞")
         for invalid in (None, "abc", "-1", "1e5", "", True, -1, 1.5, float("nan"), "1,23", "１"):
             with self.subTest(invalid=invalid):

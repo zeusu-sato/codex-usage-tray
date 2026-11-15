@@ -46,7 +46,7 @@ internal sealed partial class UsageToggleForm
                 previous.Dispose();
             }
             usageValue.ForeColor = forecastColor;
-            usageTitle.Text = reply.Title;
+            usageTitle.Text = reply.Credit != null ? "" : reply.Title;
             usageDetail.Text = reply.Detail;
             usageForecast.ForeColor = forecastColor;
             string quotaNote = String.Join("\n", new[] { reply.Note, reply.Scope }.Where(value => !String.IsNullOrEmpty(value)));

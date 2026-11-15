@@ -104,10 +104,10 @@ try {
     $purple = [Drawing.Color]::FromArgb(106, 76, 196).ToArgb()
     if ($forecastColors.Values -contains $purple) { throw 'Credit color equals a normal color' }
     foreach ($text in @('0', '999', '1k', '99k', '.1M', '.9M', '1M', '99M', '.1G', '.9G', '1G', '99G', '61k', '688', '∞', '¤', '1k')) {
-        $credit = @{kind='codex_credits';tray_text=$text;amount_known=$true;title='Credit 利用中';summary='残り61,794クレジット'}
+        $credit = @{kind='codex_credits';tray_text=$text;amount_known=$true;title='Credit 利用中';summary='残り 47,466 クレジット'}
         Write-Fixture $data @{remaining=0;credit=$credit}
         Refresh-Quota $window
-        if ($window.Controls['UsageRemaining'].Text -ne $credit.title -or [PublicUiTest]::IconBackground($window) -ne $purple -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $purple) { throw 'Credit title/color missing' }
+        if ($window.Controls['UsageRemaining'].Text -ne $credit.title -or $window.Controls['UsageTitle'].Text -ne '' -or [PublicUiTest]::IconBackground($window) -ne $purple -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $purple) { throw 'Credit title/color missing' }
         if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne '' -or $window.Controls['UsageChecked'].Top -ne $window.Controls['UsageForecast'].Top) { throw 'Credit explanation or forecast layout incorrect' }
     }
     Write-Output 'PASS: Credit title, summary, tooltip, hidden forecast, and distinct purple icon background.'
