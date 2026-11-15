@@ -108,9 +108,9 @@ try {
         Write-Fixture $data @{remaining=0;credit=$credit}
         Refresh-Quota $window
         if ($window.Controls['UsageRemaining'].Text -ne $credit.title -or [PublicUiTest]::IconBackground($window) -ne $purple -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $purple) { throw 'Credit title/color missing' }
-        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne '予測: 未確認') { throw 'Credit explanation missing' }
+        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne '' -or $window.Controls['UsageChecked'].Top -ne $window.Controls['UsageForecast'].Top) { throw 'Credit explanation or forecast layout incorrect' }
     }
-    Write-Output 'PASS: Credit title, summary, tooltip, forecast explanation, and distinct purple icon background.'
+    Write-Output 'PASS: Credit title, summary, tooltip, hidden forecast, and distinct purple icon background.'
     $invalidCredits = @('bad', @{}, @{kind='unknown';tray_text='61k';amount_known=$true;title='Credit 利用中';summary='credit'})
     foreach ($badText in @('', '123456', '$688', '$1.2k', '999k', '1.2M', '1000', '1B', 812, $null, "a`nb")) {
         $invalidCredits += @{kind='codex_credits';tray_text=$badText;amount_known=$true;title='Credit 利用中';summary='credit'}
@@ -129,7 +129,7 @@ try {
     }
     Write-Fixture $data @{remaining=98;credit=$null}
     Refresh-Quota $window
-    if ($window.Controls['UsageRemaining'].Text -ne '98%' -or [PublicUiTest]::IconBackground($window) -ne $gray) { throw 'Null credit changed normal quota display' }
+    if ($window.Controls['UsageRemaining'].Text -ne '98%' -or [PublicUiTest]::IconBackground($window) -ne $gray -or $window.Controls['UsageForecast'].Text -eq '') { throw 'Null credit changed normal quota display' }
     Write-Output 'PASS: malformed Credit rejected; null Credit restores normal percentage and color.'
 
     Write-Fixture $data @{ remaining = 98; configured = $true }

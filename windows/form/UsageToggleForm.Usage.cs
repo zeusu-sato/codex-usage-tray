@@ -53,7 +53,7 @@ internal sealed partial class UsageToggleForm
             helpTooltip.SetToolTip(usageDetail, quotaNote);
             helpTooltip.SetToolTip(usageTitle, quotaNote);
             helpTooltip.SetToolTip(usageForecast, reply.Blocked && !reply.Stale ? "利用制限があるため予測を判定できません。" : reply.RemainingPercent == 0 && reply.Credit == null ? "対象の利用枠の残量は0%です。" : reply.Forecast.Detail);
-            usageForecast.Text = reply.Credit != null ? "予測: " + reply.Forecast.Title : !current
+            usageForecast.Text = reply.Credit != null ? "" : !current
                 ? (reply.Blocked && !reply.Stale ? "予測: 利用制限中" : "予測: 未確認")
                 : reply.RemainingPercent.Value == 0 ? "予測: 残量なし"
                 : "予測: " + reply.Forecast.Title;
@@ -177,7 +177,7 @@ internal sealed partial class UsageToggleForm
         usageDetail.Top = usageTitle.Bottom + (int)(6 * scale);
         usageForecast.Top = usageDetail.Bottom + (int)(8 * scale);
         usageForecast.Left = usageDetail.Left;
-        usageChecked.Top = usageForecast.Bottom + (int)(8 * scale);
+        usageChecked.Top = (String.IsNullOrEmpty(usageForecast.Text) ? usageDetail.Bottom : usageForecast.Bottom) + (int)(8 * scale);
         mitigationHeading.Top = usageChecked.Bottom + (int)(22 * scale);
         summary.Top = mitigationHeading.Bottom + (int)(6 * scale);
         toggle.Top = summary.Top;
