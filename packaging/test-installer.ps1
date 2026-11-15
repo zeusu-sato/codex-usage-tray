@@ -57,7 +57,7 @@ function Wait-App {
 function Set-Shortcut([string] $Target, [string] $Description) {
     $assembly = [Reflection.Assembly]::Load([IO.File]::ReadAllBytes((Join-Path $app 'CodexUsageTray.exe')))
     $method = $assembly.GetType('StartupShortcuts', $true).GetMethod('Save')
-    [void]$method.Invoke($null, @($link, $Target, '', [IO.Path]::GetDirectoryName($Target), $Description))
+    [void]$method.Invoke($null, [string[]]@($link, $Target, '', [IO.Path]::GetDirectoryName($Target), $Description))
 }
 function Uninstall-App {
     $process = Start-Isolated (Join-Path $app 'unins000.exe') "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$fixture\uninstall.log`""
