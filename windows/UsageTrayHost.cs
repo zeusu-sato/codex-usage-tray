@@ -30,6 +30,7 @@ internal sealed class UsageTrayHost : Form
     internal UsageTrayHost(string python, string backend, string data, bool tray, EventWaitHandle show, UpdateCheck checker)
     {
         updateCheck=checker;
+        UpdateCheck.CleanupDownloads();
         wake = show;
         showRequested = !tray;
         var version = (System.Reflection.AssemblyInformationalVersionAttribute)Attribute.GetCustomAttribute(
@@ -89,12 +90,12 @@ internal sealed class UsageTrayHost : Form
     void ExitHost() { exiting=true; Close(); }
     void ShowUpdate(string error, bool checkError)
     {
-        string text=availableUpdate==null?null:(updateBusy?"ダウンロード中…":"v"+availableUpdate.Version+" にアップデート");
+        string text=availableUpdate==null?null:(error!=null && !checkError?"????????":updateBusy?"ダウンロード中…":"v"+availableUpdate.Version+" にアップデート");
         foreach(var view in views) view.SetUpdate(text,!updateBusy,StartUpdate);
         updateLink.Text=text ?? ""; updateLink.Visible=text!=null; updateLink.Enabled=!updateBusy;
         updateError.Visible=error!=null; updateError.Text=checkError?"アップデートを確認できません":"アップデートできません";
         updateError.Left=updateLink.Visible?updateLink.Right+12:10;
-        updateTip.SetToolTip(updateError,error ?? ""); updatePanel.Visible=text!=null || error!=null;
+        updateTip.SetToolTip(updateError,error ?? ""); updateTip.SetToolTip(updateLink,error ?? ""); updatePanel.Visible=text!=null || error!=null;
     }
     void CheckUpdate()
     {
