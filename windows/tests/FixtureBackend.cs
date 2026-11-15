@@ -80,7 +80,7 @@ internal static class FixtureBackend
                 var creditData = credit as Dictionary<string, object>;
                 string creditTitle = creditData == null ? "" : Value(creditData, "title", "");
                 string creditSummary = creditData == null ? "" : Value(creditData, "summary", "");
-                if (credit != null) forecast = new { status = "unavailable", title = "Credit 利用中は予測を表示しません。",
+                if (credit != null) forecast = new { status = "unavailable", title = "未確認",
                     detail = "", window_label = (string)null, observed_hours = (double?)null, projected_remaining_percent = (double?)null };
                 result = new { ok = credit != null || (!stale && percent != null), stale = credit != null ? false : stale, remaining_percent = percent,
                     credit = credit,

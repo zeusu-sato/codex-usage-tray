@@ -115,7 +115,7 @@ internal sealed partial class UsageToggleForm
     private static ForecastReply ReadForecastReply(Dictionary<string, object> data)
     {
         ForecastReply collecting = new ForecastReply {
-            Status = "collecting", Title = "データを集めています",
+            Status = "collecting", Title = "準備中",
             Detail = "まだ予測を判定できません。残量の更新時に再確認します。"
         };
         object raw;

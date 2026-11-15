@@ -29,6 +29,19 @@ def predict(values, hours=6, **options):
 
 
 class ForecastTests(unittest.TestCase):
+    def test_forecast_titles_and_explanations(self):
+        cases = [
+            (predict([12, 11, 10], reset=T + 3600), "余裕あり"),
+            (predict([100, 99, 97]), "ペース注意"),
+            (predict([100, 96, 90]), "不足見込み"),
+            (trend.forecast(None, [window(0)], T, quota.label), "残量なし"),
+            (trend.forecast(None, [window(95)], T, quota.label), "準備中"),
+            (predict([100, 98, 96], reset=None), "未確認"),
+        ]
+        for result, title in cases:
+            self.assertEqual(result["title"], title)
+            self.assertTrue(result["detail"])
+
     def test_low_remaining_can_be_green_when_reset_is_near(self):
         result = predict([12, 11, 10], reset=T + 3600)
         self.assertEqual(result['status'], 'comfortable')

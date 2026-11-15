@@ -99,7 +99,7 @@ internal sealed partial class UsageToggleForm
         usageForecast.MaximumSize = new Size(408, 0);
         usageForecast.Font = new Font(Font.FontFamily, 9F);
         usageForecast.ForeColor = UsageColor(null);
-        usageForecast.Text = "予測: 残量を確認しています";
+        usageForecast.Text = "予測: 未確認";
 
         usageChecked = new Label();
         usageChecked.Name = "UsageChecked";

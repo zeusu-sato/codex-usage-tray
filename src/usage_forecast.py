@@ -68,7 +68,7 @@ def record(history, windows, timestamp):
 
 
 def pending(status="collecting", detail=None):
-    return {"status": status, "title": "予測準備中" if status == "collecting" else "予測は未確認です",
+    return {"status": status, "title": "準備中" if status == "collecting" else "未確認",
             "detail": detail or "履歴を集めています。通常の残量取得だけで計算します。",
             "window_label": None, "observed_hours": None, "projected_remaining_percent": None}
 
@@ -76,7 +76,7 @@ def pending(status="collecting", detail=None):
 def assess_one(window, samples, now, name):
     remaining, reset = window["remaining_percent"], window["resets_at"]
     if remaining == 0:
-        return {**pending(), "status": "at_risk", "title": "利用枠を使い切っています",
+        return {**pending(), "status": "at_risk", "title": "残量なし",
                 "detail": name + ": 現在の残量は0%です。", "window_label": name, "projected_remaining_percent": 0.0}
     if reset is None or reset <= now:
         return pending("unavailable", name + ": 次のリセット時刻を確認できません。")
@@ -96,11 +96,11 @@ def assess_one(window, samples, now, name):
     lower_available = max(0, remaining - ROUNDING_POINTS)
     upper_available = min(100, remaining + ROUNDING_POINTS)
     if lower_use > upper_available:
-        status, title = "at_risk", "リセット前に不足しそう"
+        status, title = "at_risk", "不足見込み"
     elif upper_use <= lower_available * (1 - HEADROOM_FRACTION):
-        status, title = "comfortable", "このペースなら余裕あり"
+        status, title = "comfortable", "余裕あり"
     else:
-        status, title = "tight", "リセットまでのペースに注意"
+        status, title = "tight", "ペース注意"
     hours = elapsed / 3600
     projected_remaining = round(max(0, min(100, remaining - projected_use)), 1)
     return {"status": status, "title": title, "window_label": name, "observed_hours": round(hours, 1),

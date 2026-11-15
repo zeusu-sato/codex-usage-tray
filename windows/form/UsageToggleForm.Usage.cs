@@ -52,10 +52,10 @@ internal sealed partial class UsageToggleForm
             string quotaNote = String.Join("\n", new[] { reply.Note, reply.Scope }.Where(value => !String.IsNullOrEmpty(value)));
             helpTooltip.SetToolTip(usageDetail, quotaNote);
             helpTooltip.SetToolTip(usageTitle, quotaNote);
-            helpTooltip.SetToolTip(usageForecast, reply.Forecast.Detail);
-            usageForecast.Text = reply.Credit != null ? reply.Forecast.Title : !current
-                ? (reply.Blocked && !reply.Stale ? "予測: 利用制限があるため判定できません" : "予測: 未確認")
-                : reply.RemainingPercent.Value == 0 ? "残量なし: 対象の利用枠の残量は0%です。"
+            helpTooltip.SetToolTip(usageForecast, reply.Blocked && !reply.Stale ? "利用制限があるため予測を判定できません。" : reply.RemainingPercent == 0 && reply.Credit == null ? "対象の利用枠の残量は0%です。" : reply.Forecast.Detail);
+            usageForecast.Text = reply.Credit != null ? "予測: " + reply.Forecast.Title : !current
+                ? (reply.Blocked && !reply.Stale ? "予測: 利用制限中" : "予測: 未確認")
+                : reply.RemainingPercent.Value == 0 ? "予測: 残量なし"
                 : "予測: " + reply.Forecast.Title;
             usageChecked.Text = reply.CheckedLabel;
             usageTooltip = reply.Tooltip;

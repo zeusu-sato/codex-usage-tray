@@ -219,7 +219,7 @@ public static class DualUiTest {
             Require(view.Controls["UsageRemaining"].Text == title, "Credit title missing");
             Require(view.Controls["UsageDetail"].Text.StartsWith(summary), "Credit summary missing");
             Require(((string)Field(view,"usageTooltip")).Contains(title), "Credit tooltip missing");
-            Require(view.Controls["UsageForecast"].Text == "Credit 利用中は予測を表示しません。", "Credit forecast explanation missing");
+            Require(view.Controls["UsageForecast"].Text == "予測: 未確認", "Credit forecast explanation missing");
             using (Bitmap bitmap = ((Icon)Field(view,"usageIcon")).ToBitmap())
                 Require(bitmap.GetPixel(0,0).ToArgb() == Color.FromArgb(106,76,196).ToArgb(), "Credit icon background mismatch");
             return null;
