@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -48,17 +49,18 @@ internal sealed partial class UsageToggleForm
             usageTitle.Text = reply.Title;
             usageDetail.Text = reply.Detail;
             usageForecast.ForeColor = forecastColor;
-            helpTooltip.SetToolTip(usageDetail, reply.Scope);
+            string quotaNote = String.Join("\n", new[] { reply.Note, reply.Scope }.Where(value => !String.IsNullOrEmpty(value)));
+            helpTooltip.SetToolTip(usageDetail, quotaNote);
+            helpTooltip.SetToolTip(usageTitle, quotaNote);
             helpTooltip.SetToolTip(usageForecast, reply.Forecast.Detail);
             usageForecast.Text = reply.Credit != null ? reply.Forecast.Title : !current
-                ? (reply.Blocked ? "予測: 利用制限があるため判定できません" : "予測: 現在の残量は未確認です")
+                ? (reply.Blocked && !reply.Stale ? "予測: 利用制限があるため判定できません" : "予測: 未確認")
                 : reply.RemainingPercent.Value == 0 ? "残量なし: 対象の利用枠の残量は0%です。"
                 : "予測: " + reply.Forecast.Title;
-            usageChecked.Text = reply.CheckedLabel + (reply.Stale ? "\n現在の残量は未確認" : "");
+            usageChecked.Text = reply.CheckedLabel;
             usageTooltip = reply.Tooltip;
             if (current)
             {
-                lastUsageValue = usageValue.Text;
                 lastUsageDetail = reply.Detail;
             }
             UpdateForecastIcon(current ? reply.RemainingPercent : null, reply.Forecast.Status, reply.Credit);
@@ -70,16 +72,16 @@ internal sealed partial class UsageToggleForm
             if (IsDisposed || exiting) return;
             usageValue.Text = "?";
             usageValue.ForeColor = UsageColor(null);
-            usageTitle.Text = "現在の残量を確認できません";
-            usageForecast.Text = "予測: 現在の残量は未確認です";
+            usageTitle.Text = "Usage 未確認";
+            usageForecast.Text = "予測: 未確認";
             usageForecast.ForeColor = UsageColor(null);
-            usageDetail.Text = error.Message;
-            helpTooltip.SetToolTip(usageDetail, "");
+            usageDetail.Text = lastUsageDetail ?? "";
+            string quotaNote = error.Message + "\n5分ごとに再確認します。";
+            helpTooltip.SetToolTip(usageDetail, quotaNote);
+            helpTooltip.SetToolTip(usageTitle, quotaNote);
             helpTooltip.SetToolTip(usageForecast, "");
-            if (!String.IsNullOrEmpty(lastUsageValue))
-                usageDetail.Text += "\n前回の表示 · 現在の残量は未確認: " + lastUsageValue + "\n" + lastUsageDetail;
-            usageChecked.Text = "5分後に再確認します。";
-            usageTooltip = "Codex Usage: 現在の残量は未確認";
+            usageChecked.Text = "";
+            usageTooltip = (provider == "claude" ? "Claude Code" : "Codex") + " Usage 未確認";
             UpdateUsageIcon(null);
             UpdateTrayTooltip();
             ResizeForText();

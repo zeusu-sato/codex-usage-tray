@@ -9,6 +9,7 @@ import claude_adapter
 import client_registry
 import quota_monitor as quota
 import usage_forecast
+from quota_support.codex_reply import stale_note
 from storage import read_json, write_json
 
 
@@ -42,19 +43,20 @@ def align_reset_history(history, windows, timestamp):
 
 def response(cache, now):
     result = quota.reply(cache, now)
-    for key in ("title", "detail", "tooltip"):
+    for key in ("title", "detail", "tooltip", "note"):
         result[key] = result[key].replace("Codex", "Claude Code")
     windows = (cache.get("snapshot") or {}).get("windows", [])
     if windows and not any(w["kind"] == "primary" for w in windows):
         result["scope"] = "対象: 全体の週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
     else:
         result["scope"] = "対象: 全体の5時間枠・週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
-    if cache.get("error") == "unsupported_version":
-        result["detail"] = "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。\n選択したクライアントをご確認ください。\n" + result["detail"]
-    elif cache.get("error") == "usage_temporarily_unavailable":
-        result["detail"] = "Claude Code が利用枠を一時的に取得できませんでした。\n5分ごとに再確認します。\n" + result["detail"]
-    elif cache.get("error") == "incompatible_protocol":
-        result["detail"] = "Claude Codeの残量取得への応答が対応形式と一致しません。\n続く場合はアプリの対応更新が必要です。\n" + result["detail"]
+    reasons = {
+        "unsupported_version": "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。選択したクライアントをご確認ください。",
+        "usage_temporarily_unavailable": "Claude Code がClaudeのサーバーから利用枠を取得できませんでした。Claude側の一時的な問題の可能性があります。",
+        "incompatible_protocol": "Claude Codeの応答が対応形式と一致しません。続く場合はアプリの更新が必要です。",
+    }
+    if result["stale"] and cache.get("error") in reasons:
+        result["note"] = stale_note(bool(windows), reasons[cache["error"]])
     if cache.get("last_ok") and not cache.get("account_scope") and result["credit"] is None:
         result["forecast"] = usage_forecast.pending("unavailable", "アカウントの連続性を確認できないため、残量だけを表示します。")
     return result

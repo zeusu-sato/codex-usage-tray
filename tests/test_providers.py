@@ -117,14 +117,19 @@ class ProviderTests(unittest.TestCase):
                 claude_quota.quota_command(self.folder, self.now + timedelta(minutes=5 * index))
                 cache = json.loads(path.read_text(encoding='utf-8'))
                 self.assertEqual((cache['error'], cache['error_reason']), ('incompatible_protocol', reason))
-        self.read(now=self.now + timedelta(minutes=15))
+        previous = self.read(now=self.now + timedelta(minutes=15))
+        self.assertEqual(previous['note'], '')
         self.assertNotIn('error_reason', json.loads(path.read_text(encoding='utf-8')))
         result = self.read({'rate_limits_available': True, 'rate_limits': None}, self.now + timedelta(minutes=20))
         cache = json.loads(path.read_text(encoding='utf-8'))
         self.assertEqual(cache['error'], 'usage_temporarily_unavailable')
         self.assertNotIn('error_reason', cache)
-        self.assertTrue(result['detail'].startswith('Claude Code が利用枠を一時的に取得できませんでした。\n5分ごとに再確認します。'))
-        self.assertNotIn('対応更新が必要', result['detail'])
+        self.assertEqual(result['title'], 'Usage 未確認')
+        self.assertEqual(result['detail'], '\n'.join(f"{w['label']}: 残り {w['remaining_percent']:g}%  ·  {w['resets_label']}" for w in previous['windows']))
+        self.assertEqual(result['checked_label'], previous['checked_label'])
+        self.assertEqual(result['note'].count('5分ごとに再確認します。'), 1)
+        self.assertIn('Claude Code がClaudeのサーバーから利用枠を取得できませんでした。', result['note'])
+        self.assertNotIn('Claude Code がClaude', result['detail'])
         self.read(now=self.now + timedelta(minutes=25))
         cache = json.loads(path.read_text(encoding='utf-8'))
         self.assertNotIn('error_reason', cache)
@@ -136,6 +141,35 @@ class ProviderTests(unittest.TestCase):
         self.read(second,self.now+timedelta(minutes=6))
         cache=json.loads((self.folder/'quota-state.json').read_text())
         self.assertEqual([len(row['samples']) for row in cache['history']],[1,1])
+
+    def test_stale_display_reasons(self):
+        import quota_monitor
+        window = {'kind': 'secondary', 'remaining_percent': 39, 'duration_mins': 10080,
+                  'resets_at': int((self.now + timedelta(days=5)).timestamp())}
+        cache = {'snapshot': {'windows': [window], 'blocked': False},
+                 'fetched_at': self.now.isoformat(), 'last_ok': False}
+        expected = 'Weekly: 残り 39%  ·  リセット 09/14 09:00 JST'
+        reasons = {
+            'unsupported_version': 'Claude Codeのバージョンを確認できないか、2.1.263より古い版です。選択したクライアントをご確認ください。',
+            'usage_temporarily_unavailable': 'Claude Code がClaudeのサーバーから利用枠を取得できませんでした。Claude側の一時的な問題の可能性があります。',
+            'incompatible_protocol': 'Claude Codeの応答が対応形式と一致しません。続く場合はアプリの更新が必要です。',
+        }
+        codex = quota_monitor.reply(cache, self.now)
+        self.assertEqual((codex['title'], codex['detail'], codex['checked_label']),
+                         ('Usage 未確認', expected, '最終取得: 09/09 09:00:00 JST'))
+        self.assertEqual(codex['note'], '表示は前回取得した残量です。\n接続とCodexのログイン状態をご確認ください。\n5分ごとに再確認します。')
+        for error, reason in reasons.items():
+            with self.subTest(error=error):
+                result = claude_quota.response(dict(cache, error=error), self.now)
+                self.assertEqual((result['title'], result['detail'], result['checked_label']),
+                                 (codex['title'], expected, codex['checked_label']))
+                self.assertEqual(result['note'], '表示は前回取得した残量です。\n' + reason + '\n5分ごとに再確認します。')
+                self.assertNotIn(reason, result['detail'])
+        self.assertEqual(quota_monitor.reply(dict(cache, last_ok=True), self.now)['note'], '')
+        self.assertEqual(claude_quota.response(dict(cache, last_ok=True), self.now)['note'], '')
+        empty = quota_monitor.reply({}, self.now)
+        self.assertEqual(empty['detail'], '')
+        self.assertNotIn('表示は前回', empty['note'])
 
     def test_reset_jitter_preserves_history_until_a_forecast_can_be_computed(self):
         for index, seconds in enumerate((0, 60, -60, 0, 60)):
@@ -215,7 +249,7 @@ class ProviderTests(unittest.TestCase):
         with patch.object(client_registry,'current_identity',return_value=self.identity),patch('claude_adapter.subprocess.Popen',side_effect=AssertionError('Must not start unsupported binary')):
             reply=claude_quota.quota_command(self.folder,self.now)
         self.assertIsNone(reply['remaining_percent'])
-        self.assertIn('古い版',reply['detail'])
+        self.assertIn('古い版',reply['note'])
 
     def test_compatible_update_keeps_quota_independent_of_unreviewed_version_alert(self):
         reference=copy.deepcopy(self.identity)
@@ -259,7 +293,7 @@ class ProviderTests(unittest.TestCase):
         malformed['rate_limits']['seven_day']['resets_at']='private-invalid-timestamp'
         reply=self.read(malformed,self.now+timedelta(minutes=5))
         self.assertIsNone(reply['remaining_percent'])
-        self.assertIn('対応形式と一致しません',reply['detail'])
+        self.assertIn('対応形式と一致しません',reply['note'])
         self.assertEqual(reply['forecast']['status'],'unavailable')
         self.assertNotIn('private-invalid',json.dumps(reply))
         self.assertNotIn('private-invalid',(self.folder/'quota-state.json').read_text())

@@ -92,7 +92,7 @@ class QuotaMonitorTest(unittest.TestCase):
             self.assertFalse(result["ok"])
             self.assertTrue(result["stale"])
             self.assertIsNone(result["remaining_percent"])
-            self.assertIn("前回取得", result["detail"])
+            self.assertIn("前回取得", result["note"])
             self.assertIn("98%", result["detail"])
             self.assertNotIn("private-token", (folder / "quota-state.json").read_text())
 

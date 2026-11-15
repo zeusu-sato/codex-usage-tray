@@ -67,6 +67,7 @@ internal sealed partial class UsageToggleForm
             reply.Stale = RequireBoolean(data, "stale");
             reply.Title = RequireString(data, "title");
             reply.Detail = RequireString(data, "detail");
+            reply.Note = RequireString(data, "note");
             reply.CheckedLabel = RequireString(data, "checked_label");
             reply.Tooltip = RequireString(data, "tooltip");
             object scope;
@@ -213,6 +214,7 @@ internal sealed partial class UsageToggleForm
         public CreditReply Credit;
         public string Title;
         public string Detail;
+        public string Note;
         public string CheckedLabel;
         public string Tooltip;
         public string Scope;

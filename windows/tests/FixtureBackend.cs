@@ -87,7 +87,7 @@ internal static class FixtureBackend
                     blocked = Flag(config, "blocked"), forecast = forecast,
                     title = credit != null ? creditTitle : percent == null ? "テスト状態: 残量は未確認" : "Codexの残り使用枠",
                     detail = (credit != null ? creditSummary + "\n" : "") + (stale ? "前回の記録です。" : "") + "週間枠のリセット: 09/15 15:29 JST",
-                    checked_label = "最終取得: テスト時刻", tooltip = credit != null ? "Codex " + creditTitle + " / " + creditSummary + " / 12:34取得" : stale ? "Codex Usage 未確認" : "Codex 残り" + percent + "% / 09/15 15:29 JST",
+                    note = stale ? "5分ごとに再確認します。" : "", checked_label = "最終取得: テスト時刻", tooltip = credit != null ? "Codex " + creditTitle + " / " + creditSummary + " / 12:34取得" : stale ? "Codex Usage 未確認" : "Codex 残り" + percent + "% / 09/15 15:29 JST",
                     scope = Value(config, "scope", ""), windows = new object[0] };
                 break;
             case "review-status":
