@@ -36,9 +36,22 @@ public static class UpdateTests {
         Action<string> launch=delegate(string file) { launched++; };
         object instance=Activator.CreateInstance(checker,flags,null,new object[]{fetch,download,launch},null);
         var check=checker.GetMethod("Check",flags); object[] args={null,null,null}; Assert((bool)check.Invoke(instance,args) && fetched==0,"development build");
-        args=new object[]{"1.0.0",null,null}; Assert(!(bool)check.Invoke(instance,args) && fetched==1,"fetch failure");
+        args=new object[]{"1.0.0",null,null}; Assert(!(bool)check.Invoke(instance,args) && fetched==1 && (string)args[2]=="????????10??????????????????????","fetch failure");
         var install=checker.GetMethod("Install",flags); args=new object[]{selected,null}; Assert((bool)install.Invoke(instance,args) && launched==1,"matching hash"); Directory.Delete(downloaded,true);
-        match=false; args=new object[]{selected,null}; Assert(!(bool)install.Invoke(instance,args) && launched==1 && !Directory.Exists(downloaded),"mismatching hash cleanup");
+        match=false; args=new object[]{selected,null}; Assert(!(bool)install.Invoke(instance,args) && launched==1 && !Directory.Exists(downloaded) && (string)args[1]=="?????????????????????????","mismatching hash cleanup");
+        match=true; Action<string> failLaunch=delegate(string file) { throw new Exception("secret English"); };
+        instance=Activator.CreateInstance(checker,flags,null,new object[]{fetch,download,failLaunch},null);
+        args=new object[]{selected,null}; Assert(!(bool)install.Invoke(instance,args) && (string)args[1]=="????????10?????????????????????????" && !Directory.Exists(downloaded),"launch failure");
+        string temp=Path.Combine(Path.GetTempPath(),"update-test-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(temp);
+        string oldTemp=Environment.GetEnvironmentVariable("TEMP"), oldTmp=Environment.GetEnvironmentVariable("TMP");
+        try {
+            Environment.SetEnvironmentVariable("TEMP",temp); Environment.SetEnvironmentVariable("TMP",temp);
+            string folder=Path.Combine(temp,"CodexUsageTray-update-"+Guid.NewGuid().ToString("N")); Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder,"CodexUsageTray-Setup-1.2.3.exe"),"fixture"); File.WriteAllText(Path.Combine(folder,"SHA256SUMS.txt"),"fixture"); File.WriteAllText(Path.Combine(folder,"other.txt"),"keep");
+            string other=Path.Combine(temp,"CodexUsageTray-update-not-ours"); Directory.CreateDirectory(other); File.WriteAllText(Path.Combine(other,"SHA256SUMS.txt"),"keep");
+            Call("CleanupDownloads");
+            Assert(!File.Exists(Path.Combine(folder,"CodexUsageTray-Setup-1.2.3.exe")) && !File.Exists(Path.Combine(folder,"SHA256SUMS.txt")) && File.Exists(Path.Combine(folder,"other.txt")) && File.Exists(Path.Combine(other,"SHA256SUMS.txt")),"scoped cleanup");
+        } finally { Environment.SetEnvironmentVariable("TEMP",oldTemp); Environment.SetEnvironmentVariable("TMP",oldTmp); Directory.Delete(temp,true); }
     }
 }
 '@
