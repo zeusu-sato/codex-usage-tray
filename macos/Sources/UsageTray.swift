@@ -51,7 +51,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let usageTitle = NSTextField(wrappingLabelWithString: "残量を確認しています")
     let quotaDetail = NSTextField(wrappingLabelWithString: "")
     let checked = NSTextField(wrappingLabelWithString: "")
-    let forecastTitle = NSTextField(wrappingLabelWithString: "予測を確認しています")
+    let forecastTitle = NSTextField(wrappingLabelWithString: "予測: 未確認")
     let policyTitle = NSTextField(wrappingLabelWithString: "追加対策")
     let policyDetail = NSTextField(wrappingLabelWithString: "")
     let policySwitch = NSSwitch()
@@ -118,13 +118,13 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         quotaDetail.stringValue = credit?.text("summary") ?? state.quota.text("detail")
         checked.stringValue = state.quota.text("checked_label")
         forecastTitle.stringValue = !state.quota.isEmpty && state.remaining == nil
-            ? (state.quota.flag("blocked") && !state.quota.flag("stale") ? "予測: 利用制限があるため判定できません" : "予測: 未確認")
-            : state.forecast.text("title")
+            ? (state.quota.flag("blocked") && !state.quota.flag("stale") ? "予測: 利用制限中" : "予測: 未確認")
+            : (state.credit == nil && state.remaining == 0 ? "予測: 残量なし" : "予測: " + (state.forecast.text("title").isEmpty ? "未確認" : state.forecast.text("title")))
         forecastTitle.textColor = remaining.textColor
         let quotaNote = [state.quota.text("note"), state.quota.text("scope")].filter { !$0.isEmpty }.joined(separator: "\n")
         quotaDetail.toolTip = quotaNote.isEmpty ? nil : quotaNote
         usageTitle.toolTip = quotaDetail.toolTip
-        let forecastNote = state.forecast.text("detail")
+        let forecastNote = state.quota.flag("blocked") && !state.quota.flag("stale") ? "利用制限があるため予測を判定できません。" : (state.credit == nil && state.remaining == 0 ? "対象の利用枠の残量は0%です。" : state.forecast.text("detail"))
         forecastTitle.toolTip = forecastNote.isEmpty ? nil : forecastNote
         policyTitle.stringValue = state.policy.text("title").isEmpty ? "追加対策" : state.policy.text("title")
         policyDetail.stringValue = state.policy.text("detail")

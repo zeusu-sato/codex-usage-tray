@@ -15,7 +15,7 @@ final class FixtureBackend: BackendCalling {
         case "usage-check": return ["ok": true, "stale": false, "blocked": false, "remaining_percent": provider == "codex" ? 68 : 24,
             "title": "Usage 残り " + (provider == "codex" ? "68%" : "24%"), "detail": "Weekly: 残り" + (provider == "codex" ? "68%" : "24%") + " · リセット 09/15 15:29 JST\nテスト用データです。",
             "checked_label": "最終取得: Demo", "tooltip": provider + " Demo quota",
-            "forecast": ["status": provider == "codex" ? "comfortable" : "tight", "title": provider == "codex" ? "このペースなら余裕があります" : "リセットまでのペースに注意",
+            "forecast": ["status": provider == "codex" ? "comfortable" : "tight", "title": provider == "codex" ? "余裕あり" : "ペース注意",
                          "detail": "最近の利用ペースから計算した目安です。今後の利用量で変わります。"]]
         case "monitor-check": return ["ok": true, "alert": false, "mismatch": false, "signature": String(repeating: "a", count: 64),
             "title": "監視の基準と一致しています", "detail": "対象: VS Code", "baseline_label": "監視開始時: Demo", "current_label": "現在: Demo"]
@@ -122,8 +122,8 @@ func runSelfTests(output: URL) throws {
                          "title": "Credit 利用中", "summary": "残り61,794クレジット"]
     let savedQuota = state.quota
     let unavailableQuotas: [Reply] = [
-        ["ok": false, "forecast": ["title": "予測は未確認です"]],
-        ["ok": true, "stale": true, "forecast": ["title": "予測は未確認です"]],
+        ["ok": false, "forecast": ["title": "未確認"]],
+        ["ok": true, "stale": true, "forecast": ["title": "未確認"]],
         ["ok": false]
     ]
     for quota in unavailableQuotas {
@@ -131,16 +131,20 @@ func runSelfTests(output: URL) throws {
         try require(controller.forecastTitle.stringValue == "予測: 未確認", "Unavailable forecast matches Windows")
     }
     state.quota = ["ok": false, "blocked": true]; controller.render()
-    try require(controller.forecastTitle.stringValue == "予測: 利用制限があるため判定できません", "Blocked forecast matches Windows")
+    try require(controller.forecastTitle.stringValue == "予測: 利用制限中", "Blocked forecast matches Windows")
+    try require(controller.forecastTitle.toolTip?.contains("利用制限") == true, "Blocked forecast explanation is a tooltip")
+    state.quota = ["ok": true, "remaining_percent": 0]; controller.render()
+    try require(controller.forecastTitle.stringValue == "予測: 残量なし", "Zero forecast matches Windows")
+    try require(controller.forecastTitle.toolTip?.contains("0%") == true, "Zero forecast explanation is a tooltip")
     state.quota = ["ok": false, "blocked": true, "stale": true]; controller.render()
     try require(controller.forecastTitle.stringValue == "予測: 未確認", "Stale blocked forecast matches Windows")
     state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "tooltip": "Credit 利用中",
-                   "forecast": ["status": "unavailable", "title": "予測なし", "detail": "pending"]]
+                   "forecast": ["status": "unavailable", "title": "未確認", "detail": "pending"]]
     controller.render(); controller.renderIcon(state)
     try require(state.credit != nil && state.remaining == 0, "Credit parsed without changing remaining")
     try require(controller.remaining.stringValue == credit.text("title"), "Credit title displayed")
     try require(controller.quotaDetail.stringValue == credit.text("summary"), "Credit summary displayed")
-    try require(controller.forecastTitle.stringValue == "予測なし", "Backend credit forecast preserved")
+    try require(controller.forecastTitle.stringValue == "予測: 未確認", "Backend credit forecast preserved")
     try require(state.statusItem?.button?.toolTip?.contains("Credit 利用中") == true, "Credit tooltip displayed")
     try require(controller.remaining.textColor == TrayImage.creditColor, "Credit window color")
     for status in ["comfortable", "tight", "at_risk", "unavailable"] {

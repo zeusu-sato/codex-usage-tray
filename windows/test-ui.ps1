@@ -77,6 +77,8 @@ try {
         Refresh-Quota $window
         $expectedValue = if ($override -eq 'zero') { '0%' } else { '?' }
         $expectedColor = if ($override -eq 'zero') { $red } else { $gray }
+        if ($override -eq 'blocked' -and ($window.Controls['UsageForecast'].Text -ne '予測: 利用制限中' -or ([PublicUiTest]::Field($window, 'helpTooltip').GetToolTip($window.Controls['UsageForecast'])) -notlike '*利用制限*')) { throw 'Blocked forecast explanation missing' }
+        if ($override -eq 'zero' -and ($window.Controls['UsageForecast'].Text -ne '予測: 残量なし' -or ([PublicUiTest]::Field($window, 'helpTooltip').GetToolTip($window.Controls['UsageForecast'])) -notlike '*0%*')) { throw 'Zero forecast explanation missing' }
         if ($window.Controls['UsageRemaining'].Text -ne $expectedValue -or [PublicUiTest]::IconBackground($window) -ne $expectedColor -or $window.Controls['UsageForecast'].Text.Contains('comfortable')) { throw "Forecast failed the $override override" }
     }
     Write-Fixture $data @{ remaining = 4; forecast = (Forecast-Fixture 'comfortable') }
@@ -106,7 +108,7 @@ try {
         Write-Fixture $data @{remaining=0;credit=$credit}
         Refresh-Quota $window
         if ($window.Controls['UsageRemaining'].Text -ne $credit.title -or [PublicUiTest]::IconBackground($window) -ne $purple -or $window.Controls['UsageRemaining'].ForeColor.ToArgb() -ne $purple) { throw 'Credit title/color missing' }
-        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne 'Credit 利用中は予測を表示しません。') { throw 'Credit explanation missing' }
+        if (-not $window.Controls['UsageDetail'].Text.StartsWith($credit.summary) -or -not ([string][PublicUiTest]::Field($window,'usageTooltip')).Contains($credit.title) -or $window.Controls['UsageForecast'].Text -ne '予測: 未確認') { throw 'Credit explanation missing' }
     }
     Write-Output 'PASS: Credit title, summary, tooltip, forecast explanation, and distinct purple icon background.'
     $invalidCredits = @('bad', @{}, @{kind='unknown';tray_text='61k';amount_known=$true;title='Credit 利用中';summary='credit'})
