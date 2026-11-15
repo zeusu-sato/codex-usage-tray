@@ -7,9 +7,9 @@ $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{76F70EFD-4C9D
 if (Test-Path -LiteralPath $key) { throw 'Existing installation detected; refusing to run.' }
 $fixture = Join-Path $root ('build\installer smoke ' + [guid]::NewGuid().ToString('N'))
 $app = Join-Path $fixture $(if ($JapanesePath) { '日本語 テスト\CodexUsageTray' } else { 'installed app' })
-$menuLink = Join-Path ([Environment]::GetFolderPath('Programs')) 'Codex Usage Tray.lnk'
 $data = Join-Path $fixture 'test data 日本語'
 $profile = Join-Path $fixture 'profile'
+$menuLink = Join-Path $profile 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Codex Usage Tray.lnk'
 $outside = Join-Path $fixture 'outside app'
 $link = Join-Path $profile 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\CodexUsageTray-managed.lnk'
 $testShortcut = -not (Test-Path -LiteralPath $link)
