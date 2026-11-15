@@ -55,11 +55,9 @@ function Wait-App {
     throw 'Installed app did not start'
 }
 function Set-Shortcut([string] $Target, [string] $Description) {
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($link)
-    $shortcut.TargetPath = $Target
-    $shortcut.Description = $Description
-    $shortcut.Save()
+    $assembly = [Reflection.Assembly]::Load([IO.File]::ReadAllBytes((Join-Path $app 'CodexUsageTray.exe')))
+    $method = $assembly.GetType('StartupShortcuts', $true).GetMethod('Save')
+    [void]$method.Invoke($null, @($link, $Target, '', (Split-Path $Target -Parent), $Description))
 }
 function Uninstall-App {
     $process = Start-Isolated (Join-Path $app 'unins000.exe') "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$fixture\uninstall.log`""
