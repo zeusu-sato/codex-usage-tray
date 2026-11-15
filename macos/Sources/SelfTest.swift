@@ -121,6 +121,19 @@ func runSelfTests(output: URL) throws {
     let credit: Reply = ["kind": "codex_credits", "tray_text": "61k", "amount_known": true,
                          "title": "Credit 利用中", "summary": "残り61,794クレジット"]
     let savedQuota = state.quota
+    let unavailableQuotas: [Reply] = [
+        ["ok": false, "forecast": ["title": "予測は未確認です"]],
+        ["ok": true, "stale": true, "forecast": ["title": "予測は未確認です"]],
+        ["ok": false]
+    ]
+    for quota in unavailableQuotas {
+        state.quota = quota; controller.render()
+        try require(controller.forecastTitle.stringValue == "予測: 未確認", "Unavailable forecast matches Windows")
+    }
+    state.quota = ["ok": false, "blocked": true]; controller.render()
+    try require(controller.forecastTitle.stringValue == "予測: 利用制限があるため判定できません", "Blocked forecast matches Windows")
+    state.quota = ["ok": false, "blocked": true, "stale": true]; controller.render()
+    try require(controller.forecastTitle.stringValue == "予測: 未確認", "Stale blocked forecast matches Windows")
     state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "tooltip": "Credit 利用中",
                    "forecast": ["status": "unavailable", "title": "予測なし", "detail": "pending"]]
     controller.render(); controller.renderIcon(state)
