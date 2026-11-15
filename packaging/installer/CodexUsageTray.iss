@@ -51,6 +51,38 @@ Type: files; Name: "{app}\CodexUsageTray.ico"
 Type: dirifempty; Name: "{app}"
 
 [Code]
+type
+  TLinkFindData = record
+    Attributes: DWORD;
+    CreationTime, AccessTime, WriteTime: TFileTime;
+    SizeHigh, SizeLow, Reserved0, Reserved1: DWORD;
+    FileName: array[0..259] of Char;
+    AlternateFileName: array[0..13] of Char;
+  end;
+  IShellLinkW = interface(IUnknown)
+    '{000214F9-0000-0000-C000-000000000046}'
+    function GetPath(Buffer: String; Size: Integer; var FindData: TLinkFindData; Flags: DWORD): HRESULT;
+  end;
+  IPersist = interface(IUnknown)
+    '{0000010C-0000-0000-C000-000000000046}'
+    function GetClassID(var ClassID: TGUID): HRESULT;
+  end;
+  IPersistFile = interface(IPersist)
+    '{0000010B-0000-0000-C000-000000000046}'
+    function IsDirty: HRESULT;
+    function Load(FileName: String; Mode: Longint): HRESULT;
+  end;
+
+function ShortcutTarget(const FileName: String): String;
+var Obj: IUnknown; Data: TLinkFindData;
+begin
+  Obj := CreateComObject(StringToGuid('{00021401-0000-0000-C000-000000000046}'));
+  OleCheck(IPersistFile(Obj).Load(FileName, 0));
+  SetLength(Result, 32768);
+  OleCheck(IShellLinkW(Obj).GetPath(Result, 32768, Data, 4));
+  SetLength(Result, Pos(#0, Result) - 1);
+end;
+
 function ParameterValue(const Name: String): String;
 var I: Integer; S, Prefix: String;
 begin
@@ -134,7 +166,7 @@ begin
         Shell := CreateOleObject('WScript.Shell');
         Shortcut := Shell.CreateShortcut(Link);
         Description := Shortcut.Description;
-        Target := Shortcut.TargetPath;
+        Target := ShortcutTarget(Link);
         Expected := ExpandFileName(ExpandConstant('{app}\CodexUsageTray.exe'));
         Log('Startup shortcut description: [' + Description + ']');
         Log('Startup shortcut target: [' + Target + ']');

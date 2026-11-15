@@ -1,14 +1,16 @@
-﻿param([Parameter(Mandatory = $true)][string] $InstallerPath, [string] $ZipPath = '')
+﻿param([Parameter(Mandatory = $true)][string] $InstallerPath, [string] $ZipPath = '', [switch] $JapanesePath)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
 $installer = (Resolve-Path -LiteralPath $InstallerPath).Path
 if ($ZipPath) { $ZipPath = (Resolve-Path -LiteralPath $ZipPath).Path }
 $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{76F70EFD-4C9D-472F-A3B9-577C640E8424}_is1'
 if (Test-Path -LiteralPath $key) { throw 'Existing installation detected; refusing to run.' }
-$fixture = Join-Path $root ('build\installer smoke ' + [guid]::NewGuid().ToString('N'))
-$app = Join-Path $fixture 'installed app'
+$fixtureRoot = if ($JapanesePath) { [IO.Path]::GetTempPath() } else { Join-Path $root 'build' }
+$fixture = Join-Path $fixtureRoot ('installer smoke ' + [guid]::NewGuid().ToString('N'))
+$app = Join-Path $fixture $(if ($JapanesePath) { '日本語 テスト\CodexUsageTray' } else { 'installed app' })
 $data = Join-Path $fixture 'test data 日本語'
 $profile = Join-Path $fixture 'profile'
+$menuLink = Join-Path $profile 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Codex Usage Tray.lnk'
 $outside = Join-Path $fixture 'outside app'
 $link = Join-Path $profile 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\CodexUsageTray-managed.lnk'
 $testShortcut = -not (Test-Path -LiteralPath $link)
@@ -53,11 +55,9 @@ function Wait-App {
     throw 'Installed app did not start'
 }
 function Set-Shortcut([string] $Target, [string] $Description) {
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($link)
-    $shortcut.TargetPath = $Target
-    $shortcut.Description = $Description
-    $shortcut.Save()
+    $assembly = [Reflection.Assembly]::Load([IO.File]::ReadAllBytes((Join-Path $app 'CodexUsageTray.exe')))
+    $method = $assembly.GetType('StartupShortcuts', $true).GetMethod('Save')
+    [void]$method.Invoke($null, [string[]]@($link, $Target, '', [IO.Path]::GetDirectoryName($Target), $Description))
 }
 function Uninstall-App {
     $process = Start-Isolated (Join-Path $app 'unins000.exe') "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=`"$fixture\uninstall.log`""
@@ -71,11 +71,14 @@ function Uninstall-App {
     Get-Content -LiteralPath "$fixture\uninstall.log" | Where-Object { $_ -match 'Startup shortcut|Could not inspect startup shortcut' }
     if (@(Get-AppProcesses $app).Count) { throw 'Installed app process survived uninstall' }
     if (Test-Path -LiteralPath $key) { throw 'Uninstall registry key remains' }
+    if (Test-Path -LiteralPath $menuLink) { throw 'Start menu shortcut remains' }
+    if (Test-Path -LiteralPath (Join-Path $app 'CodexUsageTray.exe')) { throw 'Installed application file remains' }
     if (-not (Test-Path -LiteralPath (Join-Path $data 'sentinel.txt'))) { throw 'Data deleted' }
 }
 try {
     Invoke-Setup
     if (-not (Test-Path -LiteralPath (Join-Path $app 'backend\CodexUsageBackend.exe')) -or -not (Test-Path -LiteralPath $key)) { throw 'Installation incomplete' }
+    if (-not (Test-Path -LiteralPath $menuLink)) { throw 'Start menu shortcut missing' }
     $first = Wait-App
     $cmdline = (Get-CimInstance Win32_Process -Filter "ProcessId=$($first.Id)").CommandLine
     if (-not $cmdline.Contains($data)) { throw 'App did not receive data directory' }
