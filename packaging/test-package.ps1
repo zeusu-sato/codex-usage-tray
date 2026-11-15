@@ -137,7 +137,7 @@ $launchCount = @(Get-Content -LiteralPath $claudeLaunches).Count
 Write-FixtureIndex '2.1.262'
 $unsupported = Invoke-FixtureBackend -Command 'usage-check' -Provider 'claude' -ClaudeVersion '2.1.262'
 $afterLaunches = @(Get-Content -LiteralPath $claudeLaunches)
-if ($unsupported.ok -or $null -ne $unsupported.remaining_percent -or $unsupported.detail -notlike '*古い版*') { throw 'Old Claude version was not explained as unavailable' }
+if ($unsupported.ok -or $null -ne $unsupported.remaining_percent -or $unsupported.note -notlike '*古い版*') { throw 'Old Claude version was not explained as unavailable' }
 if ($afterLaunches.Count -ne $launchCount + 1 -or $afterLaunches[-1] -ne 'version' -or
     ((Get-Content -LiteralPath $claudeCapture) -join ',') -ne ($claudeMethods -join ',')) { throw 'Unsupported Claude version started a metadata process' }
 if ((Get-FileHash -LiteralPath (Join-Path $data 'quota-state.json') -Algorithm SHA256).Hash -ne $codexStateHash) { throw 'Claude checks changed Codex state' }

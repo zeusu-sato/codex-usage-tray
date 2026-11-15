@@ -1,3 +1,17 @@
+# v0.5.4 — Shorter failure display
+
+UI release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.4). Early beta with a Japanese UI.
+
+- When the current quota cannot be read, the window shows only the heading **Usage 未確認**, the last retrieved quota, and the time it was retrieved. The reason and the five-minute recheck are a tooltip on the heading and the quota lines. This applies to Codex and Claude Code on Windows and Mac.
+- When Claude Code returns no usage limits, the tooltip says that Claude Code could not get the quota from Claude's servers and that this may be a temporary problem on Claude's side. The failures seen on November 15 were of this kind: Claude Code itself could not retrieve its usage. They were not caused by how the app reads the quota or by the v0.5.3 changes.
+- No new API, method, or token read is added.
+
+**残量を確認できないときの表示を短くしました。** 画面には見出し「Usage 未確認」と、前回取得した残量、取得時刻だけを表示します。理由と5分ごとの再確認は、見出しと残量の行のツールチップに移しました。WindowsとMac、CodexとClaude Codeの両方が対象です。
+
+Claude Codeが利用枠を返さなかったときは、Claude CodeがClaudeのサーバーから利用枠を取得できず、Claude側の一時的な問題の可能性があることをツールチップで案内します。11月15日に起きた取得の失敗はこの種類で、Claude Code自身が利用状況を取得できなかったものです。アプリの取得方法やv0.5.3の変更が原因ではありません。新しいAPI・メソッド・トークンの読み出しはありません。
+
+---
+
 # v0.5.3 — Shorter window text
 
 UI release for Windows x64 and macOS 13+ (Apple Silicon / Intel). [Windows and Mac downloads](https://github.com/zeusu-sato/codex-usage-tray/releases/tag/v0.5.3). Early beta with a Japanese UI.

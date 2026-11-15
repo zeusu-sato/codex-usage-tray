@@ -185,6 +185,11 @@ def label(window):
     return str(duration) + "分枠"
 
 
+def stale_note(has_rows, reason="接続とCodexのログイン状態をご確認ください。"):
+    return "\n".join((["表示は前回取得した残量です。"] if has_rows else [])
+                     + [reason, "5分ごとに再確認します。"])
+
+
 def reply(cache, now):
     snapshot = cache.get("snapshot")
     cached_credit = snapshot.get("credit") if isinstance(snapshot, dict) and cache.get("schema_version") != 1 else None
@@ -227,9 +232,7 @@ def reply(cache, now):
     if not stale and cached_credit is not None:
         credit, credit_summary = credit_display(cached_credit)
     if stale:
-        title = "Usageを確認できません"
-        details.insert(0, "現在値は未確認です。" + ("以下は前回取得した残量です。" if rows else ""))
-        details.append("接続・Codexのログイン状態をご確認ください。5分ごとに再確認します。")
+        title = "Usage 未確認"
         tooltip = "Codex Usage 未確認" + (" / 前回 " + fetched.astimezone(JST).strftime("%m/%d %H:%M") if fetched else "")
     elif credit is not None:
         title = credit["title"]
@@ -243,7 +246,7 @@ def reply(cache, now):
         title = f"Usage 残り {remaining:g}%"
         chosen = min(rows, key=lambda row: row["remaining_percent"])
         tooltip = f'Codex {chosen["label"]} 残り{remaining:g}% / ' + chosen["resets_label"] + " / " + fetched.astimezone(JST).strftime("%H:%M取得")
-    if len(rows) > 1 and credit is None:
+    if not stale and len(rows) > 1 and credit is None:
         details.append("トレイには、このCodex枠のうち最も少ない残量を表示します。")
     forecast = (usage_forecast.pending("unavailable", "現在の残量を確認できるまで予測を保留します。")
                 if stale or blocked or credit is not None else usage_forecast.forecast(cache.get("history"), snapshot["windows"], now.timestamp(), label))
@@ -255,7 +258,7 @@ def reply(cache, now):
         affected = "(" + forecast["window_label"] + ")" if forecast["window_label"] else ""
         tooltip = short + affected + " / " + tooltip
     return {"ok": not stale, "stale": stale, "title": title, "detail": "\n".join(details),
+            "note": stale_note(bool(rows)) if stale else "",
             "checked_label": checked, "tooltip": tooltip[:63], "remaining_percent": None if stale or blocked else remaining,
             "windows": rows, "blocked": blocked, "forecast": forecast, "credit": credit}
-
 

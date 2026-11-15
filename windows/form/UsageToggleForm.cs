@@ -77,7 +77,6 @@ internal sealed partial class UsageToggleForm : Form
     private string usageTooltip = "Codex Usage: 残量を確認しています";
     private string monitorTooltipSuffix = "";
     private string lastUsageDetail;
-    private string lastUsageValue;
     private string currentVersionSignature;
     private string promptedSignature;
     private ReviewPromptForm reviewPrompt;
