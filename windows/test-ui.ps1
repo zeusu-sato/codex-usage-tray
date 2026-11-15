@@ -36,6 +36,9 @@ try {
     }
     Write-Fixture $data @{ remaining = 98; stale = $true }
     Refresh-Quota $window
+    $staleTip = [PublicUiTest]::Field($window, 'helpTooltip')
+    if ($window.Controls['UsageForecast'].Text -ne '予測: 未確認' -or $staleTip.GetToolTip($window.Controls['UsageTitle']) -ne $staleTip.GetToolTip($window.Controls['UsageDetail']) -or $staleTip.GetToolTip($window.Controls['UsageDetail']) -notlike '*5分ごとに再確認します。*') { throw 'Stale quota tooltip or forecast missing' }
+    Refresh-Quota $window
     if ($window.Controls['UsageRemaining'].Text -ne '?' -or -not $window.Controls['UsageDetail'].Text.Contains('前回')) { throw 'Stale quota displayed as current' }
     Write-Fixture $data @{ remaining = $null }
     Refresh-Quota $window
@@ -119,7 +122,8 @@ try {
     foreach ($bad in $invalidCredits) {
         Write-Fixture $data @{remaining=0;credit=$bad}
         Refresh-Quota $window
-        if ($window.Controls['UsageRemaining'].Text -ne '?' -or -not $window.Controls['UsageDetail'].Text.Contains('使用枠の応答を読み取れませんでした。')) { throw 'Malformed credit was accepted' }
+        $errorTip = [PublicUiTest]::Field($window, 'helpTooltip').GetToolTip($window.Controls['UsageDetail'])
+        if ($window.Controls['UsageRemaining'].Text -ne '?' -or -not $errorTip.Contains('使用枠の応答を読み取れませんでした。') -or -not $errorTip.Contains('5分ごとに再確認します。')) { throw 'Malformed credit was accepted or its error tooltip is missing' }
     }
     Write-Fixture $data @{remaining=98;credit=$null}
     Refresh-Quota $window

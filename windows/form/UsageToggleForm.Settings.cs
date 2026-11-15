@@ -86,13 +86,12 @@ internal sealed partial class UsageToggleForm
             if (IsDisposed || exiting) return false;
             if (!RequireBoolean(reply, "ok")) throw new InvalidOperationException("Codexの選択を保存できませんでした。");
             promptedSignature = null;
-            lastUsageValue = null;
             lastUsageDetail = null;
             usageValue.Text = "?";
             usageTitle.Text = "選択したCodexの残量を確認しています…";
             usageDetail.Text = "";
             usageValue.ForeColor = UsageColor(null);
-            usageForecast.Text = "予測: 現在の残量は未確認です";
+            usageForecast.Text = "予測: 未確認";
             usageForecast.ForeColor = UsageColor(null);
             usageChecked.Text = "";
             usageTooltip = "Codex Usage: 選択した環境を確認中";

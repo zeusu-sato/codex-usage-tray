@@ -68,6 +68,10 @@ func runSelfTests(output: URL) throws {
     try require(controller.clientButton.toolTip?.contains("監視の基準と一致しています") == true, "Monitor tooltip displayed")
     try require(controller.policyDetail.toolTip == "Policy tooltip", "Policy tooltip displayed")
     try require(controller.forecastTitle.toolTip == "最近の利用ペースから計算した目安です。今後の利用量で変わります。", "Forecast explanation is a tooltip")
+    controller.states[0].quota["note"] = "Note"
+    controller.states[0].quota["scope"] = "Scope"
+    controller.render()
+    try require(controller.quotaDetail.toolTip == "Note\nScope" && controller.usageTitle.toolTip == "Note\nScope", "Quota note and scope appear on both tooltips")
     let changed = controller.states[0]
     changed.monitor = ["ok": true, "mismatch": true, "policy_stopped": false, "title": "Codexの変更を検知しました", "detail": "旧対策は停止します。",
                        "baseline_label": "監視開始時: A", "current_label": "現在: B", "checked_label": "最終確認: C"]

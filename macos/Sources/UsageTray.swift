@@ -119,8 +119,9 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         checked.stringValue = state.quota.text("checked_label")
         forecastTitle.stringValue = state.forecast.text("title")
         forecastTitle.textColor = remaining.textColor
-        let scope = state.quota.text("scope")
-        quotaDetail.toolTip = scope.isEmpty ? nil : scope
+        let quotaNote = [state.quota.text("note"), state.quota.text("scope")].filter { !$0.isEmpty }.joined(separator: "\n")
+        quotaDetail.toolTip = quotaNote.isEmpty ? nil : quotaNote
+        usageTitle.toolTip = quotaDetail.toolTip
         let forecastNote = state.forecast.text("detail")
         forecastTitle.toolTip = forecastNote.isEmpty ? nil : forecastNote
         policyTitle.stringValue = state.policy.text("title").isEmpty ? "追加対策" : state.policy.text("title")
@@ -162,7 +163,7 @@ final class UsageController: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 if let version = version { state.monitor = version }
                 if let policy = policy { state.policy = policy }
                 if let failure = failure {
-                    if usage { state.quota = ["ok": false, "title": "現在の残量は未確認です", "detail": failure] }
+                    if usage { state.quota = ["ok": false, "title": "Usage 未確認", "detail": "", "note": failure + "\n5分ごとに再確認します。"] }
                     if monitor { state.monitor = ["ok": false, "title": "バージョンは未確認です", "detail": failure] }
                     state.policy = ["enabled": false, "can_enable": false, "title": "状態を確認できません", "detail": failure]
                     state.feedback = failure
