@@ -85,22 +85,22 @@ internal sealed class UpdateCheck
     {
         release=null;error=null;
         if(ParseVersion(current)==null || Environment.GetEnvironmentVariable("CODEX_USAGE_TRAY_UPDATE_CHECK")=="0")return true;
-        try { release=SelectRelease(fetch(ApiUrl),current); return true; } catch(Exception ex) { Trace.TraceError(ex.ToString()); error="????????10??????????????????????"; return false; }
+        try { release=SelectRelease(fetch(ApiUrl),current); return true; } catch(Exception ex) { Trace.TraceError(ex.ToString()); error="更新確認に失敗しました。10分後にウィンドウを開くと再確認します。"; return false; }
     }
     internal bool Install(UpdateRelease release,out string error)
     {
         error=null; string folder=Path.Combine(Path.GetTempPath(),"CodexUsageTray-update-"+Guid.NewGuid().ToString("N"));
-        string reason="????????10?????????????????????????";
+        string reason="更新の準備に失敗しました。再試行してください。";
         try {
             if(release==null || ParseVersion(release.Version)==null || !ValidUrl(release.InstallerUrl) || !ValidUrl(release.SumsUrl)) throw new InvalidOperationException("Invalid update");
             Directory.CreateDirectory(folder); string name="CodexUsageTray-Setup-"+release.Version+".exe", installer=Path.Combine(folder,name), sums=Path.Combine(folder,"SHA256SUMS.txt");
-            reason="?????????????????????????";
+            reason="ダウンロードに失敗しました。再試行してください。";
             download(release.InstallerUrl,installer); download(release.SumsUrl,sums);
-            reason="?????????????????????????";
+            reason="ファイルの検証に失敗しました。再試行してください。";
             if(new FileInfo(installer).Length>300L*1024*1024 || new FileInfo(sums).Length>4*1024*1024)throw new InvalidDataException("Download too large");
             byte[] hash; using(var sha=SHA256.Create()) using(var stream=File.OpenRead(installer)) hash=sha.ComputeHash(stream);
             if(!HashMatches(File.ReadAllText(sums),name,hash))throw new InvalidDataException("SHA256 mismatch");
-            reason="????????10?????????????????????????";
+            reason="インストーラーの起動に失敗しました。再試行してください。";
             launch(installer); return true;
         } catch(Exception ex) { Trace.TraceError(ex.ToString()); error=reason; try { if(Directory.Exists(folder))Directory.Delete(folder,true); } catch {} return false; }
     }
@@ -127,12 +127,17 @@ internal sealed class UpdateCheck
         if(request.Proxy!=null) request.Proxy.Credentials=null;
         return request;
     }
+    internal static bool IsAllowedRedirect(Uri uri)
+    {
+        return uri != null && uri.IsAbsoluteUri && uri.Scheme == Uri.UriSchemeHttps && uri.Port == 443 && uri.UserInfo.Length == 0 &&
+            (uri.Host == "github.com" || uri.Host == "api.github.com" || uri.Host == "objects.githubusercontent.com" || uri.Host == "release-assets.githubusercontent.com");
+    }
     static void CopyResponse(string url,Stream output,long limit)
     {
         for(int redirects=0;redirects<10;redirects++) {
             var request=CreateRequest(url);
             using(var response=(HttpWebResponse)request.GetResponse()) {
-                if((int)response.StatusCode>=300 && (int)response.StatusCode<400) { Uri next=new Uri(new Uri(url),response.Headers["Location"]); if(next.Scheme!=Uri.UriSchemeHttps)throw new InvalidDataException("Insecure redirect"); url=next.AbsoluteUri; continue; }
+                if((int)response.StatusCode>=300 && (int)response.StatusCode<400) { Uri next=new Uri(new Uri(url),response.Headers["Location"]); if(!IsAllowedRedirect(next))throw new InvalidDataException("Disallowed redirect"); url=next.AbsoluteUri; continue; }
                 if(response.ContentLength>limit)throw new InvalidDataException("Response too large");
                 using(var input=response.GetResponseStream()) { byte[] buffer=new byte[32768]; long total=0; int n; while((n=input.Read(buffer,0,buffer.Length))>0) { total+=n;if(total>limit)throw new InvalidDataException("Response too large");output.Write(buffer,0,n); } } return;
             }
