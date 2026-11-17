@@ -9,9 +9,29 @@ import client_registry
 import model_catalog
 import policy_manager
 import reviews
+from review_support.prompt import build_prompt
 from storage import read_json, write_json
 
 class ReviewWorkflowTests(WorkflowTestCase):
+    def test_prompt_omits_paths_and_preserves_full_identity_fingerprint(self):
+        reference = {**self.identity, "provider": "codex", "client_id": "vscode",
+                     "binary_path": r"C:\Users\AlicePrivate\codex.exe",
+                     "extra": {"nested": ["/Users/BobPrivate/codex"]}}
+        current = {**self.identity, "provider": "claude", "client_id": "cli-path",
+                   "binary_path": "/Users/BobPrivate/claude",
+                   "label": r"C:\Users\AlicePrivate\extension"}
+        prompt = build_prompt(reference, current)
+        for secret in ("AlicePrivate", "BobPrivate", "binary_path", "nested"):
+            self.assertNotIn(secret, prompt)
+        for value in ("1.2.3", "4.5.6", "vscode", "cli-path", "claude", client_registry.fingerprint(current)):
+            self.assertIn(value, prompt)
+        current["cli_version"] = {"nested": "/Users/BobPrivate/secret"}
+        current["extension_version"] = r"C:\Users\AlicePrivate\secret"
+        prompt = build_prompt(reference, current)
+        self.assertNotIn("AlicePrivate", prompt)
+        self.assertNotIn("BobPrivate", prompt)
+        self.assertIn(client_registry.fingerprint(current), prompt)
+
     def test_interrupted_review_reaps_child_and_never_accepts_results(self):
         signature, request = self.prepare()
         child = Mock()

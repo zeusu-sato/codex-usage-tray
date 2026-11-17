@@ -90,7 +90,7 @@ internal sealed class UsageTrayHost : Form
     void ExitHost() { exiting=true; Close(); }
     void ShowUpdate(string error, bool checkError)
     {
-        string text=availableUpdate==null?null:(error!=null && !checkError?"????????":updateBusy?"ダウンロード中…":"v"+availableUpdate.Version+" にアップデート");
+        string text=availableUpdate==null?null:(error!=null && !checkError?"再試行":updateBusy?"ダウンロード中…":"v"+availableUpdate.Version+" にアップデート");
         foreach(var view in views) view.SetUpdate(text,!updateBusy,StartUpdate);
         updateLink.Text=text ?? ""; updateLink.Visible=text!=null; updateLink.Enabled=!updateBusy;
         updateError.Visible=error!=null; updateError.Text=checkError?"アップデートを確認できません":"アップデートできません";
