@@ -11,7 +11,7 @@ Published on 2026-09-09: [v0.3.0 beta](https://github.com/zeusu-sato/codex-usage
 | [Qiita](https://qiita.com/DoroDango/items/435ec033e0382c0ec52a) | Existing article title, body, tags, and demo updated | Reloaded article checked; anonymous HTTP 200 exposes the revised body. The new image URL and alt text are present, and the Qiita image proxy returns a PNG. Automatic X sharing and stock-user change notifications were off. |
 | X | Revised copy and image prepared; still unpublished | The composer/media editor remained blank after reload, so browser draft persistence is unverified. The exact text, image, and alt text are preserved in this directory. No new posting attempt was made. |
 
-The revised posts describe Claude support as experimental and limited to Claude Code 2.1.263. LinkedIn, Reddit, and Qiita distinguish routine monitoring without inference from a user-requested AI review that consumes Codex allowance. [published.json](published.json) records the current revision and preserves the original publication evidence below.
+The revised posts describe Claude support as experimental and limited to Claude Code 2.1.263. LinkedIn, Reddit, and Qiita distinguish routine monitoring without inference from a user-requested AI review that consumes Codex allowance.
 
 ## v0.2.0 publication history
 
