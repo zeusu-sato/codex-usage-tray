@@ -63,7 +63,7 @@ func runSelfTests(output: URL) throws {
     try require(controller.states.enumerated().allSatisfy { $0.element.statusItem?.button?.tag == $0.offset }, "Provider tray targets")
     controller.refreshAll(usage: true, monitor: true)
     try spinUntil { controller.states.allSatisfy { !$0.busy && !$0.quota.isEmpty } }
-    try require(controller.remaining.stringValue == "68%", "Codex remaining")
+    try require(controller.remaining.stringValue == "68%" && controller.usageTitle.isHidden, "Codex remaining without duplicate title")
     try require(controller.monitorDetail.stringValue.isEmpty && controller.monitorDetail.isHidden, "Normal monitor text hidden")
     try require(controller.clientButton.toolTip?.contains("監視の基準と一致しています") == true, "Monitor tooltip displayed")
     try require(controller.policyDetail.toolTip == "Policy tooltip", "Policy tooltip displayed")
@@ -85,7 +85,7 @@ func runSelfTests(output: URL) throws {
                        "title": "監視の基準と一致しています", "detail": "対象: VS Code", "baseline_label": "監視開始時: Demo", "current_label": "現在: Demo"]
     controller.render()
     controller.selector.selectedSegment = 1; controller.providerChanged(controller.selector)
-    try require(controller.remaining.stringValue == "24%", "Claude selection")
+    try require(controller.remaining.stringValue == "24%" && controller.usageTitle.isHidden, "Claude selection without duplicate title")
     controller.policySwitch.state = .on; controller.togglePolicy()
     try spinUntil { !controller.states[1].busy }
     try require(controller.states[1].policy.flag("enabled"), "Claude toggle enabled")
@@ -136,7 +136,8 @@ func runSelfTests(output: URL) throws {
     state.quota = ["ok": true, "remaining_percent": 0]; controller.render()
     try require(controller.forecastTitle.stringValue == "予測: 残量なし", "Zero forecast matches Windows")
     try require(controller.forecastTitle.toolTip?.contains("0%") == true, "Zero forecast explanation is a tooltip")
-    state.quota = ["ok": false, "blocked": true, "stale": true]; controller.render()
+    state.quota = ["ok": false, "blocked": true, "stale": true, "title": "Usage 未確認"]; controller.render()
+    try require(!controller.usageTitle.isHidden && controller.usageTitle.stringValue == "Usage 未確認", "Unavailable title displayed")
     try require(controller.forecastTitle.stringValue == "予測: 未確認", "Stale blocked forecast matches Windows")
     state.quota = ["ok": true, "remaining_percent": 0, "credit": credit, "detail": credit.text("summary"), "tooltip": "Credit 利用中",
                    "forecast": ["status": "unavailable", "title": "未確認", "detail": "pending"]]

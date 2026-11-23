@@ -31,11 +31,13 @@ try {
     foreach ($percent in @(98, 21, 4, 0, 100)) {
         Write-Fixture $data @{ remaining = $percent }
         Refresh-Quota $window
+        if ($window.Controls['UsageTitle'].Text -ne '') { throw "Normal quota title duplicated at $percent%" }
         if ($window.Controls['UsageRemaining'].Text -ne "$percent%") { throw "Wrong quota at $percent%" }
         [PublicUiTest]::SaveIcon($window, (Join-Path $testRoot "icon-$percent.png"))
     }
     Write-Fixture $data @{ remaining = 98; stale = $true }
     Refresh-Quota $window
+    if ($window.Controls['UsageTitle'].Text -ne 'Usage 未確認') { throw 'Stale title missing' }
     $staleTip = [PublicUiTest]::Field($window, 'helpTooltip')
     if ($window.Controls['UsageForecast'].Text -ne '予測: 未確認' -or $staleTip.GetToolTip($window.Controls['UsageTitle']) -ne $staleTip.GetToolTip($window.Controls['UsageDetail']) -or $staleTip.GetToolTip($window.Controls['UsageDetail']) -notlike '*5分ごとに再確認します。*') { throw 'Stale quota tooltip or forecast missing' }
     Refresh-Quota $window
@@ -77,6 +79,7 @@ try {
         Refresh-Quota $window
         $expectedValue = if ($override -eq 'zero') { '0%' } else { '?' }
         $expectedColor = if ($override -eq 'zero') { $red } else { $gray }
+        if ($override -eq 'blocked' -and $window.Controls['UsageTitle'].Text -ne '利用制限が通知されています') { throw 'Blocked title missing' }
         if ($override -eq 'blocked' -and ($window.Controls['UsageForecast'].Text -ne '予測: 利用制限中' -or ([PublicUiTest]::Field($window, 'helpTooltip').GetToolTip($window.Controls['UsageForecast'])) -notlike '*利用制限*')) { throw 'Blocked forecast explanation missing' }
         if ($override -eq 'zero' -and ($window.Controls['UsageForecast'].Text -ne '予測: 残量なし' -or ([PublicUiTest]::Field($window, 'helpTooltip').GetToolTip($window.Controls['UsageForecast'])) -notlike '*0%*')) { throw 'Zero forecast explanation missing' }
         if ($window.Controls['UsageRemaining'].Text -ne $expectedValue -or [PublicUiTest]::IconBackground($window) -ne $expectedColor -or $window.Controls['UsageForecast'].Text.Contains('comfortable')) { throw "Forecast failed the $override override" }
