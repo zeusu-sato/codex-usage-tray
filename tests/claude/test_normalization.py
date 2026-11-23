@@ -187,7 +187,7 @@ class ClaudeModelWindowsTest(unittest.TestCase):
         data["rate_limits"]["seven_day"]["utilization"] = 100
         result = claude.normalize(claude._usage_fields(data, {}))
         from quota_support.codex_reply import credit_display
-        self.assertEqual(credit_display(result["credit"])[0]["summary"], "\u4e0a\u9650\u307e\u3067\u6b8b\u308a $0.00")
+        self.assertEqual(credit_display(result["credit"])[0]["summary"], "上限まで残り $0.00")
 
     def test_null_weekly_is_temporarily_unavailable(self):
         data = {"rate_limits_available": True, "rate_limits": {"seven_day": {"utilization": None, "resets_at": None}}}
@@ -204,10 +204,10 @@ class ClaudeModelWindowsTest(unittest.TestCase):
         snapshot = claude.normalize(claude._usage_fields(data, {}))
         cache = {"schema_version": 2, "snapshot": snapshot, "fetched_at": now.isoformat(), "last_ok": True}
         reply = claude_quota.response(cache, now)
-        self.assertEqual(reply["title"], "Usage \u6b8b\u308a 45%")
-        self.assertIn("Fable: \u6b8b\u308a 40%  \u00b7  \u30ea\u30bb\u30c3\u30c8 11/26 02:00 JST", reply["detail"])
-        self.assertIn("\u30e2\u30c7\u30eb\u5225\u306e\u67a0\u306f\u4e00\u89a7", reply["scope"])
+        self.assertEqual(reply["title"], "Usage 残り 45%")
+        self.assertIn("Fable: 残り 40%  ·  リセット 11/26 02:00 JST", reply["detail"])
+        self.assertIn("モデル別の枠は一覧", reply["scope"])
         snapshot["model_windows"][0]["name"] = "bad\nname"
         reply = claude_quota.response(cache, now)
         self.assertNotIn("model_windows", snapshot)
-        self.assertEqual(reply["title"], "Usage \u6b8b\u308a 45%")
+        self.assertEqual(reply["title"], "Usage 残り 45%")

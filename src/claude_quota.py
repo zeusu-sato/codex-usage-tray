@@ -64,12 +64,12 @@ def response(cache, now):
     if models:
         lines = result["detail"].splitlines()
         index = max((i for i, line in enumerate(lines) if any(
-            line.startswith(row["label"] + ": \u6b8b\u308a ") for row in result["windows"])), default=-1) + 1
+            line.startswith(row["label"] + ": 残り ") for row in result["windows"])), default=-1) + 1
         for model in models:
             reset = model["resets_at"]
-            reset_label = ("\u30ea\u30bb\u30c3\u30c8 " + datetime.fromtimestamp(reset, JST).strftime("%m/%d %H:%M JST")
-                           if reset is not None else "\u30ea\u30bb\u30c3\u30c8\u6642\u523b: \u672a\u63d0\u4f9b")
-            lines.insert(index, f'{model["name"]}: \u6b8b\u308a {model["remaining_percent"]:g}%  \u00b7  {reset_label}')
+            reset_label = ("リセット " + datetime.fromtimestamp(reset, JST).strftime("%m/%d %H:%M JST")
+                           if reset is not None else "リセット時刻: 未提供")
+            lines.insert(index, f'{model["name"]}: 残り {model["remaining_percent"]:g}%  ·  {reset_label}')
             index += 1
         result["detail"] = "\n".join(lines)
     for key in ("title", "detail", "tooltip", "note"):
@@ -80,8 +80,8 @@ def response(cache, now):
     else:
         result["scope"] = "対象: 全体の5時間枠・週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
     if models:
-        target = "\u5168\u4f53\u306e\u9031\u9593\u67a0" if windows and not any(w["kind"] == "primary" for w in windows) else "\u5168\u4f53\u306e5\u6642\u9593\u67a0\u30fb\u9031\u9593\u67a0"
-        result["scope"] = "\u5bfe\u8c61: " + target + "\u3002\u30e2\u30c7\u30eb\u5225\u306e\u67a0\u306f\u4e00\u89a7\u3060\u3051\u306b\u8868\u793a\u3057\u307e\u3059\u3002\u8ffd\u52a0\u5229\u7528\u306f Usage \u3092\u4f7f\u3044\u5207\u3063\u305f\u3068\u304d\u3060\u3051\u8868\u793a\u3057\u307e\u3059\u3002"
+        target = "全体の週間枠" if windows and not any(w["kind"] == "primary" for w in windows) else "全体の5時間枠・週間枠"
+        result["scope"] = "対象: " + target + "。モデル別の枠は一覧だけに表示します。追加利用は Usage を使い切ったときだけ表示します。"
     reasons = {
         "unsupported_version": "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。選択したクライアントをご確認ください。",
         "usage_temporarily_unavailable": "Claude Code がClaudeのサーバーから利用枠を取得できませんでした。Claude側の一時的な問題の可能性があります。",
