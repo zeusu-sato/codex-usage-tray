@@ -1,6 +1,6 @@
 param(
     [string] $Python = 'python',
-    [string] $Version = '0.5.9',
+    [string] $Version = '0.5.10',
     [string] $OutputDirectory = '',
     [switch] $SkipDependencyInstall,
     [string] $InnoSetupCompiler = '',
