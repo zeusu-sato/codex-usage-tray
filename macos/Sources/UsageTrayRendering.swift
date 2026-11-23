@@ -15,7 +15,7 @@ extension UsageController {
         let credit = state.remaining == nil ? nil : state.credit
         remaining.stringValue = credit?.text("title") ?? (state.remaining.map { String(Int(floor($0))) + "%" } ?? "?")
         remaining.textColor = TrayImage.color(state.remaining, state.forecast.text("status"), credit: credit)
-        usageTitle.isHidden = credit != nil
+        usageTitle.isHidden = credit != nil || (state.remaining != nil && state.quota.text("title").hasPrefix("Usage 残り "))
         usageTitle.stringValue = state.quota.text("title").isEmpty ? state.name + "の残量を確認しています" : state.quota.text("title")
         quotaDetail.stringValue = state.quota.text("detail")
         checked.stringValue = state.quota.text("checked_label")
