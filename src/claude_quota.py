@@ -9,7 +9,8 @@ import claude_adapter
 import client_registry
 import quota_monitor as quota
 import usage_forecast
-from quota_support.codex_reply import stale_note
+from quota_support.codex_reply import stale_note, reset_time, number, JST
+import unicodedata
 from storage import read_json, write_json
 
 
@@ -42,7 +43,35 @@ def align_reset_history(history, windows, timestamp):
 
 
 def response(cache, now):
+    snapshot = cache.get("snapshot")
+    models = snapshot.get("model_windows") if isinstance(snapshot, dict) else None
+    try:
+        if models is not None:
+            if not isinstance(models, list) or len(models) > 4:
+                raise ValueError()
+            for model in models:
+                name = model["name"]
+                if (set(model) != {"name", "remaining_percent", "resets_at"} or not isinstance(name, str)
+                        or not 1 <= len(name) <= 40 or name != name.strip()
+                        or any(unicodedata.category(c) == "Cc" for c in name)
+                        or not 0 <= number(model["remaining_percent"]) <= 100):
+                    raise ValueError()
+                reset_time(model["resets_at"])
+    except (ValueError, TypeError, KeyError, OverflowError, quota.QuotaError, OSError):
+        snapshot.pop("model_windows", None)
+        models = None
     result = quota.reply(cache, now)
+    if models:
+        lines = result["detail"].splitlines()
+        index = max((i for i, line in enumerate(lines) if any(
+            line.startswith(row["label"] + ": \u6b8b\u308a ") for row in result["windows"])), default=-1) + 1
+        for model in models:
+            reset = model["resets_at"]
+            reset_label = ("\u30ea\u30bb\u30c3\u30c8 " + datetime.fromtimestamp(reset, JST).strftime("%m/%d %H:%M JST")
+                           if reset is not None else "\u30ea\u30bb\u30c3\u30c8\u6642\u523b: \u672a\u63d0\u4f9b")
+            lines.insert(index, f'{model["name"]}: \u6b8b\u308a {model["remaining_percent"]:g}%  \u00b7  {reset_label}')
+            index += 1
+        result["detail"] = "\n".join(lines)
     for key in ("title", "detail", "tooltip", "note"):
         result[key] = result[key].replace("Codex", "Claude Code")
     windows = (cache.get("snapshot") or {}).get("windows", [])
@@ -50,6 +79,9 @@ def response(cache, now):
         result["scope"] = "対象: 全体の週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
     else:
         result["scope"] = "対象: 全体の5時間枠・週間枠。モデル別の制限は含みません。追加利用は Usage を使い切ったときだけ表示します。"
+    if models:
+        target = "\u5168\u4f53\u306e\u9031\u9593\u67a0" if windows and not any(w["kind"] == "primary" for w in windows) else "\u5168\u4f53\u306e5\u6642\u9593\u67a0\u30fb\u9031\u9593\u67a0"
+        result["scope"] = "\u5bfe\u8c61: " + target + "\u3002\u30e2\u30c7\u30eb\u5225\u306e\u67a0\u306f\u4e00\u89a7\u3060\u3051\u306b\u8868\u793a\u3057\u307e\u3059\u3002\u8ffd\u52a0\u5229\u7528\u306f Usage \u3092\u4f7f\u3044\u5207\u3063\u305f\u3068\u304d\u3060\u3051\u8868\u793a\u3057\u307e\u3059\u3002"
     reasons = {
         "unsupported_version": "Claude Codeのバージョンを確認できないか、2.1.263より古い版です。選択したクライアントをご確認ください。",
         "usage_temporarily_unavailable": "Claude Code がClaudeのサーバーから利用枠を取得できませんでした。Claude側の一時的な問題の可能性があります。",
@@ -122,16 +154,27 @@ def quota_command(folder, now):
             cache.update(snapshot=snapshot, account_scope=scope, fetched_at=now.isoformat(), last_ok=True)
             cache.pop("error", None)
             cache.pop("error_reason", None)
+            cache.pop("error_detail", None)
         except (OSError, ValueError, TypeError, KeyError, AttributeError, OverflowError,
                 quota.QuotaError, subprocess.SubprocessError) as error:
             # Never persist raw process/server output or account identifiers.
             cache.update(attempted_at=now.isoformat(), last_ok=False)
             cache["error"] = error_category(error)
             reason = str(error) if isinstance(error, quota.QuotaError) else None
-            if reason in ("protocol", "unsupported_response", "incomplete_windows"):
+            diagnostic = getattr(error, "reason", None) if isinstance(error, quota.QuotaError) else None
+            if reason == "timeout":
+                diagnostic = "timeout"
+            if diagnostic in ("line_type", "line_limit", "json", "envelope", "behaviors", "timestamp", "utilization", "missing_weekly", "timeout", "process_exit"):
+                cache["error_reason"] = diagnostic
+            elif reason in ("protocol", "unsupported_response", "incomplete_windows"):
                 cache["error_reason"] = reason
             else:
                 cache.pop("error_reason", None)
+            detail = getattr(error, "detail", None)
+            if diagnostic == "line_type" and isinstance(detail, str) and re.fullmatch(r"[a-z_]{1,40}", detail):
+                cache["error_detail"] = detail
+            else:
+                cache.pop("error_detail", None)
         cache["schema_version"] = 2
         write_json(folder / "quota-state.json", cache)
         return response(cache, now)
