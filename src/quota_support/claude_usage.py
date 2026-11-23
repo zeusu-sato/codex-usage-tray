@@ -59,7 +59,8 @@ def _scope_key(initialized, scope_salt=None):
 
 
 def _usage_fields(data, initialized, scope_salt=None):
-    # Deliberately discard behavioral data, account details, and model windows.
+    # Deliberately discard behavioral data, account details, and model windows
+    # other than the bounded model_scoped name/utilization/reset fields.
     if data.get("behaviors") is not None:
         raise QuotaError("protocol", "behaviors")
     limits = data.get("rate_limits")
