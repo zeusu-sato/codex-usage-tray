@@ -1,5 +1,9 @@
 # Claude metadata compatibility evidence
 
+## Windows 2.1.330 system event inspection
+
+Static inspection of the official npm Windows x64 2.1.330 binary found a `system` / `init` builder containing the working directory, session ID, tools, MCP server names and status, model, permission mode, commands, credential source, version, agents, skills, and plugins. No process, prompt, or credential file was used. This confirms the fields the binary can construct, not the exact output of every control-only session. These events are discarded.
+
 ## Mac v0.5.1 observation (2026-11-01)
 
 On an M1 Mac, v0.5.1 retrieved Codex quota and Claude weekly quota using real accounts. The Codex value matched `/status`; the Claude value has not yet been compared with claude.ai. Keychain behavior remains unverified.
