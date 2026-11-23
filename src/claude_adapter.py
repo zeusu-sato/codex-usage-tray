@@ -141,11 +141,10 @@ def request_usage(binary, version, timeout=16, *, scope_salt=None):
                     except (ValueError, UnicodeError, RecursionError):
                         raise QuotaError("protocol", "json") from None
                     kind = item.get("type") if isinstance(item, dict) else None
-                    if kind in ("keep_alive", "rate_limit_event"):
-                        continue
+                    if not isinstance(item, dict) or not isinstance(kind, str):
+                        raise QuotaError("protocol", "line_type")
                     if kind != "control_response":
-                        detail = kind if isinstance(kind, str) and re.fullmatch(r"[a-z_]{1,40}", kind) else None
-                        raise QuotaError("protocol", "line_type", detail)
+                        continue
                     responses += 1
                     if responses > MAX_MESSAGES:
                         raise QuotaError("protocol", "line_limit")

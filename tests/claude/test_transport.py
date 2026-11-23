@@ -140,7 +140,7 @@ class ClaudeTransportTest(unittest.TestCase):
                 self.assertEqual(claude.normalize(result)["windows"][1]["remaining_percent"], 91)
 
     def test_new_version_cannot_bypass_response_or_skip_behaviors_contract(self):
-        for response in (envelope("new-protocol-id"), {"type": "result"}):
+        for response in (envelope("new-protocol-id"),):
             with self.subTest(response=response):
                 _, sent, _, _ = self.run_fake("emit(" + repr(response) + ")\ntime.sleep(60)\n",
                                               version="3.0.0", expected_error="protocol")
@@ -161,10 +161,7 @@ class ClaudeTransportTest(unittest.TestCase):
         self.assertEqual(sent, [claude._initialize()])
 
     def test_unexpected_categories_wrong_id_and_bad_json_abort_before_usage(self):
-        invalid = [{"type": "assistant", "message": {"content": "private"}},
-                   {"type": "system", "subtype": "init"}, {"type": "result"},
-                   {"type": "control_request", "request": {"subtype": "can_use_tool"}},
-                   envelope("wrong-id"), {"type": "control_response", "response": []},
+        invalid = [envelope("wrong-id"), {"type": "control_response", "response": []},
                    {"type": "control_response", "response": {"subtype": "success", "request_id": claude.INITIALIZE_ID}}]
         for message in invalid:
             with self.subTest(message=message):
@@ -268,9 +265,14 @@ class ClaudeTransportTest(unittest.TestCase):
 
 
     def test_events_are_discarded(self):
-        behavior = ("emit({'type':'keep_alive', 'private':'discard'})\n"
+        behavior = ("emit({'type':'system', 'subtype':'init', 'cwd':'private', 'session_id':'private', 'tools':[], 'model':'private'})\n"
+                    + "emit({'type':'future_event', 'private':'discard'})\n"
+                    + "emit({'type':'keep_alive', 'private':'discard'})\n"
                     + "emit(" + repr(envelope(claude.INITIALIZE_ID)) + ")\nread()\n"
                     + "emit({'type':'rate_limit_event', 'private':'discard'})\n"
                     + "emit(" + repr(envelope(claude.USAGE_ID, usage())) + ")\n")
         result, _, _, _ = self.run_fake(behavior)
         self.assertNotIn("private", str(result))
+
+    def test_unknown_events_without_required_response_fail(self):
+        self.run_fake("emit({'type':'system', 'subtype':'init'})\n", expected_error="protocol")
