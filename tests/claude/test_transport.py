@@ -265,3 +265,12 @@ class ClaudeTransportTest(unittest.TestCase):
         self.assertNotIn("firstParty", json.dumps(result))
         self.assertNotIn("claude.ai", json.dumps(result))
         self.assertNotIn(salt.decode(), json.dumps((result, sent, command, options["env"])))
+
+
+    def test_events_are_discarded(self):
+        behavior = ("emit({'type':'keep_alive', 'private':'discard'})\n"
+                    + "emit(" + repr(envelope(claude.INITIALIZE_ID)) + ")\nread()\n"
+                    + "emit({'type':'rate_limit_event', 'private':'discard'})\n"
+                    + "emit(" + repr(envelope(claude.USAGE_ID, usage())) + ")\n")
+        result, _, _, _ = self.run_fake(behavior)
+        self.assertNotIn("private", str(result))

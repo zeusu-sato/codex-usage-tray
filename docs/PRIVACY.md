@@ -3,7 +3,7 @@
 The experimental Linux source UI uses the same shared metadata backend and provider data separation. State is stored under `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`; relative XDG paths use the default. The Linux UI exposes quota reads, client selection, and version monitoring only. See the [Linux guide](../linux/README.ja.md).
 Linux 試作版も共通の取得処理と製品別保存先を使います。保存先は `${XDG_DATA_HOME:-$HOME/.local/share}/CodexUsageTray`（相対 XDG パスは既定値に戻します）です。Linux UI は残量取得・クライアント選択・バージョン監視に対応します。[Linux の説明](../linux/README.ja.md)もご覧ください。
 
-This document describes **v0.5.9**, including experimental Claude Code support and Credit mode. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint. The only recurring connection the app itself makes is the anonymous release check described below.
+This document describes **v0.5.10**, including experimental Claude Code support and Credit mode. This is an independent local Windows and macOS application with no project-operated telemetry or analytics endpoint. The only recurring connection the app itself makes is the anonymous release check described below.
 
 ## Routine operation
 
@@ -17,7 +17,7 @@ The installed Claude Code process handles its existing authentication and the ne
 
 The **2.1.263 and 2.1.266 Windows binaries** were statically inspected for this control path; this does not establish compatibility with every future version or Mac account. On November 1, v0.5.1 retrieved Claude weekly quota with a real account on an M1 Mac, but the value has not yet been compared with claude.ai. The process uses safe mode, empty user/project setting sources, no tools, and disabled browser integration and session persistence. Inherited VS Code integration hints are removed. Claude still manages its own authentication and may apply administrator-managed settings, including managed hooks under safe mode, as described in its [CLI reference](https://code.claude.com/docs/en/cli-reference). A changed client version still stops old additional instructions; that policy decision does not itself stop compatible metadata reads.
 
-Global five-hour and weekly quota amounts, reset times, and the four extra-usage fields described below leave the adapter, with an optional pseudonymous account scope. The scope is HMAC-SHA256 of bounded account email and, when present, organization, API-provider and token-source **metadata**, using an app-generated 32-byte random salt. Raw account fields are processed only in memory and are not returned, logged, or saved. Token-source metadata describes the authentication source; it is not an authentication token. The salt is local app data, not a provider credential. Missing or invalid account identity prevents history-based forecasting.
+Global five-hour and weekly quota amounts, reset times, up to four sanitized model-scoped names and quota amounts and reset times, and the four extra-usage fields described below leave the adapter, with an optional pseudonymous account scope. The scope is HMAC-SHA256 of bounded account email and, when present, organization, API-provider and token-source **metadata**, using an app-generated 32-byte random salt. Raw account fields are processed only in memory and are not returned, logged, or saved. Token-source metadata describes the authentication source; it is not an authentication token. The salt is local app data, not a provider credential. Missing or invalid account identity prevents history-based forecasting.
 
 The two tray icons may read symbol images from installed official VS Code / Insiders extensions. Images are rendered at 18% opacity, are not uploaded or bundled, and can be absent without preventing numeric quota display.
 
@@ -71,7 +71,7 @@ For a public bug report, prefer the app version, operating-system version, selec
 
 ## 日本語
 
-Claude Codeの試験対応とCreditモードを含む**v0.5.9**について説明しています。
+Claude Codeの試験対応とCreditモードを含む**v0.5.10**について説明しています。
 
 このアプリ独自のアクセス解析やテレメトリー送信先はありません。定期的な残量取得は、インストール済みCodexを通して公式の`account/rateLimits/read`を呼びます。AIの会話・推論ターンは開始しませんが、残量を取得するCodex自身はサービスと通信する場合があります。バージョン確認はローカル処理です。アプリ自身の定期的な通信は、次に示す匿名のリリース確認だけです。
 

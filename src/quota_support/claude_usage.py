@@ -59,9 +59,10 @@ def _scope_key(initialized, scope_salt=None):
 
 
 def _usage_fields(data, initialized, scope_salt=None):
-    # Deliberately discard behavioral data, account details, and model windows.
+    # Deliberately discard behavioral data, account details, and model windows
+    # other than the bounded model_scoped name/utilization/reset fields.
     if data.get("behaviors") is not None:
-        raise QuotaError("protocol")
+        raise QuotaError("protocol", "behaviors")
     limits = data.get("rate_limits")
     result = {"rate_limits_available": data.get("rate_limits_available"),
               "rate_limits": ({key: {field: value[field] for field in ("utilization", "resets_at")
@@ -72,28 +73,50 @@ def _usage_fields(data, initialized, scope_salt=None):
         extra = limits["extra_usage"]
         result["rate_limits"]["extra_usage"] = {key: extra[key] for key in
             ("is_enabled", "monthly_limit", "used_credits", "currency") if key in extra}
+    if isinstance(limits, dict) and isinstance(limits.get("model_scoped"), list):
+        models = []
+        for item in limits["model_scoped"]:
+            if len(models) == 4:
+                break
+            if not isinstance(item, dict):
+                continue
+            name, used, reset = item.get("display_name"), item.get("utilization"), item.get("resets_at")
+            if not isinstance(name, str):
+                continue
+            name = name.strip()
+            if (not 1 <= len(name) <= 40 or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in name)
+                    or not credit_number(used)):
+                continue
+            try:
+                _reset_time(reset)
+            except QuotaError:
+                continue
+            models.append({"display_name": name, "utilization": used, "resets_at": reset})
+        if models:
+            result["rate_limits"]["model_scoped"] = models
     scope = _scope_key(initialized, scope_salt=scope_salt)
     if scope is not None:
         result["scope_key"] = scope
     return result
 
 
-_ISO_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})\Z")
+_ISO_TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:?\d{2})\Z")
 
 
 def _reset_time(value):
     if value is None:
         return None
     if not isinstance(value, str) or not _ISO_TIMESTAMP.fullmatch(value):
-        raise QuotaError("unsupported_response")
+        raise QuotaError("unsupported_response", "timestamp")
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        value = re.sub(r"(\.\d{6})\d+", r"\1", value)
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00").replace("z", "+00:00"))
         timestamp = int(parsed.astimezone(timezone.utc).timestamp())
         if timestamp < 0:
             raise ValueError("Negative timestamp")
         return timestamp
     except (ValueError, OverflowError, OSError):
-        raise QuotaError("unsupported_response") from None
+        raise QuotaError("unsupported_response", "timestamp") from None
 
 
 def normalize(result):
@@ -116,14 +139,18 @@ def normalize(result):
         if source not in limits or limits[source] is None:
             if source == "five_hour":
                 continue
-            raise QuotaError("incomplete_windows")
+            raise QuotaError("incomplete_windows", "missing_weekly")
         raw = limits[source]
         if not isinstance(raw, dict) or "resets_at" not in raw:
             raise QuotaError("unsupported_response")
         used = raw.get("utilization")
+        if used is None:
+            if source == "five_hour":
+                continue
+            raise QuotaError("usage_temporarily_unavailable")
         if (isinstance(used, bool) or not isinstance(used, (int, float))
                 or (isinstance(used, float) and not math.isfinite(used)) or used < 0):
-            raise QuotaError("unsupported_response")
+            raise QuotaError("unsupported_response", "utilization")
         windows.append({"kind": kind, "remaining_percent": max(0, 100 - used),
                         "duration_mins": duration, "resets_at": _reset_time(raw["resets_at"])})
     # Shared UI reserves blocked for an explicit non-quota restriction. Known
@@ -139,4 +166,9 @@ def normalize(result):
                   "monthly_limit": limit if credit_number(limit) else None,
                   "limit_known": "monthly_limit" in extra and (limit is None or credit_number(limit)),
                   "used_credits": extra.get("used_credits") if credit_number(extra.get("used_credits")) else None}
-    return {"windows": windows, "blocked": False, "credit": credit}
+    result = {"windows": windows, "blocked": False, "credit": credit}
+    if limits.get("model_scoped"):
+        result["model_windows"] = [{"name": item["display_name"],
+            "remaining_percent": max(0, 100 - item["utilization"]),
+            "resets_at": _reset_time(item["resets_at"])} for item in limits["model_scoped"]]
+    return result

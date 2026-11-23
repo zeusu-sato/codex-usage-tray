@@ -78,7 +78,7 @@ class ClaudeNormalizationTest(unittest.TestCase):
                 claude.normalize(data)
 
     def test_invalid_schema_utilization_and_missing_reset_are_rejected(self):
-        for invalid in (None, True, False, "9", -1, float("nan"), float("inf"), float("-inf"), [], {}):
+        for invalid in (True, False, "9", -1, float("nan"), float("inf"), float("-inf"), [], {}):
             with self.subTest(invalid=invalid), self.assertRaises(quota.QuotaError):
                 claude.normalize(usage(invalid))
         for data in (None, [], {}, {"rate_limits_available": True, "rate_limits": []},
@@ -168,3 +168,46 @@ class ClaudeNormalizationTest(unittest.TestCase):
             result = quota.reply({"snapshot": claude.normalize(data), "last_ok": True, "fetched_at": NOW.isoformat()}, NOW)
             self.assertEqual(result["credit"]["tray_text"], tray)
             self.assertLessEqual(len(tray), 3)
+
+
+class ClaudeModelWindowsTest(unittest.TestCase):
+    def test_model_windows_and_long_timestamp(self):
+        data = {"rate_limits_available": True, "rate_limits": {
+            "seven_day": {"utilization": 55, "resets_at": "2026-11-25T17:00:00.123456789+0000"},
+            "model_scoped": [{"display_name": " Fable ", "utilization": 60, "resets_at": "2026-11-25T17:00:00.1234567z"},
+                             {"display_name": "bad\nname", "utilization": 3, "resets_at": None}],
+            "extra_usage": {"is_enabled": True, "monthly_limit": 68780, "used_credits": 68808, "utilization": 100.04, "currency": "USD"}}}
+        payload = claude._usage_fields(data, {})
+        result = claude.normalize(payload)
+        self.assertEqual(result["windows"][0]["remaining_percent"], 45)
+        self.assertEqual(result["model_windows"][0]["name"], "Fable")
+        self.assertEqual(result["model_windows"][0]["remaining_percent"], 40)
+        self.assertEqual(len(result["model_windows"]), 1)
+        self.assertIsNone(result["credit"])
+        data["rate_limits"]["seven_day"]["utilization"] = 100
+        result = claude.normalize(claude._usage_fields(data, {}))
+        from quota_support.codex_reply import credit_display
+        self.assertEqual(credit_display(result["credit"])[0]["summary"], "上限まで残り $0.00")
+
+    def test_null_weekly_is_temporarily_unavailable(self):
+        data = {"rate_limits_available": True, "rate_limits": {"seven_day": {"utilization": None, "resets_at": None}}}
+        with self.assertRaisesRegex(claude.QuotaError, "usage_temporarily_unavailable"):
+            claude.normalize(claude._usage_fields(data, {}))
+
+    def test_render_model_and_invalid_cache(self):
+        from datetime import datetime, timezone
+        import claude_quota
+        now = datetime(2026, 11, 25, 16, 0, tzinfo=timezone.utc)
+        data = {"rate_limits_available": True, "rate_limits": {
+            "seven_day": {"utilization": 55, "resets_at": "2026-11-25T17:00:00.123456789+00:00"},
+            "model_scoped": [{"display_name": "Fable", "utilization": 60, "resets_at": "2026-11-25T17:00:00.123456789+00:00"}]}}
+        snapshot = claude.normalize(claude._usage_fields(data, {}))
+        cache = {"schema_version": 2, "snapshot": snapshot, "fetched_at": now.isoformat(), "last_ok": True}
+        reply = claude_quota.response(cache, now)
+        self.assertEqual(reply["title"], "Usage 残り 45%")
+        self.assertIn("Fable: 残り 40%  ·  リセット 11/26 02:00 JST", reply["detail"])
+        self.assertIn("モデル別の枠は一覧", reply["scope"])
+        snapshot["model_windows"][0]["name"] = "bad\nname"
+        reply = claude_quota.response(cache, now)
+        self.assertNotIn("model_windows", snapshot)
+        self.assertEqual(reply["title"], "Usage 残り 45%")

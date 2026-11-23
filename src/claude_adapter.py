@@ -26,6 +26,7 @@ MAX_TIMEOUT_SECONDS = 16
 MAX_LINE_BYTES = 1024 * 1024
 MAX_OUTPUT_BYTES = 2 * MAX_LINE_BYTES
 MAX_MESSAGES = 2
+MAX_LINES = 8
 INITIALIZE_ID = "usage-tray-initialize"
 USAGE_ID = "usage-tray-get-usage"
 
@@ -121,10 +122,11 @@ def request_usage(binary, version, timeout=16, *, scope_salt=None):
         messages = queue.Queue(maxsize=MAX_MESSAGES + 1)
         stop = threading.Event()
         failed = threading.Event()
+        failure = [None]
         reader = None
 
         def read():
-            total = count = 0
+            total = count = responses = 0
             try:
                 while not stop.is_set():
                     line = process.stdout.readline(MAX_LINE_BYTES + 1)
@@ -132,13 +134,24 @@ def request_usage(binary, version, timeout=16, *, scope_salt=None):
                         break
                     count += 1
                     total += len(line)
-                    if len(line) > MAX_LINE_BYTES or total > MAX_OUTPUT_BYTES or count > MAX_MESSAGES:
-                        raise ValueError("Output limit")
-                    item = json.loads(line.decode("utf-8"), object_pairs_hook=_unique_object)
-                    if not isinstance(item, dict) or item.get("type") != "control_response":
-                        raise ValueError("Unexpected category")
+                    if len(line) > MAX_LINE_BYTES or total > MAX_OUTPUT_BYTES or count > MAX_LINES:
+                        raise QuotaError("protocol", "line_limit")
+                    try:
+                        item = json.loads(line.decode("utf-8"), object_pairs_hook=_unique_object)
+                    except (ValueError, UnicodeError, RecursionError):
+                        raise QuotaError("protocol", "json") from None
+                    kind = item.get("type") if isinstance(item, dict) else None
+                    if kind in ("keep_alive", "rate_limit_event"):
+                        continue
+                    if kind != "control_response":
+                        detail = kind if isinstance(kind, str) and re.fullmatch(r"[a-z_]{1,40}", kind) else None
+                        raise QuotaError("protocol", "line_type", detail)
+                    responses += 1
+                    if responses > MAX_MESSAGES:
+                        raise QuotaError("protocol", "line_limit")
                     messages.put_nowait(item)
-            except (ValueError, UnicodeError, OSError, queue.Full, RecursionError):
+            except (QuotaError, OSError, queue.Full) as error:
+                failure[0] = error if isinstance(error, QuotaError) else QuotaError("protocol", "line_limit")
                 failed.set()
             finally:
                 try:
@@ -151,23 +164,27 @@ def request_usage(binary, version, timeout=16, *, scope_salt=None):
             if left <= 0:
                 raise QuotaError("timeout")
             if failed.is_set():
-                raise QuotaError("protocol")
+                raise failure[0] or QuotaError("protocol", "envelope")
             try:
                 item = messages.get(timeout=left)
             except queue.Empty:
                 raise QuotaError("timeout") from None
-            if failed.is_set() or not isinstance(item, dict):
-                raise QuotaError("protocol")
+            if failed.is_set():
+                raise failure[0] or QuotaError("protocol", "envelope")
+            if item is None:
+                raise QuotaError("protocol", "process_exit")
+            if not isinstance(item, dict):
+                raise QuotaError("protocol", "envelope")
             response = item.get("response")
             if not isinstance(response, dict) or response.get("request_id") != identifier:
-                raise QuotaError("protocol")
+                raise failure[0] or QuotaError("protocol", "envelope")
             if response.get("subtype") == "error":
                 raise QuotaError("account_unavailable")
             if response.get("subtype") != "success" or "error" in response:
-                raise QuotaError("protocol")
+                raise failure[0] or QuotaError("protocol", "envelope")
             data = response.get("response")
             if not isinstance(data, dict):
-                raise QuotaError("protocol")
+                raise failure[0] or QuotaError("protocol", "envelope")
             return data
 
         try:
@@ -177,7 +194,7 @@ def request_usage(binary, version, timeout=16, *, scope_salt=None):
                 send_read_only(process.stdin, _initialize())
                 initialized = receive(INITIALIZE_ID)
                 if failed.is_set():
-                    raise QuotaError("protocol")
+                    raise failure[0] or QuotaError("protocol", "envelope")
                 if time.monotonic() >= deadline:
                     raise QuotaError("timeout")
                 send_read_only(process.stdin, _get_usage())
