@@ -1,5 +1,9 @@
 # Claude metadata compatibility evidence
 
+## Windows 2.1.330 system event inspection
+
+Static inspection of the official npm Windows x64 2.1.330 binary found a `system` / `init` builder containing the working directory, session ID, tools, MCP server names and status, model, permission mode, commands, credential source, version, agents, skills, and plugins. No process, prompt, or credential file was used. This confirms the fields the binary can construct, not the exact output of every control-only session. These events are discarded.
+
 ## Mac v0.5.1 observation (2026-11-01)
 
 On an M1 Mac, v0.5.1 retrieved Codex quota and Claude weekly quota using real accounts. The Codex value matched `/status`; the Claude value has not yet been compared with claude.ai. Keychain behavior remains unverified.
@@ -41,7 +45,7 @@ The extension's own experimental usage wrapper is also present in both `extensio
 
 ## Compatibility boundary
 
-The app requires an identified stable version at least 2.1.263, without an upper version pin. It sends exactly the fixed initialization and usage controls, with transcript analysis disabled, and never sends a prompt. Every read validates the response envelope and quota schema. Unexpected message types, behavioral analysis data, malformed or incomplete quota windows, output overflow, and timeouts fail without an AI fallback. Global five-hour and weekly utilization/reset data, up to four sanitized model-scoped names and utilization/reset values, the four extra-usage fields described below, and a salted pseudonymous scope may leave the adapter. Keep-alive and rate-limit events are discarded.
+The app requires an identified stable version at least 2.1.263, without an upper version pin. It sends exactly the fixed initialization and usage controls, with transcript analysis disabled, and never sends a prompt. Every read validates the response envelope and quota schema. Behavioral analysis data, malformed or incomplete quota windows, invalid control responses, output overflow, and timeouts fail without an AI fallback. Global five-hour and weekly utilization/reset data, up to four sanitized model-scoped names and utilization/reset values, the four extra-usage fields described below, and a salted pseudonymous scope may leave the adapter. Non-control-response message types, including system initialization, keep-alive, and rate-limit events, are discarded without using their contents. JSON framing, output limits, and both required control responses remain validated.
 
 Checking for words in a binary would not prove their runtime meaning and would depend on packaging and bytecode layout. The app therefore does not scan binaries or start an extra help/capability process on each poll. A successful future-version exchange establishes only that the observed response meets the supported contract; it cannot prove every startup behavior is unchanged.
 
